@@ -8,7 +8,7 @@ const page=`<!doctype html><html><head><meta name="viewport" content="width=devi
 <h1>BUYGUY // FREE RADAR</h1><p class="hint">Read-only research • Robinhood + Solana • Indicative prices • Paper wallet experimental</p>
 <div id="login"><input type="password" id="pass" placeholder="Dashboard secret" autocomplete="off"><button id="enter">Open</button><p id="msg"></p></div>
 <div id="board"><button id="refresh">Refresh data</button><div id="overview"></div><section><h2>Recent runs</h2><div id="runs"></div></section><section><h2>Token research</h2><div id="assets"></div></section><section><h2>Paper wallet</h2><div id="wallet"></div></section><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
-<p class="hint">No security verdict or real-money execution. Paper trading is disabled pending verification. No current quote guarantees execution.</p>
+<p class="hint">Research only. Top token accounts can include AMM pools, escrows and custodians, not unique holder wallets. Mint checks do not verify liquidity locks or executable exits. Paper trades remain disabled.</p>
 <script>
 let token='';
 const cell=v=>'<td>'+String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td>';
@@ -17,7 +17,13 @@ async function refresh(){try{const r=await fetch('/api/status',{headers:{authori
 const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
 document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
 document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
-document.getElementById('assets').innerHTML=table(['Chain','Token','Score','Status','Liquidity $','Price $','5m buys/sells','Risk'],(x.assets||[]).map(a=>[a.chain,a.symbol,a.score,a.status,a.liquidity,a.price,a.buys_m5+'/'+a.sells_m5,a.risk_status]));
+const riskInfo=a=>{try{return JSON.parse(a.risk_note||'{}')}catch{return {}}};
+document.getElementById('assets').innerHTML=table(['Chain','Token','Score','Status','Liquidity $','5m buys/sells','Mint review','Top acct %','Mint/holder flags','Provider'],(x.assets||[]).map(a=>{
+const audit=riskInfo(a);
+return [a.chain,a.symbol,a.score,a.status,a.liquidity,a.buys_m5+'/'+a.sells_m5,
+a.risk_status,audit.top1Bps===null||audit.top1Bps===undefined?'Unknown':(audit.top1Bps/100).toFixed(1)+'%',
+[...(audit.mintFlags||[]),...(audit.holderFlags||[])].join(', ')||'Not fully reviewed',a.provider];
+}));
 document.getElementById('wallet').innerHTML=table(['Starting','Cash','Realised P&L','Estimated equity','Stale marks'],[[
 x.paper?.starting_cash,x.paper?.cash,x.paper?.realised,x.paper?.estimated_total===null?'Unknown':x.paper?.estimated_total,x.paper?.unknown_marks]])+
 table(['Token','Cost USD','Est. sale value','Unrealised P&L','Price stale'],(x.paper?.positions||[]).map(p=>[
