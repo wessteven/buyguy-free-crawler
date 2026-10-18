@@ -1,32 +1,63 @@
-// Optional, bounded Solana mint-authority research pass.
-// A ChatGPT Helius plugin does NOT grant this Worker its credentials.
-// Set HELIUS_RPC_URL as a Cloudflare Worker secret to enable; absent = no calls.
+// Bounded read-only Helius audit. NEVER certifies a token as safe or paper eligible.
+// Token-account distribution is a proxy, not unique holders; cannot prove sellability.
 import {checkSolanaMint} from './token-risk.mjs';
+import {fetchLargestAccounts,assessLargestAccounts} from './holder-risk.mjs';
+
+export function combineRisk(mint,holders){
+  if(mint.riskStatus!=='MINT_CONTROLS_REVOKED')return mint.riskStatus;
+  if(holders.status==='CONCENTRATION_WARNING')return 'HOLDER_CONCENTRATION_RISK';
+  if(holders.status==='TOKEN_ACCOUNT_BALANCES_SCREENED')return 'PARTIAL_ONCHAIN_REVIEW';
+  return 'HOLDER_DATA_UNAVAILABLE';
+}
 
 export async function verifyPendingMints(env,{limit=3,now=new Date().toISOString(),fetcher=fetch}={}){
-  if(!env.DB)throw Error('D1 not configured');
-  if(!env.HELIUS_RPC_URL)return {enabled:false,checked:0,reason:'HELlUS_RPC_URL_NOT_CONFIGURED'};
-  const rows=(await env.DB.prepare(`SELECT asset_key,address,chain,score
-    FROM assets WHERE chain='solana' AND risk_status='UNVERIFIED' AND status IN ('ALIVE','STATIC')
-    ORDER BY score DESC LIMIT ?`).bind(Math.max(1,Math.min(4,limit))).all()).results||[];
-  let checked=0,failed=0;
+  if(!env?.DB)throw Error('D1 not configured');
+  if(!env.HELIUS_RPC_URL)return {enabled:false,checked:0,reason:'HELIUS_RPC_URL_NOT_CONFIGURED'};
+  const checkDate=new Date(now).getTime();
+  const cutoff=new Date(checkDate-60*60000).toISOString();
+  const rows=(await env.DB.prepare(`SELECT a.asset_key,a.address,a.chain,a.score
+    FROM assets a WHERE a.chain='solana' AND a.risk_status='UNVERIFIED'
+      AND a.status IN ('ALIVE','STATIC')
+      AND NOT EXISTS (SELECT 1 FROM research_events e WHERE e.asset_key=a.asset_key
+       AND e.kind='MINT_AUTHORITY_REVIEW' AND e.at>?)
+    ORDER BY a.score DESC LIMIT ?`).bind(cutoff,Math.max(1,Math.min(4,limit))).all()).results||[];
+  let checked=0,failed=0,concentration=0;
   for(const a of rows){
     try{
-      const result=await checkSolanaMint({mint:a.address,rpcEndpoint:env.HELIUS_RPC_URL,fetcher});
-      const note=JSON.stringify({checkedAt:result.checkedAt,source:result.source,flags:result.flags,
-        notes:result.notes,paperEligible:false}).slice(0,700);
-      const list=[
+      const mint=await checkSolanaMint({mint:a.address,rpcEndpoint:env.HELIUS_RPC_URL,fetcher});
+      let holders={status:'NOT_CHECKED',flags:[],top1Bps:null,top5Bps:null,top20Bps:null};
+      if(mint.supplyRaw && (mint.riskStatus==='MINT_CONTROLS_REVOKED'||mint.riskStatus==='TOKEN_2022_REVIEW_REQUIRED')){
+        try{
+          const payload=await fetchLargestAccounts({mint:a.address,rpcEndpoint:env.HELIUS_RPC_URL,fetcher});
+          holders=assessLargestAccounts(a.address,mint.supplyRaw,payload);
+        }catch(error){
+          holders={status:'UNVERIFIED',flags:['HOLDER_RPC_UNAVAILABLE'],top1Bps:null,top5Bps:null,top20Bps:null};
+        }
+      }
+      const riskStatus=combineRisk(mint,holders);
+      const note=JSON.stringify({checkedAt:mint.checkedAt,program:mint.tokenProgram||null,
+        source:'Helius read-only Solana RPC',mintFlags:mint.flags,holderFlags:holders.flags,
+        holderStatus:holders.status,top1Bps:holders.top1Bps,top5Bps:holders.top5Bps,
+        top20Bps:holders.top20Bps,
+        limits:'Top TOKEN ACCOUNTS may include AMM vaults; liquidity locks and sells NOT independently tested.',
+        paperEligible:false});
+      const safeNote=note.slice(0,1300);
+      const statements=[
         env.DB.prepare(`UPDATE assets SET risk_status=?,risk_note=?
-          WHERE asset_key=? AND risk_status='UNVERIFIED'`).bind(result.riskStatus,note,a.asset_key),
+           WHERE asset_key=? AND risk_status='UNVERIFIED'`).bind(riskStatus,safeNote,a.asset_key),
         env.DB.prepare(`INSERT INTO research_events(at,asset_key,kind,note)
-          VALUES(?,?,'MINT_AUTHORITY_REVIEW',?)`).bind(now,a.asset_key,note)
+           VALUES(?,?,'MINT_AUTHORITY_REVIEW',?)`).bind(now,a.asset_key,safeNote)
       ];
-      await env.DB.batch(list);checked++;
-    }catch(e){
+      await env.DB.batch(statements);
+      checked++;
+      if(holders.status==='CONCENTRATION_WARNING')concentration++;
+    }catch(error){
       failed++;
-      console.warn('Solana mint check failed for',a.asset_key,'(secret withheld):',String(e).replace(/https:\/\/[^\s]+/g,'<redacted-url>').slice(0,130));
+      // Never include URL, API credentials or raw RPC response in logs.
+      console.warn('Solana mint review failed:',a.asset_key,
+        'category:',error?.name||'UnknownError');
     }
   }
-  return {enabled:true,checked,failed,
-    caveat:'Mint/freeze authority only; never full contract certification'};
+  return {enabled:true,checked,failed,concentration,
+    caveat:'Read-only mint and top-token-account screening only. No holder-identity, LP-lock, or executable sell certification.'};
 }
