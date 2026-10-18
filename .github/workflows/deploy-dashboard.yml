@@ -66,6 +66,18 @@ jobs:
         run: |
           test -n "$DASHBOARD_TOKEN" || { echo "Missing ADMIN_TOKEN" >&2; exit 1; }
           printf %s "$DASHBOARD_TOKEN" | npx wrangler secret put ADMIN_TOKEN --name buyguy-free-radar
+      - name: Configure optional private Helius RPC without printing credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: |
+          if [ -n "$HELIUS_API_KEY" ]; then
+            printf 'https://mainnet.helius-rpc.com/?api-key=%s' "$HELIUS_API_KEY" | npx wrangler secret put HELIUS_RPC_URL --name buyguy-free-radar
+            echo "Optional read-only Helius RPC configured without printing its key."
+          else
+            echo "No HELIUS_API_KEY GitHub secret; autonomous mint checks stay disabled."
+          fi
 
       - name: Verify persistent D1 state using authenticated Cloudflare API
         env:
