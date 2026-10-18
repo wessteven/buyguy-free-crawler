@@ -52,3 +52,45 @@ jobs:
         run: |
           test -n "$DASHBOARD_TOKEN" || { echo "Missing ADMIN_TOKEN" >&2; exit 1; }
           printf %s "$DASHBOARD_TOKEN" | npx wrangler secret put ADMIN_TOKEN --name buyguy-free-radar
+
+      - name: Smoke-test deployed dashboard and protected D1 data
+        env:
+          DASHBOARD_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json, os, time
+          from urllib.request import Request, urlopen
+          from urllib.error import HTTPError
+          base='https://buyguy-free-radar.wessteven.workers.dev'
+          def probe(path, token=None):
+              h={'Accept':'application/json'}
+              if token: h['Authorization']='Bearer '+token
+              req=Request(base+path,headers=h)
+              try:
+                  with urlopen(req,timeout=15) as r:
+                      return r.status, r.read(262144).decode()
+              except HTTPError as e:
+                  return e.code, e.read(4096).decode()
+          last=None
+          for i in range(10):
+              try:
+                  code, body=probe('/health')
+                  if code==200:
+                      assert json.loads(body).get('server')=='online'
+                      break
+                  last='health returned HTTP '+str(code)
+              except Exception as e: last=type(e).__name__
+              time.sleep(8)
+          else: raise SystemExit('Dashboard unavailable: '+str(last))
+          code,_=probe('/api/status')
+          assert code==401,'Unauthenticated API was not denied'
+          code,body=probe('/api/status',os.environ['DASHBOARD_TOKEN'])
+          if code!=200: raise SystemExit('Authenticated API returned HTTP '+str(code)+'; check D1 binding')
+          data=json.loads(body)
+          assert isinstance(data.get('assets'),list),'Assets table unavailable'
+          assert isinstance(data.get('runs'),list),'Scan history unavailable'
+          assert data.get('wallet') is not None,'Paper-wallet baseline unavailable'
+          print('Dashboard health=200, anonymous API=401, authenticated API=200')
+          print('Live D1 records: assets='+str(len(data['assets']))+', scans='+str(len(data['runs'])))
+          print('Paper account installed; trades remain disabled.')
+          PY
