@@ -40,6 +40,8 @@ export function assessMintAccount(mint,rpcResponse) {
     base.notes.push('Authority checks only: sell restrictions, liquidity ownership, holders and admin roles NOT VERIFIED.');
   }
   base.decimals=info.decimals;
+  base.supplyRaw=(typeof info.supply==='string' && /^\d+$/.test(info.supply))?info.supply:null;
+  base.tokenProgram=value.owner;
   return base;
 }
 // Private endpoint URL is supplied at runtime; never store API key in public repo.
