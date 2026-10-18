@@ -14,32 +14,7 @@ const cell=v=>'<td>'+String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 function table(keys,rows){return '<table><thead><tr>'+keys.map(k=>'<th>'+k+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(cell).join('')+'</tr>').join('')+'</tbody></table>';}
 async function refresh(){try{const r=await fetch('/api/status',{headers:{authorization:'Bearer '+token},cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const x=await r.json();document.getElementById('login').style.display='none';document.getElementById('board').style.display='block';
 const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
-document.getElementById('overview').innerHTML='<div class="stat">Cash: 
-document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
-document.getElementById('assets').innerHTML=table(['Chain','Token','Score','Status','Liquidity $','Price $','5m buys/sells','Risk'],(x.assets||[]).map(a=>[a.chain,a.symbol,a.score,a.status,a.liquidity,a.price,a.buys_m5+'/'+a.sells_m5,a.risk_status]));
-document.getElementById('wallet').innerHTML=table(['Cash','Starting','Realized P&L'],[[x.wallet?.cash,x.wallet?.starting_cash,x.wallet?.realised]]);
-document.getElementById('predictions').innerHTML=table(['Token','Status','Horizon min','Change %'],(x.predictions||[]).map(p=>[p.asset_key,p.status,p.horizon_min,p.change_pct]));
-}catch(e){document.getElementById('msg').textContent='Access or service error: '+e.message}}
-document.getElementById('enter').onclick=()=>{token=document.getElementById('pass').value;document.getElementById('pass').value='';refresh()};document.getElementById('refresh').onclick=refresh;
-</script></body></html>`;
-function auth(given,secret){if(!secret||!given||given.length!==secret.length)return false;let n=0;for(let i=0;i<given.length;i++)n|=given.charCodeAt(i)^secret.charCodeAt(i);return n===0;}
-export default {async fetch(request,env){const path=new URL(request.url).pathname;
-if(path==='/health')return json({server:'online',scan_status:'not_verified'});
-if(path==='/'||path==='/dashboard')return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
-if(path!=='/api/status')return json({error:'not_found'},404);
-const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
-if(!auth(bearer,env.ADMIN_TOKEN||''))return json({error:'unauthorized'},401);
-if(!env.DB)return json({error:'database_not_configured'},503);
-try{const list=async(sql)=>(await env.DB.prepare(sql).all()).results||[];
-const [runs,assets,wallet,predictions]=await Promise.all([
-list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
-list("SELECT * FROM assets WHERE status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 80"),
-list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
-list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30")]);
-return json({runs,assets,wallet:wallet[0]||null,predictions});
-}catch(e){return json({error:'D1 query failed',message:String(e).slice(0,180)},503)}
-}};
-+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
+document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
 document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
 document.getElementById('assets').innerHTML=table(['Chain','Token','Score','Status','Liquidity $','Price $','5m buys/sells','Risk'],(x.assets||[]).map(a=>[a.chain,a.symbol,a.score,a.status,a.liquidity,a.price,a.buys_m5+'/'+a.sells_m5,a.risk_status]));
 document.getElementById('wallet').innerHTML=table(['Cash','Starting','Realized P&L'],[[x.wallet?.cash,x.wallet?.starting_cash,x.wallet?.realised]]);
