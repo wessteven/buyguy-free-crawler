@@ -28,6 +28,7 @@ jobs:
             assert resp.get('success') and resp['result'][0]['success']
             return resp['result'][0]['results']
           print('SCAN TOTALS:',q("SELECT state,COUNT(*) AS n FROM runs GROUP BY state"))
+          print('RECENT SCANS:',q("SELECT started_at,state,discovered,observed,provider_errors FROM runs ORDER BY id DESC LIMIT 8"))
           print('SOURCE COUNTS:',q("SELECT provider,chain,COUNT(*) AS n FROM assets GROUP BY provider,chain ORDER BY n DESC"))
           print('STATE COUNTS:',q("SELECT status,chain,COUNT(*) AS n FROM assets GROUP BY status,chain"))
           print('OBSERVATIONS:',q("SELECT COUNT(*) AS n,MAX(seen_at) AS latest FROM observations"))
