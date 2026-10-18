@@ -1,30 +1,54 @@
-# BuyGuy Free Crawler V3
+# BuyGuy Free Radar — deployed experimental crawler
 
-Experimental Robinhood Chain / Solana research and USD paper-trading engine.
+Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 
-**Current deployment status: NOT LIVE.** The ChatGPT GitHub connection has begun uploading the V3 project. The crawler source, database, and website must be installed and tested before a ten-minute schedule is enabled. No real-money trading is implemented.
+**Live status:** Cloudflare Worker deployed, D1 connected and GitHub scanner operational. Cloudflare ten-minute Cron Trigger is registered and has produced at least one successful independent scheduled scan. Provider rate limits and Free-plan scheduling delays can still interrupt coverage.
 
-## Architecture ($0 target)
+## Free shared architecture
 
-- GitHub Actions public-repository standard runners: eventual six best-effort runs per hour.
-- Cloudflare D1 Free: central candidate history, prediction journal and paper wallet.
-- Cloudflare Worker Free: read-only dashboard.
-- DEX Screener and GeckoTerminal public APIs: discovery and indicative market quotes.
-- Optional private Blockscout PRO and Helius credentials: verification from GitHub Actions only when secrets are configured. Connected ChatGPT plugins do **not** expose their keys to GitHub.
+- Cloudflare Worker Free: mobile dashboard and light new-pool discovery on `*/10 * * * *` (UTC), with separate DEX Screener fallback when GeckoTerminal rate-limits.
+- GitHub Actions public repository: deeper research and prediction tracking, best-effort schedule.
+- Cloudflare D1 Free: single token/address directory, observations, predictions, event history, and USD experimental paper ledger.
+- No real-money trading or transaction signing under any circumstance.
+- The existing original BuyGuy website, real portfolios, and old Night Game simulation ledger are independent of this experimental database.
 
-## Security
+## Research labels (never confuse them)
 
-Never commit API keys, tokens, wallet keys, or secret values. Use GitHub Settings > Secrets and variables > Actions for `CF_ACCOUNT_ID`, `CF_DATABASE_ID`, `CF_D1_API_TOKEN`, and optional `BLOCKSCOUT_PRO_API_KEY` / `HELIUS_API_KEY`. Do not paste secrets in chat.
+- `ALIVE`: market momentum score, **not** evidence of contract safety.
+- `STATIC`: weaker momentum or cooling watch.
+- `DEAD`: old/quiet but identified, remains archived for reactivation.
+- `TRASH`: unresolvable and stale, retained only as a historical record.
+- `UNVERIFIED`: no completed on-chain authority assessment.
+- `MINT_CONTROL_RISK`: active mint/freeze controls or unsupported SPL mint configuration.
+- `MINT_CONTROLS_REVOKED`: only SPL mint and freeze authority checks passed. **Does not establish liquidity safety, transferability, whale concentration or buy/sell executability.**
+- `PAPER_ELIGIBLE`: explicit separately reviewed status needed before any simulated automatic entry. No current automated rule promotes a token into this state.
 
-## Initial setup
+## Paper-wallet engine
 
-1. Wait for V3 source and SQL to be uploaded.
-2. Create a free Cloudflare D1 database `buyguy-free-v3` and scoped API token.
-3. Configure GitHub repository secrets securely.
-4. Run **BuyGuy Free Crawler > Run workflow > init**, then **scan**.
-5. Verify three good scan results, source timestamps, stable D1 history and zero trades without valid quotes.
-6. Enable best-effort `7,17,27,37,47,57 * * * *` UTC schedule only after initial checks succeed.
+- Starting balance US$1,000 with no deposits or withdrawals from real wallets.
+- US$40 per experimental position; eight maximum; stop 12%, target 35%, modeled adverse slippage 2% each way, modeled fee 0.3% each way.
+- Refuses stale quotes, unknown pools, unreviewed contracts, price-less pools, duplicate open positions and entries during six-hour post-exit cooldown.
+- D1 transaction batches keep cash, position and trade journal synchronized; tests execute against actual SQLite.
+- Unrealized P&L is unknown (never made up) when a current usable quote cannot be established.
+- The operational execution switch is **OFF by default**: `PAPER_SIMULATION_ENABLED` must explicitly equal `true` in the deployed Worker environment, and candidates must still pass `PAPER_ELIGIBLE` risk status. It must not be enabled until contract, pool and fill verification are fully integrated and the ledger is independently reviewed.
+- No trades have been placed by this stage.
 
-All paper fills are illustrative, not proof of real execution. Contract existence is NOT a safety certification. This is separate from the historical BuyGuy and Night Game accounts.
+## Optional Helius integration
 
-[Cloudflare D1](https://developers.cloudflare.com/d1/) · [GitHub Actions](https://docs.github.com/en/actions)
+The ChatGPT Helius connector and GitHub/Cloudflare workers do not automatically share authentication. The Worker has code for **read-only** Solana mint account authority checks using Helius JSON-RPC. To enable without exposing credentials in GitHub source or chat:
+
+1. Obtain your own Helius API key securely from the Helius account.
+2. Save it only as a GitHub Actions repository secret called `HELIUS_API_KEY`.
+3. Re-run the dashboard deployment workflow. It configures the Worker secret `HELIUS_RPC_URL` on the server without printing the key.
+4. Verification remains partial by design and never marks a token as paper eligible.
+
+**Robinhood contract checks through private Blockscout PRO are not yet integrated into the unattended engine.** The private Blockscout connector inside ChatGPT cannot be silently reused by GitHub. No shared free API allowance is used as a fallback.
+
+## Deployment and tests
+
+- GitHub Actions `BuyGuy V3 Tests` runs Python discovery tests, JavaScript mint-risk and simulated-ledger tests, and a real SQLite integration test.
+- The dashboard deployment reruns the JavaScript/SQLite tests before publishing to Workers Free.
+- Cloudflare may block GitHub's automated HTTP access to `.workers.dev` with Error 1010. That is reported as an external reachability warning, not conflated with deployment or D1 failure. The dashboard is already known to open on the user's phone.
+- Periodic checks can fail on HTTP 429/other upstream outages; fallback is labeled in `runs.provider_errors` as `PARTIAL`, never synthesized as successful price evidence.
+
+[Cloudflare Worker cron](https://developers.cloudflare.com/workers/configuration/cron-triggers/) · [Cloudflare D1](https://developers.cloudflare.com/d1/) · [GitHub Actions](https://docs.github.com/en/actions)
