@@ -1,0 +1,41 @@
+name: Deploy BuyGuy Free Dashboard
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install deployment tool
+        run: npm install --no-audit --no-fund
+      - name: Configure D1 binding locally, without committing identifiers
+        env:
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          p=Path('wrangler.toml')
+          ident=os.environ.get('CF_DATABASE_ID','')
+          if not ident:raise SystemExit('Configure CF_DATABASE_ID in Actions repository secrets first')
+          p.write_text(p.read_text().replace('REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID',ident))
+          PY
+      - name: Deploy dashboard
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      - name: Set private dashboard secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          DASHBOARD_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          test -n "$DASHBOARD_TOKEN" || { echo "Missing ADMIN_TOKEN" >&2; exit 1; }
+          printf %s "$DASHBOARD_TOKEN" | npx wrangler secret put ADMIN_TOKEN --name buyguy-free-radar
