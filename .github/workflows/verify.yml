@@ -30,4 +30,4 @@ jobs:
       - name: Test Cloudflare scheduled scanner
         run: |
           node --check src/light-scan.mjs
-          node --test tests/light-scan.test.mjs
+          node --test tests/*.test.mjs
