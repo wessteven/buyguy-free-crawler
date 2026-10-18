@@ -27,3 +27,7 @@ jobs:
       - name: Check dashboard JavaScript when present
         run: |
           if [ -f src/viewer.mjs ]; then node --check src/viewer.mjs; fi
+      - name: Test Cloudflare scheduled scanner
+        run: |
+          node --check src/light-scan.mjs
+          node --test tests/light-scan.test.mjs
