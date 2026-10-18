@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
 import {parseNewPools,cronScan} from '../src/light-scan.mjs';
 
 const mint='So11111111111111111111111111111111111111112';
@@ -52,4 +54,32 @@ test('Provider outage becomes a recorded error rather than invented quotes',asyn
   await assert.rejects(cronScan({DB},async()=>({ok:false,status:429})));
   assert.equal(failures.length,1);
   assert.match(failures[0].sql,/INSERT INTO runs/);
+});
+
+test('Actual SQLite validates the D1 INSERT and UPDATE statements', async()=>{
+  const statements=[];
+  const DB={
+    prepare(sql){return {bind(...args){return {sql,args,run:async()=>{}}}};},
+    batch:async(batch)=>{statements.push(...batch);return [];}
+  };
+  await cronScan({DB},async()=>({ok:true,json:async()=>fixture}));
+  const py=`
+import sys,json,sqlite3
+d=json.load(sys.stdin)
+cx=sqlite3.connect(':memory:')
+cx.executescript(d['schema'])
+for line in d['statements']:
+  cx.execute(line['sql'],line['args'])
+cx.commit()
+assert cx.execute('select count(*) from assets').fetchone()[0]==1
+assert cx.execute('select count(*) from observations').fetchone()[0]==1
+assert cx.execute('select count(*) from runs').fetchone()[0]==1
+asset=cx.execute('select symbol,price,status,risk_status from assets').fetchone()
+assert asset==('CRONTEST',0.001,'STATIC','UNVERIFIED'), asset
+print('SQLite D1 statements: passed')
+`;
+  const run=spawnSync('python',['-c',py],{input:JSON.stringify({
+    schema:readFileSync('sql/schema.sql','utf8'),statements
+  }),encoding:'utf8',timeout:15000});
+  assert.equal(run.status,0,run.stderr||run.stdout);
 });
