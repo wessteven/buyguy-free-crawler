@@ -5,6 +5,12 @@ on:
       - '.github/workflows/deploy-dashboard.yml'
       - 'src/viewer.mjs'
       - 'src/light-scan.mjs'
+      - 'src/dex-fallback.mjs'
+      - 'src/paper-core.mjs'
+      - 'src/paper-ops.mjs'
+      - 'src/token-risk.mjs'
+      - 'src/risk-ops.mjs'
+      - 'src/retirement.mjs'
       - 'wrangler.toml'
   workflow_dispatch:
 permissions:
@@ -20,6 +26,11 @@ jobs:
           node-version: '22'
       - name: Install deployment tool
         run: npm install --no-audit --no-fund
+      - name: Test JavaScript and execute SQLite integration tests before deployment
+        run: |
+          node --check src/viewer.mjs
+          node --check src/light-scan.mjs
+          node --test tests/*.test.mjs
       - name: Configure D1 binding locally, without committing identifiers
         env:
           CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
