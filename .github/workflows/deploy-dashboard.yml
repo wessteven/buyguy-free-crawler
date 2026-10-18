@@ -79,6 +79,7 @@ jobs:
                       assert json.loads(body).get('server')=='online'
                       break
                   last='health returned HTTP '+str(code)
+                  if i==0: print('Public health HTTP',code,'body preview:',repr(body[:220]))
               except Exception as e: last=type(e).__name__
               time.sleep(8)
           else: raise SystemExit('Dashboard unavailable: '+str(last))
