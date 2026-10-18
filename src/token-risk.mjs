@@ -30,8 +30,11 @@ export function assessMintAccount(mint,rpcResponse) {
       base.flags.push('TOKEN_2022_EXTENSIONS_UNREVIEWED');
     }
   }
-  if(base.flags.length){
+  if(base.flags.includes('MINT_AUTHORITY_ACTIVE')||base.flags.includes('FREEZE_AUTHORITY_ACTIVE')){
     base.riskStatus='MINT_CONTROL_RISK';
+  }else if(base.flags.includes('TOKEN_2022_EXTENSIONS_UNREVIEWED')){
+    base.riskStatus='TOKEN_2022_REVIEW_REQUIRED';
+    base.notes.push('Token-2022 extension details must be independently checked; not evidence of malicious controls.');
   }else{
     base.riskStatus='MINT_CONTROLS_REVOKED';
     base.notes.push('Authority checks only: sell restrictions, liquidity ownership, holders and admin roles NOT VERIFIED.');
