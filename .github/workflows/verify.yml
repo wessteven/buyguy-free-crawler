@@ -1,0 +1,29 @@
+name: BuyGuy V3 Tests
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run tests when source is installed
+        shell: bash
+        run: |
+          if [ -f src/engine.py ] && [ -d tests ]; then
+            python -m unittest discover -s tests -v
+          else
+            echo "Crawler engine has not yet been added."
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check dashboard JavaScript when present
+        run: |
+          if [ -f src/viewer.mjs ]; then node --check src/viewer.mjs; fi
