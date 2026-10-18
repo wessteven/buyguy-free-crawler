@@ -25,6 +25,7 @@ test('Real mainnet Token-2022 program ID is recognized; unknown extensions remai
   assert.equal(result.flags.includes('UNKNOWN_ACCOUNT_OWNER'),false);
   assert.equal(result.paperEligible,false);
   assert.ok(result.flags.includes('TOKEN_2022_EXTENSIONS_UNREVIEWED'));
+  assert.equal(result.riskStatus,'TOKEN_2022_REVIEW_REQUIRED');
 });
 test('Token-2022 unknown extensions are not cleared',()=>{
   const risk=assessMintAccount(mint,fixture(null,null,TOKEN_2022));
