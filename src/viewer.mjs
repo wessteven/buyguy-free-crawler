@@ -1,4 +1,7 @@
 import {cronScan} from './light-scan.mjs';
+import {retireDormantAssets} from './retirement.mjs';
+import {verifyPendingMints} from './risk-ops.mjs';
+import {getPaperSnapshot,runPaperGame} from './paper-ops.mjs';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17,7 +20,10 @@ const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Da
 document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
 document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
 document.getElementById('assets').innerHTML=table(['Chain','Token','Score','Status','Liquidity $','Price $','5m buys/sells','Risk'],(x.assets||[]).map(a=>[a.chain,a.symbol,a.score,a.status,a.liquidity,a.price,a.buys_m5+'/'+a.sells_m5,a.risk_status]));
-document.getElementById('wallet').innerHTML=table(['Cash','Starting','Realized P&L'],[[x.wallet?.cash,x.wallet?.starting_cash,x.wallet?.realised]]);
+document.getElementById('wallet').innerHTML=table(['Starting','Cash','Realised P&L','Estimated equity','Stale marks'],[[
+x.paper?.starting_cash,x.paper?.cash,x.paper?.realised,x.paper?.estimated_total===null?'Unknown':x.paper?.estimated_total,x.paper?.unknown_marks]])+
+table(['Token','Cost USD','Est. sale value','Unrealised P&L','Price stale'],(x.paper?.positions||[]).map(p=>[
+p.asset_key,p.cost,p.estimatedValue===null?'Unknown':p.estimatedValue,p.unrealized===null?'Unknown':p.unrealized,p.stale]));
 document.getElementById('predictions').innerHTML=table(['Token','Status','Horizon min','Change %'],(x.predictions||[]).map(p=>[p.asset_key,p.status,p.horizon_min,p.change_pct]));
 }catch(e){document.getElementById('msg').textContent='Access or service error: '+e.message}}
 document.getElementById('enter').onclick=()=>{token=document.getElementById('pass').value;document.getElementById('pass').value='';refresh()};document.getElementById('refresh').onclick=refresh;
@@ -36,9 +42,15 @@ list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
 list("SELECT * FROM assets WHERE status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 80"),
 list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
 list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30")]);
-return json({runs,assets,wallet:wallet[0]||null,predictions});
+const paper=await getPaperSnapshot(env);
+return json({runs,assets,wallet:wallet[0]||null,predictions,paper});
 }catch(e){return json({error:'D1 query failed',message:String(e).slice(0,180)},503)}
 },async scheduled(controller,env,ctx){
   await cronScan(env);
+  await retireDormantAssets(env.DB);
+  // Helius authentication is separately configured; no free-tier proxy fallback.
+  if(env.HELIUS_RPC_URL)await verifyPendingMints(env);
+  // Entry fills cannot occur unless explicitly enabled AND token has PAPER_ELIGIBLE status.
+  if(env.PAPER_SIMULATION_ENABLED==='true')await runPaperGame(env);
 }
 };
