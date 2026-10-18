@@ -34,6 +34,11 @@ jobs:
           CF_DEPLOY_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
         run: |
           test -n "$CF_DEPLOY_API_TOKEN" || { echo "::error::Missing CF_DEPLOY_API_TOKEN secret"; exit 1; }
+      - name: Confirm dashboard login secret before publishing
+        env:
+          DASHBOARD_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          test -n "$DASHBOARD_TOKEN" || { echo "::error::Missing ADMIN_TOKEN GitHub Actions secret. Create a long random password before deploying."; exit 1; }
       - name: Deploy dashboard
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
