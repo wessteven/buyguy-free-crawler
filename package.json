@@ -1,0 +1,14 @@
+{
+  "name": "buyguy-free-crawler-v3",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy:dashboard": "wrangler deploy",
+    "check:viewer": "node --check src/viewer.mjs",
+    "test": "python -m unittest discover -s tests -v"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
