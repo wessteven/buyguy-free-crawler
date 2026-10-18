@@ -1,0 +1,39 @@
+name: BuyGuy Research Health Report
+on:
+  push:
+    paths:
+      - '.github/workflows/research-health.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Query live D1 research status (read-only)
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from urllib.request import Request,urlopen
+          url='https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}/query'.format(os.environ['CF_ACCOUNT_ID'],os.environ['CF_DATABASE_ID'])
+          def q(sql):
+            request=Request(url,json.dumps({'sql':sql,'params':[]}).encode(),
+              {'authorization':'Bearer '+os.environ['CF_D1_API_TOKEN'],'content-type':'application/json'})
+            with urlopen(request,timeout=30) as r: resp=json.load(r)
+            assert resp.get('success') and resp['result'][0]['success']
+            return resp['result'][0]['results']
+          print('SCAN TOTALS:',q("SELECT state,COUNT(*) AS n FROM runs GROUP BY state"))
+          print('SOURCE COUNTS:',q("SELECT provider,chain,COUNT(*) AS n FROM assets GROUP BY provider,chain ORDER BY n DESC"))
+          print('STATE COUNTS:',q("SELECT status,chain,COUNT(*) AS n FROM assets GROUP BY status,chain"))
+          print('OBSERVATIONS:',q("SELECT COUNT(*) AS n,MAX(seen_at) AS latest FROM observations"))
+          print('TOP UNVERIFIED LEADS:')
+          for item in q("SELECT symbol,chain,address,score,liquidity,market_cap,buys_m5,sells_m5,status,risk_status,provider FROM assets WHERE status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 12"):
+            print(json.dumps(item,separators=(',',':')))
+          print('ACCOUNT:',q("SELECT starting_cash,cash,realised FROM paper_account WHERE account='buyguy-v3'"))
+          print('PAPER FILLS:',q("SELECT COUNT(*) AS n FROM paper_trades"))
+          PY
