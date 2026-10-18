@@ -1,7 +1,10 @@
 name: BuyGuy Free Crawler
 on:
   schedule:
-    - cron: '7,17,27,37,47,57 * * * *'
+    - cron: '8,18,28,38,48,58 * * * *'
+  push:
+    paths:
+      - '.github/workflows/crawler.yml'
   workflow_dispatch:
     inputs:
       action:
@@ -10,7 +13,7 @@ on:
         required: true
         options: [init, scan]
         default: scan
-# Best-effort ten-minute scans. GitHub Actions may delay or skip scheduled runs.
+# GitHub cron best-effort; a workflow config update triggers one manual-equivalent validation scan.
 # Source, D1 setup and first authenticated live scan were verified before enabling.
 permissions:
   contents: read
@@ -33,7 +36,7 @@ jobs:
           CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
           BLOCKSCOUT_PRO_API_KEY: ${{ secrets.BLOCKSCOUT_PRO_API_KEY }}
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
-          ACTION: ${{ github.event_name == 'schedule' && 'scan' || inputs.action }}
+          ACTION: ${{ github.event_name == 'workflow_dispatch' && inputs.action || 'scan' }}
         run: |
           test -f src/engine.py || { echo "Crawler source is not installed"; exit 1; }
           test -n "$CF_ACCOUNT_ID" && test -n "$CF_DATABASE_ID" && test -n "$CF_D1_API_TOKEN" || { echo "Required D1 secrets are missing"; exit 1; }
