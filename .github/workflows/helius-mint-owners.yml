@@ -1,0 +1,45 @@
+name: Diagnose Solana mint program owners
+on:
+  push:
+    paths:
+      - '.github/workflows/helius-mint-owners.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read three mint accounts through Helius (no private key or API credential printed)
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,sys
+          from urllib.request import Request,urlopen
+          from urllib.error import HTTPError,URLError
+          token=os.environ.get('HELIUS_API_KEY','')
+          if not token:sys.exit('Helius secret missing')
+          url='https://mainnet.helius-rpc.com/?api-key='+token
+          addresses=[
+            '3ZAnpeVBHAvZsySNMXp4g9nYaE1jsx6khgh29VYKpump',
+            '6yMZv1NgnQWBeocyfCNKmdqGr3Enu3Lrdpz3TJRvpump',
+            '58eo3pKwDZ2GKT2XvRumuns6RustWyvqtgfyubA3kYAJ']
+          for mint in addresses:
+            data={'jsonrpc':'2.0','id':1,'method':'getAccountInfo',
+              'params':[mint,{'encoding':'jsonParsed','commitment':'confirmed'}]}
+            req=Request(url,data=json.dumps(data).encode(),
+              headers={'Content-Type':'application/json'},method='POST')
+            try:
+              with urlopen(req,timeout=15) as res:resp=json.load(res)
+            except HTTPError as e:
+              print('RPC HTTP error for',mint,':',e.code);continue
+            except Exception as e:
+              print('RPC transport error for',mint,':',type(e).__name__);continue
+            value=resp.get('result',{}).get('value') or {}
+            parsed=(value.get('data') or {}).get('parsed') or {}
+            print('Mint',mint,'owner=',value.get('owner'),
+              'parsed_type=',parsed.get('type'),'executable=',value.get('executable'),
+              'rpc_error=',(resp.get('error') or {}).get('code'))
+          PY
