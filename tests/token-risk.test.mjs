@@ -18,6 +18,14 @@ test('Active mint and freeze authorities are both risk flags',()=>{
   assert.deepEqual(risk.flags,['MINT_AUTHORITY_ACTIVE','FREEZE_AUTHORITY_ACTIVE']);
   assert.equal(risk.riskStatus,'MINT_CONTROL_RISK');
 });
+test('Real mainnet Token-2022 program ID is recognized; unknown extensions remain risky',()=>{
+  assert.equal(TOKEN_2022,'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+  const result=assessMintAccount('3ZAnpeVBHAvZsySNMXp4g9nYaE1jsx6khgh29VYKpump',
+    fixture(null,null,'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'));
+  assert.equal(result.flags.includes('UNKNOWN_ACCOUNT_OWNER'),false);
+  assert.equal(result.paperEligible,false);
+  assert.ok(result.flags.includes('TOKEN_2022_EXTENSIONS_UNREVIEWED'));
+});
 test('Token-2022 unknown extensions are not cleared',()=>{
   const risk=assessMintAccount(mint,fixture(null,null,TOKEN_2022));
   assert.ok(risk.flags.includes('TOKEN_2022_EXTENSIONS_UNREVIEWED'));
