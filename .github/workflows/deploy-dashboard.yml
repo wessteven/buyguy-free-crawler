@@ -10,6 +10,7 @@ on:
       - 'src/paper-ops.mjs'
       - 'src/token-risk.mjs'
       - 'src/risk-ops.mjs'
+      - 'src/scheduled-research.mjs'
       - 'src/retirement.mjs'
       - 'wrangler.toml'
   workflow_dispatch:
