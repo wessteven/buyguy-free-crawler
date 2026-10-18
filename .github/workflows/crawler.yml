@@ -14,7 +14,8 @@ on:
         options: [init, scan]
         default: scan
 # GitHub cron best-effort; a workflow config update triggers one manual-equivalent validation scan.
-# Source, D1 setup and first authenticated live scan were verified before enabling.
+# Source and database verified; GeckoTerminal secondary-source scanner is now tested in CI.
+# One push-run validates the newly added fallback without changing the ten-minute schedule.
 permissions:
   contents: read
 concurrency:
