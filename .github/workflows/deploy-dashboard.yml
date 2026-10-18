@@ -1,5 +1,8 @@
 name: Deploy BuyGuy Free Dashboard
 on:
+  push:
+    paths:
+      - '.github/workflows/deploy-dashboard.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +29,11 @@ jobs:
           if not ident:raise SystemExit('Configure CF_DATABASE_ID in Actions repository secrets first')
           p.write_text(p.read_text().replace('REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID',ident))
           PY
+      - name: Check deployment token is configured
+        env:
+          CF_DEPLOY_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: |
+          test -n "$CF_DEPLOY_API_TOKEN" || { echo "::error::Missing CF_DEPLOY_API_TOKEN secret"; exit 1; }
       - name: Deploy dashboard
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
