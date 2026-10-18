@@ -48,7 +48,7 @@ export async function cronScan(env,fetcher=fetch){
       statements.push(env.DB.prepare(`INSERT OR IGNORE INTO assets
         (asset_key,chain,address,symbol,pool,provider,status,risk_status,first_seen,updated_at,pool_created,
         score,price,liquidity,market_cap,buys_m5,sells_m5,tx_m5,change_h1,volume_h24,last_seen,last_action)
-        VALUES(?,?,?,?,?,?,'STATIC','UNVERIFIED',?,?,?,?,?,?,?,?,?,?,?,?,?
+        VALUES(?,?,?,?,?,?,'STATIC','UNVERIFIED',?,?,?,?,?,?,?,?,?,?,?,?,?,
         'WATCH_ONLY — public market data, not contract certified')`)
         .bind(a.asset_key,a.chain,a.address,a.symbol,a.pool,a.source,stamp,stamp,a.pool_created,
         a.score,a.price,a.liquidity,a.market_cap,a.buys_m5,a.sells_m5,a.tx_m5,a.change_h1,a.volume_h24,stamp));
