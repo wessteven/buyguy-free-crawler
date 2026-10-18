@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {parseNewPools,cronScan} from '../src/light-scan.mjs';
+import {parseDexQuotes} from '../src/dex-fallback.mjs';
 
 const mint='So11111111111111111111111111111111111111112';
 const fixture={included:[{id:'solana_'+mint,type:'token',attributes:{address:mint,symbol:'CRONTEST'}}],
@@ -82,4 +83,35 @@ print('SQLite D1 statements: passed')
     schema:readFileSync('sql/schema.sql','utf8'),statements
   }),encoding:'utf8',timeout:15000});
   assert.equal(run.status,0,run.stderr||run.stdout);
+});
+
+test('Gecko HTTP 429 is not retried and an independent DEX feed can keep scanning',async()=>{
+  const d=[],calls=[];
+  const DB={
+    prepare(sql){return {bind(...args){return {sql,args,run:async()=>{}};}}},
+    batch:async rows=>{d.push(...rows);return []}
+  };
+  const quote={chainId:'solana',baseToken:{address:mint,symbol:'DEMO'},
+    pairAddress:'POOL2',priceUsd:'0.002',liquidity:{usd:65000},
+    marketCap:85000,txns:{m5:{buys:30,sells:10}},volume:{h24:15000},
+    pairCreatedAt:Date.now()};
+  const fetcher=async url=>{
+    calls.push(url);
+    if(url.includes('geckoterminal'))return {ok:false,status:429};
+    if(url.includes('token-profiles'))return {ok:true,json:async()=>[{chainId:'solana',tokenAddress:mint}]};
+    if(url.includes('/tokens/v1/solana/'))return {ok:true,json:async()=>[quote]};
+    throw Error('Unexpected endpoint');
+  };
+  assert.equal(await cronScan({DB},fetcher),1);
+  assert.equal(calls.filter(u=>u.includes('geckoterminal')).length,1);
+  assert.equal(d[0].args[5],'DEX Screener');
+  const run=d.at(-1);
+  assert.equal(run.args[2],'PARTIAL');
+  assert.ok(run.args[5].includes('429'));
+});
+test('DEX fallback rejects wrong chain, same ticker with different contract, zero price',()=>{
+  assert.equal(parseDexQuotes([{chainId:'ethereum',baseToken:{address:mint},priceUsd:1,
+    liquidity:{usd:90000},pairAddress:'pool'}]).length,0);
+  assert.equal(parseDexQuotes([{chainId:'solana',baseToken:{address:'not-a-token'},priceUsd:1,
+    liquidity:{usd:90000},pairAddress:'pool'}]).length,0);
 });
