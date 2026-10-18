@@ -49,11 +49,39 @@ def quote_normalize(x):
       'pool':x['pairAddress'],'price':price,'liquidity':liq,
       'cap':num(x.get('marketCap') or x.get('fdv')),'buys':int(num(tx.get('buys'))),
       'sells':int(num(tx.get('sells'))),'change':num((x.get('priceChange') or {}).get('h1')),
-      'volume':num((x.get('volume') or {}).get('h24')),'created':x.get('pairCreatedAt')}
+      'volume':num((x.get('volume') or {}).get('h24')),'created':x.get('pairCreatedAt'),'source':'DEX Screener'}
+def gecko_new_pools():
+    """Secondary independent new-pool discovery. Never converts h1 tx to m5 figures."""
+    payload=get('https://api.geckoterminal.com/api/v2/networks/solana/new_pools?include=base_token&page=1')
+    token_index={item.get('id'):(item.get('attributes') or {}) for item in payload.get('included',[]) if item.get('type')=='token'}
+    found=[]
+    for pool in payload.get('data',[])[:40]:
+        attrs=pool.get('attributes') or {}
+        relation=((pool.get('relationships') or {}).get('base_token') or {}).get('data') or {}
+        key=relation.get('id') or ''
+        meta=token_index.get(key) or {}
+        address=meta.get('address') or (key[7:] if key.startswith('solana_') else '')
+        pair=attrs.get('address') or ''
+        price=num(attrs.get('base_token_price_usd'))
+        liquidity=num(attrs.get('reserve_in_usd'))
+        if not valid('solana',address) or not pair or price<=0 or liquidity<=0:continue
+        tx=(attrs.get('transactions') or {}).get('m5') or {}
+        found.append({
+            'chain':'solana','address':address,
+            'symbol':meta.get('symbol') or (attrs.get('name','?').split('/')[0].strip()),
+            'pool':pair,'price':price,'liquidity':liquidity,
+            'cap':num(attrs.get('market_cap_usd') or attrs.get('fdv_usd')),
+            'buys':int(num(tx.get('buys'))),'sells':int(num(tx.get('sells'))),
+            'change':num((attrs.get('price_change_percentage') or {}).get('h1')),
+            'volume':num((attrs.get('volume_usd') or {}).get('h24')),
+            'created':attrs.get('pool_created_at'),'source':'GeckoTerminal'
+        })
+    return found
+
 def discover():
     addresses={'solana':set(),'robinhood':set()}
     failures=[]
-    for endpoint in ('/token-boosts/latest/v1','/token-profiles/latest/v1'):
+    for endpoint in ('/token-boosts/latest/v1','/token-profiles/latest/v1','/token-boosts/top/v1','/community-takeovers/latest/v1'):
         try:
             for item in get(BASE+endpoint)[:80]:
                 chain=item.get('chainId'); addr=item.get('tokenAddress','')
@@ -64,6 +92,11 @@ def discover():
     for item in tracked+positions:
         if valid(item['chain'],item['address']):addresses[item['chain']].add(item['address'])
     bykey={}
+    try:
+        for item in gecko_new_pools():
+            bykey[identity(item['chain'],item['address'])]=item
+    except Exception as exc:
+        failures.append('GeckoTerminal new pools: '+str(exc)[:130])
     for chain,values in addresses.items():
         candidates=list(values)[:65]
         for i in range(0,len(candidates),25):
@@ -108,22 +141,22 @@ def execute():
         if not discovered:
             raise RuntimeError('No usable market quotes; preserving portfolio and states')
         observed=0
-        for q in sorted(discovered,key=lambda x:x['liquidity'],reverse=True)[:30]:
+        for q in sorted(discovered,key=lambda x:(rank(x),x['liquidity']),reverse=True)[:30]:
             k=identity(q['chain'],q['address']); old_list=rows('SELECT * FROM assets WHERE asset_key=?',(k,))
             old=old_list[0] if old_list else None
             if old and old['status']=='TRASH':continue
-            s=rank(q,old); status='ALIVE' if s>=62 else 'STATIC'
+            s=rank(q,old); status='ALIVE' if s>=62 and q['liquidity']>=50000 else 'STATIC'
             query("""INSERT OR IGNORE INTO assets(asset_key,chain,address,first_seen,updated_at,status)
                  VALUES(?,?,?,?,?,?)""",(k,q['chain'],q['address'],start,start,'STATIC'))
             streak=int(num(old.get('momentum_streak'))) + 1 if old and old.get('pool')==q['pool'] and s>=72 else (1 if s>=72 else 0)
-            query("""UPDATE assets SET symbol=?,pool=?,provider='DEX Screener',
+            query("""UPDATE assets SET symbol=?,pool=?,provider=?,
                 status=?,last_seen=?,updated_at=?,observations=observations+1,misses=0,
                 score=?,momentum_streak=?,price=?,liquidity=?,market_cap=?,
                 buys_m5=?,sells_m5=?,tx_m5=?,change_h1=?,volume_h24=?,
-                risk_status='UNVERIFIED',last_action=? WHERE asset_key=?""",
-                (q['symbol'],q['pool'],status,start,start,s,streak,q['price'],q['liquidity'],q['cap'],q['buys'],q['sells'],q['buys']+q['sells'],q['change'],q['volume'],'WATCH_ONLY — contract and execution risks unverified',k))
+                last_action=? WHERE asset_key=?""",
+                (q['symbol'],q['pool'],q.get('source','UNKNOWN'),status,start,start,s,streak,q['price'],q['liquidity'],q['cap'],q['buys'],q['sells'],q['buys']+q['sells'],q['change'],q['volume'],'WATCH_ONLY — contract and execution risks unverified',k))
             query("""INSERT OR IGNORE INTO observations(asset_key,seen_at,pool,provider,price,liquidity,buys_m5,sells_m5,score)
-                 VALUES(?,?,?,?,?,?,?,?,?)""",(k,start,q['pool'],'DEX Screener',q['price'],q['liquidity'],q['buys'],q['sells'],s))
+                 VALUES(?,?,?,?,?,?,?,?,?)""",(k,start,q['pool'],q.get('source','UNKNOWN'),q['price'],q['liquidity'],q['buys'],q['sells'],s))
             if s>=55:
                 prev=rows('SELECT created_at FROM predictions WHERE asset_key=? ORDER BY created_at DESC LIMIT 1',(k,))
                 if not prev or (dt.datetime.now(UTC)-dt.datetime.fromisoformat(prev[0]['created_at'].replace('Z','+00:00'))).total_seconds()>3600:
