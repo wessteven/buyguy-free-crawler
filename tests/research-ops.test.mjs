@@ -34,9 +34,14 @@ test('Supported exact mint gets recorded as limited audit, NOT paper eligible',a
     isInitialized:true,decimals:9,mintAuthority:null,freezeAuthority:null,supply:'1000'
   }}}}}};
  const result=await verifyPendingMints({DB,HELIUS_RPC_URL:'https://rpc.example/secret'},
-  {limit:1,fetcher:async()=>({ok:true,json:async()=>rpc})});
+  {limit:1,fetcher:async(_url,opt)=>{
+    const method=JSON.parse(opt.body).method;
+    const holder={result:{value:[{address:mint,amount:'200'}]}};
+    return {ok:true,json:async()=>method==='getTokenLargestAccounts'?holder:rpc};
+  }});
  assert.equal(result.checked,1);
  assert.equal(calls.length,2);
- assert.equal(calls[0].args[0],'MINT_CONTROLS_REVOKED');
+ assert.equal(calls[0].args[0],'PARTIAL_ONCHAIN_REVIEW');
+ assert.ok(calls[0].args[1].includes('"top1Bps":2000'));
  assert.equal(calls[0].args[1].includes('"paperEligible":false'),true);
 });
