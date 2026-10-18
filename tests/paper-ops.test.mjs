@@ -10,7 +10,7 @@ const asset={asset_key:'solana:So11111111111111111111111111111111111111112',
  last_seen:'2026-10-19T00:00:00Z',pool_created:'2026-10-18T20:00:00Z'};
 const account={account:'buyguy-v3',starting_cash:1000,cash:1000,realised:0};
 const now=Date.parse('2026-10-19T00:06:00Z');
-function dbMock({positions=[],quote=asset,enabled=false}={}){
+function dbMock({positions=[],quote=asset,selection=asset,enabled=false}={}){
   const batches=[];
   const env={PAPER_SIMULATION_ENABLED:enabled?'true':undefined,
     DB:{
@@ -21,7 +21,7 @@ function dbMock({positions=[],quote=asset,enabled=false}={}){
           if(sql.includes('FROM paper_positions WHERE status'))return {results:positions};
           if(sql.includes('FROM assets WHERE asset_key'))return {results:[quote]};
           if(sql.includes('FROM paper_positions WHERE asset_key'))return {results:[]};
-          if(sql.includes("FROM assets\n")||sql.includes("WHERE status='ALIVE'"))return {results:[asset]};
+          if(sql.includes("FROM assets\n")||sql.includes("WHERE status='ALIVE'"))return {results:selection?.risk_status==='PAPER_ELIGIBLE'?[selection]:[]};
           throw Error('Unexpected SQL: '+sql);
         }
       }}}},
@@ -88,8 +88,8 @@ test('One approved fake buy updates cash, positions and trade history atomically
   assert.equal(db.trades[0][0],'BUY');
 });
 test('Unverified token never spends fake wallet balance',async()=>{
-  const {env,batches}=dbMock({enabled:true,quote:{...asset,risk_status:'UNVERIFIED'}});
-  // SELECT SQL candidates from DB still mocked as eligible; runPaperGame still guards entry quote.
+  const {env,batches}=dbMock({enabled:true,selection:{...asset,risk_status:'UNVERIFIED'}});
   const r=await runPaperGame(env,{now});
-  assert.equal(r.orders,1); // candidate mock deliberately ignores risk filter; caution for API integration
+  assert.equal(r.orders,0);
+  assert.equal(batches.length,0);
 });
