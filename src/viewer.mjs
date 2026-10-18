@@ -1,7 +1,5 @@
-import {cronScan} from './light-scan.mjs';
-import {retireDormantAssets} from './retirement.mjs';
-import {verifyPendingMints} from './risk-ops.mjs';
-import {getPaperSnapshot,runPaperGame} from './paper-ops.mjs';
+import {getPaperSnapshot} from './paper-ops.mjs';
+import {scheduledResearch} from './scheduled-research.mjs';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -46,11 +44,6 @@ const paper=await getPaperSnapshot(env);
 return json({runs,assets,wallet:wallet[0]||null,predictions,paper});
 }catch(e){return json({error:'D1 query failed',message:String(e).slice(0,180)},503)}
 },async scheduled(controller,env,ctx){
-  await cronScan(env);
-  await retireDormantAssets(env.DB);
-  // Helius authentication is separately configured; no free-tier proxy fallback.
-  if(env.HELIUS_RPC_URL)await verifyPendingMints(env);
-  // Entry fills cannot occur unless explicitly enabled AND token has PAPER_ELIGIBLE status.
-  if(env.PAPER_SIMULATION_ENABLED==='true')await runPaperGame(env);
+  await scheduledResearch(env);
 }
 };
