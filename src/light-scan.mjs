@@ -1,3 +1,4 @@
+import {dexFallback} from './dex-fallback.mjs';
 // Lightweight Cloudflare Free cron discovery. Never places paper or real trades.
 // Official GeckoTerminal new-pool data; source and timestamps remain explicit.
 export const FEED='https://api.geckoterminal.com/api/v2/networks/solana/new_pools?include=base_token&page=1';
@@ -40,9 +41,16 @@ export async function cronScan(env,fetcher=fetch){
   if(!env.DB)throw new Error('D1 binding is unavailable');
   const stamp=iso();
   try{
-    const response=await fetcher(FEED,{headers:{accept:'application/json'}});
-    if(!response.ok)throw new Error('GeckoTerminal HTTP '+response.status);
-    const pools=parseNewPools(await response.json());
+    let pools=[],warnings=[];
+    try{
+      const response=await fetcher(FEED,{headers:{accept:'application/json'}});
+      if(!response.ok)throw new Error('GeckoTerminal HTTP '+response.status);
+      pools=parseNewPools(await response.json());
+    }catch(error){
+      // No immediate retries against a 429. Switch to one separate public provider.
+      warnings.push(String(error).slice(0,120));
+      pools=await dexFallback(fetcher);
+    }
     const statements=[];
     for(const a of pools){
       statements.push(env.DB.prepare(`INSERT OR IGNORE INTO assets
@@ -68,9 +76,11 @@ export async function cronScan(env,fetcher=fetch){
     }
     statements.push(env.DB.prepare(`INSERT INTO runs
       (started_at,completed_at,state,discovered,observed,provider_errors)
-      VALUES(?,?,'SUCCESS',?,?,'[]')`).bind(stamp,iso(),pools.length,pools.length));
+      VALUES(?,?,?,?,?,?)`).bind(stamp,iso(),warnings.length?'PARTIAL':'SUCCESS',
+      pools.length,pools.length,JSON.stringify(warnings)));
     await env.DB.batch(statements);
-    console.log('BuyGuy Cloudflare light scan:',pools.length,'new-pool observations');
+    console.log('BuyGuy Cloudflare light scan:',pools.length,'observations; provider:',pools[0]?.source||'none',
+      '; warnings:',warnings.length);
     return pools.length;
   }catch(error){
     const message=String(error).slice(0,250);
