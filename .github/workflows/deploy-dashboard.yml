@@ -3,6 +3,9 @@ on:
   push:
     paths:
       - '.github/workflows/deploy-dashboard.yml'
+      - 'src/viewer.mjs'
+      - 'src/light-scan.mjs'
+      - 'wrangler.toml'
   workflow_dispatch:
 permissions:
   contents: read
