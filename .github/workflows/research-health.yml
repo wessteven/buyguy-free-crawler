@@ -38,6 +38,7 @@ jobs:
           print('ACCOUNT:',q("SELECT starting_cash,cash,realised FROM paper_account WHERE account='buyguy-v3'"))
           print('RISK REVIEW STATES:',q("SELECT risk_status,chain,COUNT(*) AS n FROM assets GROUP BY risk_status,chain ORDER BY n DESC"))
           print('MINT REVIEW EVENTS:',q("SELECT COUNT(*) AS n,MAX(at) AS latest FROM research_events WHERE kind='MINT_AUTHORITY_REVIEW'"))
+          print('MINT REVIEW DETAILS:',q("SELECT asset_key,note FROM research_events WHERE kind='MINT_AUTHORITY_REVIEW' ORDER BY id DESC LIMIT 8"))
           print('RECENT MINT FLAGS:',q("SELECT a.symbol,a.chain,a.risk_status,a.risk_note FROM assets a WHERE risk_status != 'UNVERIFIED' ORDER BY updated_at DESC LIMIT 6"))
           print('PAPER FILLS:',q("SELECT COUNT(*) AS n FROM paper_trades"))
           PY
