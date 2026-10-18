@@ -1,7 +1,7 @@
 // Contract checks are PARTIAL evidence only, never a scam-free guarantee.
 // This module doesn't use private keys or transmit orders.
 export const SPL_TOKEN='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
-export const TOKEN_2022='TokenzQdBNbLqP5VEhdkAS6EPFdyGJNdfXi4vg6gZR';
+export const TOKEN_2022='TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb';
 const b58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 export function assessMintAccount(mint,rpcResponse) {
   const checkedAt=new Date().toISOString();
