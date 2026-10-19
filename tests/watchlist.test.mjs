@@ -56,7 +56,7 @@ test('Real SQLite accepts D1 watch insertion and duplicate pin without overwriti
  'import sqlite3,json,sys',
  'v=json.load(sys.stdin);db=sqlite3.connect(":memory:");db.executescript(v["schema"])',
  'db.execute(v["statement"],v["args"])',
- 'db.execute("UPDATE assets SET price=42,score=88,risk_status=\\'PARTIAL_ONCHAIN_REVIEW\\',pinned=0 WHERE asset_key=?", (v["args"][0],))',
+ "db.execute(\"UPDATE assets SET price=42,score=88,risk_status='PARTIAL_ONCHAIN_REVIEW',pinned=0 WHERE asset_key=?\", (v['args'][0],))",
  'db.execute(v["statement"],v["args"])',
  'r=db.execute("SELECT pinned,status,price,score,risk_status FROM assets WHERE asset_key=?", (v["args"][0],)).fetchone()',
  'assert r==(1,"STATIC",42,88,"PARTIAL_ONCHAIN_REVIEW"),r',
