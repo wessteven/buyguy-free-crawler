@@ -4,10 +4,24 @@ const headers={'content-type':'application/json; charset=utf-8','cache-control':
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const page=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>BuyGuy Free Radar</title>
-<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}</style></head><body>
+<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}.bg-tablist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:16px 0 10px;position:sticky;top:0;z-index:5;background:#0a1610;padding:7px 0}.bg-tab{min-width:0;padding:12px 3px;font-size:clamp(10px,2.6vw,13px);font-weight:650;line-height:1.25;white-space:normal;background:#12271b;border:1px solid #416449;border-radius:9px;color:#b3d9bd;touch-action:manipulation}.bg-tab[aria-selected="true"]{background:#265b3e;color:#bfffd5;border-color:#8ddda8;box-shadow:inset 0 -3px #a1f3bb}.bg-tab:focus-visible{outline:2px solid #b7ffd2;outline-offset:2px}.tab-panel[hidden]{display:none!important}.tab-panel{min-height:160px}.tab-panel>section:first-child{margin-top:6px}@media(max-width:410px){body{padding:14px}.bg-tablist{gap:4px}.bg-tab{padding:11px 2px}} </style></head><body>
 <h1>BUYGUY // FREE RADAR</h1><p class="hint">Read-only research • Robinhood + Solana • Indicative prices • Paper wallet experimental</p>
 <div id="login"><input type="password" id="pass" placeholder="Dashboard secret" autocomplete="off"><button id="enter">Open</button><p id="msg"></p></div>
-<div id="board"><button id="refresh">Refresh data</button><div id="overview"></div><section><h2>Recent runs</h2><div id="runs"></div></section><section><h2>Token research</h2><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Keyboard: Shift + ←/→ moves a selected heading.</p><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div></section><section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section><section><h2>Paper wallet</h2><div id="wallet"></div></section><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
+<div id="board"><button id="refresh">Refresh data</button><div id="overview"></div>
+<nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
+<button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="true" tabindex="0">Token Research</button>
+<button class="bg-tab" id="tab-wallet" role="tab" type="button" data-tab="wallet" aria-controls="panel-wallet" aria-selected="false" tabindex="-1">Wallet</button>
+<button class="bg-tab" id="tab-runs" role="tab" type="button" data-tab="runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Recent Runs</button>
+<button class="bg-tab" id="tab-outcomes" role="tab" type="button" data-tab="outcomes" aria-controls="panel-outcomes" aria-selected="false" tabindex="-1">Outcomes</button>
+</nav>
+<div class="tab-panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research">
+<section><h2>Token research</h2><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Keyboard: Shift + ←/→ moves a selected heading.</p><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div></section>
+<section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
+</div>
+<div class="tab-panel" id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" hidden><section><h2>Paper wallet</h2><div id="wallet"></div></section></div>
+<div class="tab-panel" id="panel-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><section><h2>Recent runs</h2><div id="runs"></div></section></div>
+<div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
+</div>
 <p class="hint">Research only. Top token accounts can include AMM pools, escrows and custodians, not unique holder wallets. Mint checks do not verify liquidity locks or executable exits. Paper trades remain disabled.</p>
 <script>
 let token='';
@@ -43,6 +57,44 @@ const savedSort=storedValue(sortKey);
 let assetSort=(savedSort&&columnByKey[savedSort.key]&&['asc','desc'].includes(savedSort.direction))?
  savedSort:{key:'score',direction:'desc'};
 let assetRows=[];
+const tabKey='buyguy.activeTab.v1';
+const dashboardTabs=['research','wallet','runs','outcomes'];
+let activeTab=dashboardTabs.includes(storedValue(tabKey))?storedValue(tabKey):'research';
+function activateTab(tab,{focus=false}={}){
+ if(!dashboardTabs.includes(tab))return false;
+ activeTab=tab;
+ saveValue(tabKey,tab); // Layout preference only; never save credentials.
+ for(const id of dashboardTabs){
+   const button=document.getElementById('tab-'+id);
+   const panel=document.getElementById('panel-'+id);
+   if(button){
+     button.setAttribute('aria-selected',String(id===tab));
+     button.tabIndex=id===tab?0:-1;
+     if(id===tab&&focus)button.focus();
+   }
+   if(panel)panel.hidden=id!==tab;
+ }
+ return true;
+}
+function initTabs(){
+ for(const id of dashboardTabs){
+   const button=document.getElementById('tab-'+id);
+   if(!button)continue;
+   button.addEventListener('click',()=>activateTab(id));
+   button.addEventListener('keydown',event=>{
+     let target=null;
+     if(event.key==='ArrowRight')target=dashboardTabs[(dashboardTabs.indexOf(id)+1)%dashboardTabs.length];
+     else if(event.key==='ArrowLeft')target=dashboardTabs[(dashboardTabs.indexOf(id)-1+dashboardTabs.length)%dashboardTabs.length];
+     else if(event.key==='Home')target=dashboardTabs[0];
+     else if(event.key==='End')target=dashboardTabs[dashboardTabs.length-1];
+     if(target){
+       event.preventDefault();
+       activateTab(target,{focus:true});
+     }
+   });
+ }
+ activateTab(activeTab);
+}
 function riskInfo(a){try{return JSON.parse(a.risk_note||'{}')}catch{return {}}}
 function assetRow(a){
  const audit=riskInfo(a);
@@ -215,6 +267,7 @@ async function refresh(){try{
 document.getElementById('enter').onclick=()=>{token=document.getElementById('pass').value;document.getElementById('pass').value='';refresh()};
 document.getElementById('refresh').onclick=refresh;
 document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
+initTabs();
 
 
 </script></body></html>`;
