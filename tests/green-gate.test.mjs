@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {assessGreenLight} from '../src/green-gate.mjs';
 import {SPL_TOKEN} from '../src/token-risk.mjs';
+import {PUMPSWAP} from '../src/pumpswap.mjs';
 const now=Date.parse('2026-10-19T12:00:00Z');
 const address='So11111111111111111111111111111111111111112',key='solana:'+address;
 const asset={asset_key:key,chain:'solana',address,pool:'poolABC',status:'ALIVE',
@@ -24,6 +25,17 @@ const owner=()=>event('BENEFICIAL_OWNER_AUDIT',{
  verifier:'buyguy-beneficial-owners-v1',assetKey:key,verdict:'VERIFIED_DISTRIBUTION',
  vaultsExcluded:true,pool:asset.pool,onchainSource:'Helius'
 });
+const verifiedPoolProgram=()=>event('POOL_IDENTITY_PROBE',{
+ assetKey:key,program:PUMPSWAP,status:'POOL_VAULTS_VERIFIED',vaultsVerified:true
+});
+const immutableProgram=()=>event('PROGRAM_UPGRADE_PROBE',{
+ verifier:'buyguy-program-authority-v1',assetKey:key,program:PUMPSWAP,
+ status:'PROGRAM_IMMUTABLE',immutable:true,upgradeAuthorityPresent:false
+});
+const upgradeableProgram=()=>event('PROGRAM_UPGRADE_PROBE',{
+ verifier:'buyguy-program-authority-v1',assetKey:key,program:PUMPSWAP,
+ status:'PROGRAM_UPGRADEABLE',immutable:false,upgradeAuthorityPresent:true
+});
 const pool=()=>event('POOL_CUSTODY_AUDIT',{
  verifier:'buyguy-pool-custody-v1',assetKey:key,chain:'solana',pool:asset.pool,
  verdict:'LOCK_VERIFIED',onchainSource:'VERIFIED_POOL_STATE',
@@ -38,7 +50,8 @@ test('Mint, liquidity and Jupiter quotes do not imply green without owner and LP
 });
 test('Seven independently identified stages must all pass to earn green screen',()=>{
  const r=assessGreenLight(asset,{mintEvent:mint(),routeEvent:round(),
-  ownerEvent:owner(),poolEvent:pool(),now});
+  ownerEvent:owner(),poolEvent:pool(),poolProbeEvent:verifiedPoolProgram(),
+  programUpgradeEvent:immutableProgram(),now});
  assert.equal(r.green,true);
  assert.equal(r.passed,7);
  assert.equal(r.status,'SCREEN_PASSED');
@@ -117,4 +130,23 @@ test('Quiet STATIC tokens can pass fresh liquidity evidence independently of mom
    mintEvent:mint(),routeEvent:round(),now});
  assert.equal(value.checks.find(c=>c.name==='Current pool liquidity').passed,true);
  assert.equal(value.green,false);
+});
+
+test('All prior seven fields still fail when the underlying AMM retains an upgrade authority',()=>{
+ const result=assessGreenLight(asset,{mintEvent:mint(),routeEvent:round(),
+   ownerEvent:owner(),poolEvent:pool(),poolProbeEvent:verifiedPoolProgram(),
+   programUpgradeEvent:upgradeableProgram(),now});
+ assert.equal(result.green,false);
+ assert.equal(result.status,'PARTIAL');
+ assert.equal(result.checks.find(c=>c.name==='Pool custody / LP lock').passed,false);
+ assert.equal(result.partial_probes.programUpgradeAuthorityPresent,true);
+});
+test('Missing matching onchain program governance cannot inherit another pool audit',()=>{
+ const bad=immutableProgram(),metadata=JSON.parse(bad.note);
+ metadata.program='SomeOtherProgram1111111111111111111111111111';
+ bad.note=JSON.stringify(metadata);
+ const res=assessGreenLight(asset,{mintEvent:mint(),routeEvent:round(),
+   ownerEvent:owner(),poolEvent:pool(),poolProbeEvent:verifiedPoolProgram(),
+   programUpgradeEvent:bad,now});
+ assert.equal(res.green,false);
 });
