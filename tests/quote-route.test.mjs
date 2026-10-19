@@ -22,7 +22,7 @@ test('Route missing or enormous price impact always fails closed',()=>{
 });
 test('Read-only checks make two GET quote requests, never POST or trade',async()=>{
  const urls=[];
- const res=await getRoundTripQuotes(mint,{fetcher:async(u,opt)=>{
+ const res=await getRoundTripQuotes(mint,{wait:async()=>{},fetcher:async(u,opt)=>{
   urls.push({url:u,opts:opt});
   return {ok:true,json:async()=>urls.length===1?buy:sell};
  }});
