@@ -101,3 +101,20 @@ test('Unknown or malformed input always fails closed',()=>{
  const malformed=round();malformed.note='{not json';
  assert.equal(assessGreenLight(asset,{mintEvent:mint(),routeEvent:malformed,now}).green,false);
 });
+
+test('Unknown Token-2022 extension alone is NOT labeled as a confirmed malicious control',()=>{
+ const e=mint(),note=JSON.parse(e.note);
+ note.mintFlags=['TOKEN_2022_EXTENSIONS_UNREVIEWED'];
+ e.note=JSON.stringify(note);
+ const value=assessGreenLight({...asset,risk_status:'TOKEN_2022_REVIEW_REQUIRED'},{
+   mintEvent:e,routeEvent:round(),now});
+ assert.equal(value.green,false);
+ assert.equal(value.status,'PARTIAL');
+ assert.equal(value.checks[0].passed,false);
+});
+test('Quiet STATIC tokens can pass fresh liquidity evidence independently of momentum',()=>{
+ const value=assessGreenLight({...asset,status:'STATIC'},{
+   mintEvent:mint(),routeEvent:round(),now});
+ assert.equal(value.checks.find(c=>c.name==='Current pool liquidity').passed,true);
+ assert.equal(value.green,false);
+});
