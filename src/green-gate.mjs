@@ -17,7 +17,7 @@ function noteOf(event,assetKey,now,maxMinutes){
 const positive=(value)=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 const part=(name,passed,reason)=>({name,passed:Boolean(passed),reason});
 export function assessGreenLight(asset,{
-  mintEvent=null,routeEvent=null,ownerEvent=null,poolEvent=null,now=Date.now()
+  mintEvent=null,routeEvent=null,ownerEvent=null,poolEvent=null,ownerProbeEvent=null,poolProbeEvent=null,now=Date.now()
 }={}){
  const key=String(asset?.asset_key||''),chain=asset?.chain;
  const response={version:'GREEN_V1',asset_key:key,green:false,status:'UNASSESSED',
@@ -31,6 +31,17 @@ export function assessGreenLight(asset,{
  const q=noteOf(routeEvent,key,now,20);
  const h=noteOf(ownerEvent,key,now,24*60);
  const p=noteOf(poolEvent,key,now,6*60);
+ const ownerProbe=noteOf(ownerProbeEvent,key,now,6*60);
+ const poolProbe=noteOf(poolProbeEvent,key,now,6*60);
+ response.partial_probes={
+   uniqueAuthorityCount:ownerProbe?.verifier==='buyguy-owner-sample-v1'?
+     ownerProbe.uniqueAuthorityCount??null:null,
+   largestAuthorityShareOfSampleBps:ownerProbe?.verifier==='buyguy-owner-sample-v1'?
+     ownerProbe.largestAuthoritySampleBps??null:null,
+   poolAccountProgram:poolProbe?.status==='POOL_ACCOUNT_OBSERVED'?
+     poolProbe.program||null:null,
+   caveat:'Owner sample may count pool vaults; pool program identity does not verify any LP lock.'
+ };
  const risk=String(asset.risk_status||'UNVERIFIED');
  const flags=m?.mintFlags||[];
  const noControls=chain==='solana'&&
