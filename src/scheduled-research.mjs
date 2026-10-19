@@ -7,11 +7,12 @@ import {retireDormantAssets} from './retirement.mjs';
 import {runPaperGame} from './paper-ops.mjs';
 import {screenTradeRoutes} from './route-ops.mjs';
 import {refreshKnownQuotes} from './price-refresh.mjs';
+import {runGreenProbes} from './green-probes.mjs';
 export async function scheduledResearch(env,{
- market=cronScan,verify=verifyPendingMints,retire=retireDormantAssets,paper=runPaperGame,route=screenTradeRoutes,refresh=refreshKnownQuotes
+ market=cronScan,verify=verifyPendingMints,retire=retireDormantAssets,paper=runPaperGame,route=screenTradeRoutes,refresh=refreshKnownQuotes,greenProbes=runGreenProbes
 }={}){
   if(!env?.DB)throw Error('D1 binding missing');
-  const report={market:'SKIPPED',refresh:'SKIPPED',risk:'SKIPPED',route:'SKIPPED',retirement:'SKIPPED',paper:'DISABLED'};
+  const report={market:'SKIPPED',refresh:'SKIPPED',risk:'SKIPPED',route:'SKIPPED',retirement:'SKIPPED',greenProbes:'SKIPPED',paper:'DISABLED'};
   try{
     report.market=await market(env);
   }catch(error){
@@ -44,6 +45,16 @@ export async function scheduledResearch(env,{
     }catch(error){
       report.route='FAILED';
       console.warn('Read-only Jupiter route screening interrupted:',error?.name||'UnknownError');
+    }
+  }
+  // Limited read-only RPC probes; never auto-promote a token or trade.
+  if(env.HELIUS_RPC_URL){
+    try{
+      const result=await greenProbes(env);
+      report.greenProbes=result?.checked??0;
+    }catch(error){
+      report.greenProbes='FAILED';
+      console.warn('Green light owner/pool evidence probe interrupted:',error?.name||'UnknownError');
     }
   }
   try{
