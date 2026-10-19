@@ -91,9 +91,9 @@ async function queryRpc(endpoint,method,params,fetcher){
  if(payload?.error||!payload?.result)throw Error('Helius PumpSwap RPC unavailable');
  return payload.result;
 }
-export async function inspectPumpSwapPool(pool,mint,rpcEndpoint,fetcher=fetch){
+export async function inspectPumpSwapPool(pool,mint,rpcEndpoint,fetcher=fetch,{prefetchedAccount=null}={}){
  if(!pubkey.test(pool||'')||!pubkey.test(mint||''))throw Error('Exact Solana mint and pool required');
- const result=await queryRpc(rpcEndpoint,'getAccountInfo',
+ const result=prefetchedAccount?{value:prefetchedAccount}:await queryRpc(rpcEndpoint,'getAccountInfo',
    [pool,{encoding:'base64',commitment:'confirmed'}],fetcher);
  const info=decodePumpSwapPool(pool,result.value);
  if(info.status!=='PUMPSWAP_LAYOUT_VERIFIED')return info;
