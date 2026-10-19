@@ -30,9 +30,15 @@ export function ownerClusterSample(mint,largestResult,accountsResult,{verifiedPo
    result.flags.push('MISSING_OR_MISMATCHED_TOKEN_ACCOUNTS');return result;
  }
  const grouped=new Map();let total=0n;
- const approved=verifiedPool?.status==='POOL_VAULTS_VERIFIED'&&verifiedPool.vaultsVerified===true&&
-   [verifiedPool.token0Mint,verifiedPool.token1Mint].includes(mint)&&
-   Array.isArray(verifiedPool.verifiedVaults)&&verifiedPool.verifiedVaults.length===2?
+ const verifiedMintPair=verifiedPool?.protocol==='PUMPSWAP'?
+   [verifiedPool.baseMint,verifiedPool.quoteMint]:
+   verifiedPool?.protocol==='RAYDIUM_CPMM'?
+     [verifiedPool.token0Mint,verifiedPool.token1Mint]:[];
+ const approved=verifiedPool?.status==='POOL_VAULTS_VERIFIED'&&
+   verifiedPool.vaultsVerified===true&&verifiedMintPair.includes(mint)&&
+   verifiedMintPair.every(v=>b58.test(v||''))&&
+   Array.isArray(verifiedPool.verifiedVaults)&&verifiedPool.verifiedVaults.length===2&&
+   verifiedPool.verifiedVaults.every(v=>b58.test(v||''))?
    new Set(verifiedPool.verifiedVaults):null;
  for(let i=0;i<largest.length;i++){
    const token=largest[i],state=accounts[i],info=state?.data?.parsed?.info;
@@ -66,7 +72,7 @@ export function ownerClusterSample(mint,largestResult,accountsResult,{verifiedPo
  result.vaultsExcluded=Boolean(approved)&&result.excludedVaultAccounts>0;
  result.status=result.vaultsExcluded?'OWNER_SAMPLE_VAULTS_EXCLUDED':'OWNER_SAMPLE_OBSERVED';
  result.caveat='Sample of largest token accounts, NOT all circulating supply or known ultimate owners; '+
-   (result.vaultsExcluded?result.excludedVaultAccounts+' pool token vault(s) were identified using official Raydium CPMM state and excluded. ':'')+
+   (result.vaultsExcluded?result.excludedVaultAccounts+' pool token vault(s) were identified using '+verifiedPool.protocol+' on-chain state and excluded. ':'')+
    'Multiple accounts may share one controller; no green approval.';
  return result;
 }
