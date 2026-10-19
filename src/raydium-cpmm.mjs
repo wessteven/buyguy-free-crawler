@@ -27,8 +27,13 @@ function base64Bytes(value){
 export function decodeRaydiumCpmmPool(pool,account){
  const result={pool,protocol:'RAYDIUM_CPMM',program:RAYDIUM_CPMM,status:'UNVERIFIED',
   vaultsVerified:false,lpLockVerified:false,flags:[]};
- if(!pubkey.test(pool||'')||account?.owner!==RAYDIUM_CPMM||
-    account.executable===true){result.flags.push('POOL_PROGRAM_NOT_RAYDIUM_CPMM');return result}
+ if(!pubkey.test(pool||'')||account?.executable===true){
+   result.flags.push('INVALID_POOL_ACCOUNT');return result;
+ }
+ if(account?.owner!==RAYDIUM_CPMM){
+   return {...result,status:'UNSUPPORTED_PROTOCOL',observedProgram:account?.owner||null,
+     flags:['UNSUPPORTED_POOL_PROTOCOL']};
+ }
  const source=account?.data;
  const bytes=base64Bytes(Array.isArray(source)?source[0]:null);
  if(!bytes||bytes.length!==POOL_LEN){result.flags.push('POOL_LAYOUT_UNKNOWN');return result}
