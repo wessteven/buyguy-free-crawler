@@ -1,0 +1,35 @@
+name: Verify PumpSwap Program Upgrade Authority
+on:
+  push:
+    paths:
+      - '.github/workflows/live-program-authority.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read PumpSwap code upgrade authority on Solana mainnet
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: |
+          node --input-type=module <<'JS'
+          import {inspectProgramUpgradeAuthority} from './src/program-authority.mjs';
+          import {PUMPSWAP} from './src/pumpswap.mjs';
+          const url='https://mainnet.helius-rpc.com/?api-key='+process.env.HELIUS_API_KEY;
+          const value=await inspectProgramUpgradeAuthority(PUMPSWAP,url);
+          console.log('PUMPSWAP_CODE_GOVERNANCE',JSON.stringify({
+            program:PUMPSWAP,status:value.status,
+            immutable:value.immutable,upgradeAuthorityPresent:value.upgradeAuthorityPresent,
+            programDataVerified:Boolean(value.programData)
+          }));
+          if(!['PROGRAM_IMMUTABLE','PROGRAM_UPGRADEABLE'].includes(value.status))
+            throw Error('Live program upgrade authority metadata could not be verified');
+          console.log('READ_ONLY_PROGRAM_GOVERNANCE_VERIFIED');
+          JS
