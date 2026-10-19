@@ -34,7 +34,7 @@ export function assessRoundTrip(buy,sell){
   result.label=result.flags.length?'ROUTE_CAUTION':'BOTH_DIRECTIONS_QUOTED';
   return result;
 }
-export async function getRoundTripQuotes(mint,{fetcher=fetch,key=null}={}){
+export async function getRoundTripQuotes(mint,{fetcher=fetch,key=null,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
   if(!b58.test(mint||'')||mint===USDC)throw Error('Invalid candidate mint');
   const headers={accept:'application/json'};
   if(key)headers['x-api-key']=key;
@@ -49,6 +49,8 @@ export async function getRoundTripQuotes(mint,{fetcher=fetch,key=null}={}){
   const buy=await request(USDC,mint,USDC_INPUT);
   if(!/^\d+$/.test(buy?.outAmount||'') || BigInt(buy.outAmount)<=0n)
     return assessRoundTrip(buy,null);
+  // Jupiter keyless users are limited to 0.5 requests/sec: do not hammer the endpoint.
+  await wait(2200);
   const sell=await request(mint,USDC,buy.outAmount);
   return assessRoundTrip(buy,sell);
 }
