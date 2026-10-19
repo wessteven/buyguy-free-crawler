@@ -14,6 +14,7 @@ on:
       - 'src/holder-risk.mjs'
       - 'src/quote-route.mjs'
       - 'src/route-ops.mjs'
+      - 'src/price-refresh.mjs'
       - 'src/scheduled-research.mjs'
       - 'src/retirement.mjs'
       - 'wrangler.toml'
