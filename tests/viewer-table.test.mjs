@@ -350,3 +350,19 @@ test('Socials and long mint-flag headings can move by explicit controls even on 
  assert.match(page.html,/max-height:70dvh/);
  assert.match(page.html,/position:sticky!important/);
 });
+
+test('Mobile page clips outer overflow while each supporting data table scrolls within its own width',async()=>{
+ const ui=await tableSandbox();
+ assert.match(ui.html,/html\{width:100%;max-width:100%;overflow-x:clip\}/);
+ assert.match(ui.html,/#board,#overview,\.tab-panel/);
+ assert.match(ui.html,/\.data-scroll\{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto/);
+ assert.match(ui.html,/\.data-scroll th,\.data-scroll td\{white-space:normal!important/);
+ const big='solana:So11111111111111111111111111111111111111112';
+ const rendered=ui.evalJS("table(['Mint','Result'],[["+JSON.stringify(big)+",'BOTH_DIRECTIONS_QUOTED']])");
+ assert.match(rendered,/^<div class="data-scroll" role="region"/);
+ assert.match(rendered,/tabindex="0"/);
+ assert.match(rendered,/solana:So11111111111111111111111111111111111111112/);
+ assert.match(rendered,/<\/table><\/div>$/);
+ // Sticky mobile research table must still scroll independently.
+ assert.match(ui.html,/#assets,\.asset-view\{height:min\(70dvh,750px\)!important/);
+});
