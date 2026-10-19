@@ -1,0 +1,62 @@
+name: Verify Historical Pump Migration TX
+on:
+  push:
+    paths:
+      - '.github/workflows/live-pump-migration-tx.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test exact migrate discriminator and historical TX matching
+        run: node --test tests/pump-migration-tx.test.mjs tests/pump-migration.test.mjs
+      - name: Examine recent bonding-curve signatures for verified migrated pool
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          node --input-type=module <<'JS'
+          import {inspectPoolProtocol} from './src/pool-protocol.mjs';
+          import {assessPumpMigration} from './src/pump-migration.mjs';
+          import {probeMigrationTransaction} from './src/pump-migration-tx.mjs';
+          const base='https://api.cloudflare.com/client/v4/accounts/'+process.env.CF_ACCOUNT_ID+
+            '/d1/database/'+process.env.CF_DATABASE_ID+'/query';
+          const query="SELECT address,pool,symbol FROM assets WHERE chain='solana' AND pool IS NOT NULL AND status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 12";
+          const raw=await fetch(base,{method:'POST',headers:{
+            authorization:'Bearer '+process.env.CF_D1_API_TOKEN,
+            'content-type':'application/json'},body:JSON.stringify({sql:query,params:[]})});
+          const db=await raw.json();
+          if(!db?.success||!db?.result?.[0]?.success)throw Error('Database unavailable');
+          const rpc='https://mainnet.helius-rpc.com/?api-key='+process.env.HELIUS_API_KEY;
+          let checked=0,found=0;
+          for(const asset of db.result[0].results||[]){
+            try{
+              const pool=await inspectPoolProtocol(asset.pool,asset.address,rpc);
+              const identity=await assessPumpMigration(pool);
+              if(identity.status!=='CANONICAL_LP_BURN_PATTERN')continue;
+              const tx=await probeMigrationTransaction(asset.address,asset.pool,rpc,
+                {limit:24,maxReads:6});
+              console.log('PUMP_REAL_MIGRATE_RESULT',JSON.stringify({
+                symbol:asset.symbol,canonical:true,lpSupplyZero:true,
+                txStatus:tx.status,txVerified:tx.migrationTxVerified,
+                examinedSignatures:tx.examinedSignatures,
+                instruction:tx.kind||null,slot:tx.slot||null}));
+              checked++;
+              if(tx.migrationTxVerified)found++;
+              if(checked>=3)break;
+            }catch(e){console.warn('One migration historical lookup interrupted:',e?.name||'Error')}
+          }
+          console.log('HISTORICAL_MIGRATION_SUMMARY',JSON.stringify({canonicalChecked:checked,txVerified:found,
+            caveat:'Not found in small history window does not disprove canonical migration'}));
+          if(!checked)throw Error('No canonical identity samples available for historical lookup');
+          console.log('NO_ORDERS_NO_AUTO_GREEN');
+          JS
