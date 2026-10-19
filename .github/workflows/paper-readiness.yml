@@ -1,0 +1,56 @@
+name: BuyGuy Paper Trade Readiness
+on:
+  push:
+    paths:
+      - '.github/workflows/paper-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  assess:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Evaluate live candidates without trades or state changes
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          node --input-type=module <<'JS'
+          import {choosePaperEntry} from './src/paper-core.mjs';
+          const url='https://api.cloudflare.com/client/v4/accounts/'+process.env.CF_ACCOUNT_ID+
+            '/d1/database/'+process.env.CF_DATABASE_ID+'/query';
+          const q=async sql=>{
+            const res=await fetch(url,{method:'POST',headers:{authorization:'Bearer '+process.env.CF_D1_API_TOKEN,
+              'content-type':'application/json'},body:JSON.stringify({sql,params:[]})});
+            const j=await res.json();
+            if(!j.success||!j.result?.[0]?.success)throw Error('D1 query failed');
+            return j.result[0].results||[];
+          };
+          const assets=await q("SELECT asset_key,chain,symbol,pool,score,status,risk_status,last_seen,market_cap,liquidity,price,buys_m5,sells_m5,observations,pool_created FROM assets WHERE status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 150");
+          const all=assets.map(a=>({a,r:choosePaperEntry(a,{cash:1000,openCount:0,realized:0})}));
+          console.log('ASSETS_CHECKED:',all.length,'TRADING_QUALIFIED:',all.filter(x=>x.r.ok).length);
+          const blockers={};
+          for(const x of all)for(const reason of x.r.reasons||[])blockers[reason]=(blockers[reason]||0)+1;
+          console.log('BLOCKERS:',JSON.stringify(blockers));
+          console.log('TOP MARKET LEADS:');
+          all.slice(0,15).forEach(({a,r})=>console.log(JSON.stringify({
+            asset_key:a.asset_key,symbol:a.symbol,score:a.score,liquidity_usd:a.liquidity,
+            market_cap_usd:a.market_cap,risk:a.risk_status,blocks:r.reasons||[]
+          })));
+          const routes=await q("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 5");
+          console.log('RECENT_ROUTE_CHECKS:',routes.length);
+          for(const row of routes){
+            let info={};try{info=JSON.parse(row.note||'{}')}catch{}
+            console.log('ROUTE:',row.asset_key,info.label,info.estimatedRoundTripLossPct,
+              info.maxImpactPct,info.marketVsQuotePct);
+          }
+          const wallet=await q("SELECT starting_cash,cash,realised FROM paper_account WHERE account='buyguy-v3'");
+          const trades=await q("SELECT COUNT(*) AS n FROM paper_trades");
+          console.log('PAPER_ACCOUNT:',JSON.stringify(wallet),'PAPER_TRADES:',JSON.stringify(trades));
+          JS
