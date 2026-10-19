@@ -72,8 +72,7 @@ tbody tr:hover{background:#174029}
 </nav>
 <div class="tab-panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research">
 <section><h2>Token research</h2><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div><span id="copyStatus" role="status" aria-live="polite"></span>
-<dialog id="greenDialog" aria-labelledby="greenTitle"><h2 id="greenTitle">GREEN LIGHT CHECK</h2>
-<div id="greenDetails"></div><button id="greenClose" type="button">CLOSE</button></dialog></section>
+</section>
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
 <section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend">Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Tap a safety score to inspect the seven checks.  Score is 0–100 based on evidence, <strong>not a guarantee of safety</strong>. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
 </div>
@@ -97,6 +96,8 @@ tbody tr:hover{background:#174029}
 <p id="watchMsg" role="status" aria-live="polite"></p>
 <h2>PINNED // WATCHLIST</h2><div id="watchList"></div>
 </section></div>
+<dialog id="greenDialog" aria-labelledby="greenTitle"><h2 id="greenTitle">GREEN LIGHT CHECK</h2>
+<div id="greenDetails"></div><button id="greenClose" type="button">CLOSE</button></dialog>
 </div>
 <p class="hint">Research only. Top token accounts can include AMM pools, escrows and custodians, not unique holder wallets. Mint checks do not verify liquidity locks or executable exits. Paper trades remain disabled.</p>
 <script>
