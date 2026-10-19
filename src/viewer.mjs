@@ -107,7 +107,7 @@ const initialColumnKeys=assetColumns.map(c=>c.key);
 function storedValue(key){try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}}
 function saveValue(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
 function validOrder(maybe){
- const current=Array.isArray(maybe)?maybe.filter((key,index)=>typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
+ const current=Array.isArray(maybe)?maybe.filter((key,index)=>typeof key==='string'&&key!=='address'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
  const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
  // Introduce new metadata columns beside Token without overwriting a chosen layout.
  if(order.includes('symbol')){
@@ -118,7 +118,7 @@ function validOrder(maybe){
      order.splice(++insertAfter,0,key);
    }
  }
- return order;
+ return order.filter(key=>key!=='address').concat('address');
 }
 let assetOrder=validOrder(storedValue(layoutKey));
 const savedSort=storedValue(sortKey);
@@ -170,6 +170,31 @@ function safeExternalLink(value){
    u.hostname==='localhost'||u.hostname.endsWith('.local'))return null;return u.href;}catch{return null}
 }
 function escapeSocial(s){return String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function tokenCell(row){
+ const ticker=escapeSocial(row.symbol||'PENDING'),name=row.name?escapeSocial(row.name):'';
+ return '<td><strong class="ticker">'+ticker+'</strong>'+(name&&name!==ticker?
+   '<span class="hint" style="margin-left:4px;font-weight:800">'+name+'</span>':'')+'</td>';
+}
+function addressCell(row){
+ const address=String(row.address||'');
+ if(!address)return '<td>—</td>';
+ return '<td><button type="button" class="copy-address" data-address="'+escapeSocial(address)+
+   '" title="Tap to copy full '+escapeSocial(row.chain)+' token contract" aria-label="Copy full contract address '+escapeSocial(address)+'">'+
+   escapeSocial(address.length>23?address.slice(0,9)+'…'+address.slice(-7):address)+' ⧉</button></td>';
+}
+async function copyAddress(address){
+ const status=document.getElementById('copyStatus');
+ if(!address){if(status)status.textContent='No address to copy';return false;}
+ try{
+   if(!navigator.clipboard||!navigator.clipboard.writeText)throw Error('Clipboard API unavailable');
+   await navigator.clipboard.writeText(address);
+   if(status)status.textContent='Copied full contract: '+address.slice(0,10)+'…';
+   return true;
+ }catch{
+   if(status)status.textContent='Copy blocked by browser; long-press the address or use Chrome clipboard permissions.';
+   return false;
+ }
+}
 function socialCell(row){
  if(!row.socialLinks||!row.socialLinks.length)return '<td class="social-cell">—</td>';
  return '<td class="social-cell">'+row.socialLinks.map(link=>
@@ -308,7 +333,7 @@ function sortAssets(key){
  renderAssets();
 }
 function moveAssetColumn(from,to,after=false){
- if(!columnByKey[from]||!columnByKey[to]||from===to)return false;
+ if(!columnByKey[from]||!columnByKey[to]||from===to||from==='address'||to==='address')return false;
  const order=assetOrder.filter(key=>key!==from);
  const index=order.indexOf(to);
  if(index<0)return false;
@@ -346,7 +371,10 @@ function renderAssets(){
    return '<th scope="col" tabindex="0" data-col="'+key+'" aria-sort="'+aria+'" aria-label="Sort by '+c.name+'; drag to move">'+c.name+
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></th>';
  }).join('');
- const rows=orderedAssetRows().map(row=>'<tr>'+assetOrder.map(key=>key==='socials'?socialCell(row):['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))).join('')+'</tr>').join('');
+ const rows=orderedAssetRows().map(row=>'<tr>'+assetOrder.map(key=>
+ key==='socials'?socialCell(row):key==='address'?addressCell(row):key==='symbol'?tokenCell(row):
+ ['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))
+ ).join('')+'</tr>').join('');
  wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
  wrap.scrollLeft=left;
  wrap.querySelectorAll('th[data-col]').forEach(th=>{
@@ -416,6 +444,7 @@ async function refresh(){try{
  document.getElementById('msg').textContent='';
  const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
  document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
+ document.getElementById('watchList').innerHTML=watchlistTable(x.pinned);
  document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
  setAssetData(x.assets,x.routes);
  document.getElementById('routeReviews').innerHTML=table(['UTC','Mint','Result','Approx. round-trip loss','Top impact'],(x.routes||[]).map(r=>{
@@ -456,6 +485,39 @@ document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter
 document.getElementById('logout').onclick=logout;
 document.getElementById('refresh').onclick=refresh;
 document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
+document.getElementById('assets').addEventListener('click',event=>{
+ const button=event.target?.closest?.('button[data-address]');
+ if(button)copyAddress(button.dataset.address);
+});
+function watchlistTable(pins){
+ const rows=(Array.isArray(pins)?pins:[]).map(a=>[
+ a.chain,a.symbol==='PENDING'||!a.symbol?'AWAITING QUOTE':a.symbol,
+ a.status,a.risk_status||'UNVERIFIED',a.address
+ ]);
+ return table(['CHAIN','TOKEN','STATE','RISK','CONTRACT'],rows);
+}
+async function submitWatch(event){
+ event.preventDefault();
+ const chain=document.getElementById('watchChain').value,
+       input=document.getElementById('watchAddress'),
+       button=document.getElementById('watchSubmit'),
+       status=document.getElementById('watchMsg');
+ const address=input.value.trim();
+ if(!address){status.textContent='Paste a token contract first.';return;}
+ button.disabled=true;status.textContent='Validating and pinning…';
+ try{
+   const r=await fetch('/api/watchlist',{method:'POST',credentials:'same-origin',
+     headers:{'content-type':'application/json'},body:JSON.stringify({chain,address})});
+   const data=await r.json();
+   if(!r.ok){status.textContent=data.error||'Unable to add token';return;}
+   input.value='';
+   await refresh();
+   activateTab('address');
+   status.textContent='WATCHING '+data.asset_key+'. Market data will populate when a verified pool quote is available.';
+ }catch{status.textContent='Network error, try again.'}
+ finally{button.disabled=false;}
+}
+document.getElementById('watchForm').addEventListener('submit',submitWatch);
 initTabs();
 // Reopen automatically when a valid remembered session cookie is present.
 refresh();
