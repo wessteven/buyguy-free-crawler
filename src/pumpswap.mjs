@@ -68,7 +68,7 @@ export function verifyPumpSwapVaults(poolInfo,accounts,targetMint){
  }
  const lp=accounts[2];
  const state=lp?.data?.parsed;
- if(lp?.owner!==SPL_TOKEN||state?.type!=='mint'||
+ if(lp?.owner!==TOKEN_2022||state?.type!=='mint'||
    state.info?.isInitialized!==true||!/^\d+$/.test(state.info.supply||'')){
    result.flags.push('LP_MINT_UNVERIFIED');
    result.lpDiagnostics={program:lp?.owner||null,parsedType:state?.type||null,
