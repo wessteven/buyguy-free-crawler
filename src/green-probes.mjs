@@ -6,6 +6,7 @@ import {inspectProgramUpgradeAuthority} from './program-authority.mjs';
 import {PUMPSWAP} from './pumpswap.mjs';
 import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
 import {assessPumpMigration} from './pump-migration.mjs';
+import {probeMigrationTransaction} from './pump-migration-tx.mjs';
 const b58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 async function rpcCall(url,method,params,fetcher){
  if(!/^https:\/\//.test(url||''))throw Error('Secure Helius RPC absent');
@@ -126,6 +127,14 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
      catch{failed++;migration={status:'MIGRATION_DERIVATION_UNAVAILABLE',
        canonicalPool:false,lpSupplyZero:false,migrationTxVerified:false,lpLockVerified:false}}
    }
+   let history={status:'NOT_CHECKED',migrationTxVerified:false,
+     verifiedSignature:null,examinedSignatures:0};
+   if(migration.status==='CANONICAL_LP_BURN_PATTERN'){
+     try{history=await probeMigrationTransaction(asset.address,asset.pool,env.HELIUS_RPC_URL,
+       {fetcher,limit:24,maxReads:6})}
+     catch{failed++;history={status:'MIGRATION_HISTORY_UNAVAILABLE',
+       migrationTxVerified:false,verifiedSignature:null,examinedSignatures:0}}
+   }
    const proof={
      assetKey:asset.asset_key,checkedAt:now,verifier:owner.verifier||null,
      status:owner.status,uniqueAuthorityCount:owner.uniqueAuthorityCount??null,
@@ -158,6 +167,16 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
        .bind(now,asset.asset_key,JSON.stringify(proof)),
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'POOL_IDENTITY_PROBE',?)")
        .bind(now,asset.asset_key,JSON.stringify(poolProof)),
+     env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'PUMP_MIGRATION_TX_PROBE',?)")
+       .bind(now,asset.asset_key,JSON.stringify({
+         assetKey:asset.asset_key,assetMint:asset.address,pool:asset.pool,
+         checkedAt:now,verifier:'buyguy-pump-migration-tx-v1',
+         status:history.status,migrationTxVerified:history.migrationTxVerified===true,
+         signature:history.verifiedSignature||null,
+         slot:history.slot??null,blockTime:history.blockTime??null,
+         kind:history.kind||null,examinedSignatures:history.examinedSignatures||0,
+         note:'Only a successful exact-address Pump migrate instruction qualifies. A history miss is inconclusive.'
+       })),
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'PUMP_MIGRATION_PROBE',?)")
        .bind(now,asset.asset_key,JSON.stringify({
          assetKey:asset.asset_key,pool:asset.pool,checkedAt:now,
