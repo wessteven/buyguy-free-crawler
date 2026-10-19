@@ -1,0 +1,64 @@
+name: BuyGuy Green Light Audit
+on:
+  push:
+    paths:
+      - '.github/workflows/green-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Evaluate actual D1 green readiness read-only
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          node --input-type=module <<'JS'
+          import {assessGreenLight} from './src/green-gate.mjs';
+          const endpoint='https://api.cloudflare.com/client/v4/accounts/'+process.env.CF_ACCOUNT_ID+
+            '/d1/database/'+process.env.CF_DATABASE_ID+'/query';
+          const q=async sql=>{
+            const r=await fetch(endpoint,{method:'POST',
+              headers:{authorization:'Bearer '+process.env.CF_D1_API_TOKEN,
+                'content-type':'application/json'},
+              body:JSON.stringify({sql,params:[]})});
+            const body=await r.json();
+            if(!body.success||!body.result?.[0]?.success)throw Error('D1 audit read failed');
+            return body.result[0].results||[];
+          };
+          const assets=await q("SELECT asset_key,chain,address,symbol,status,risk_status,price,liquidity,pool,last_seen FROM assets WHERE status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 120");
+          const events=await q("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE') ORDER BY id DESC LIMIT 2000");
+          const recent=new Map();
+          for(const e of events){const k=e.asset_key+'|'+e.kind;if(!recent.has(k))recent.set(k,e)}
+          const statusCount={},blockCounts={},rank=[];
+          const now=Date.now();
+          for(const a of assets){
+            const opts={mintEvent:recent.get(a.asset_key+'|MINT_AUTHORITY_REVIEW'),
+              routeEvent:recent.get(a.asset_key+'|ROUNDTRIP_QUOTE'),
+              ownerEvent:recent.get(a.asset_key+'|BENEFICIAL_OWNER_AUDIT'),
+              poolEvent:recent.get(a.asset_key+'|POOL_CUSTODY_AUDIT'),
+              ownerProbeEvent:recent.get(a.asset_key+'|OWNER_CLUSTER_PROBE'),
+              poolProbeEvent:recent.get(a.asset_key+'|POOL_IDENTITY_PROBE'),now};
+            const g=assessGreenLight(a,opts);
+            statusCount[g.status]=(statusCount[g.status]||0)+1;
+            for(const b of g.blocking)blockCounts[b]=(blockCounts[b]||0)+1;
+            rank.push({chain:a.chain,symbol:a.symbol,passed:g.passed,total:g.total,
+              lamp:g.status,blocking:g.blocking});
+          }
+          rank.sort((a,b)=>b.passed-a.passed);
+          console.log('GREEN_AUDIT ASSETS',assets.length);
+          console.log('GREEN_AUDIT STATUS_COUNTS',JSON.stringify(statusCount));
+          console.log('GREEN_AUDIT BLOCKERS',JSON.stringify(blockCounts));
+          console.log('GREEN_AUDIT TOP_PROGRESS',JSON.stringify(rank.slice(0,10)));
+          console.log('GREEN_AUDIT EVIDENCE_COUNTS',JSON.stringify(
+            await q("SELECT kind,COUNT(*) n,MAX(at) latest FROM research_events WHERE kind IN ('OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE') GROUP BY kind")));
+          console.log('REAL_TRADING', 'DISABLED_AND_OUT_OF_SCOPE');
+          JS
