@@ -1,0 +1,35 @@
+name: Test Jupiter Public Quotes
+on:
+  push:
+    paths:
+      - '.github/workflows/jupiter-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check read-only USDC to SOL public quote without any trading keys
+        run: |
+          python - <<'PY'
+          import json
+          from urllib.request import Request,urlopen
+          from urllib.error import HTTPError,URLError
+          url='https://api.jup.ag/swap/v1/quote?inputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&outputMint=So11111111111111111111111111111111111111112&amount=40000000&slippageBps=200&instructionVersion=V2'
+          try:
+            with urlopen(Request(url,headers={'accept':'application/json','user-agent':'BuyGuyReadOnly/1.0'}),timeout=20) as r:
+              data=json.load(r)
+          except HTTPError as e:
+            print('JUPITER_KEYLESS_UNAVAILABLE: HTTP',e.code)
+            raise SystemExit(0)
+          except (URLError,TimeoutError) as e:
+            print('JUPITER_KEYLESS_UNAVAILABLE:',type(e).__name__)
+            raise SystemExit(0)
+          if not data.get('outAmount') or not data.get('routePlan'):
+            print('JUPITER_ROUTE_NOT_CONFIRMED')
+          else:
+            print('JUPITER_READ_ONLY_BUY_QUOTE_CONFIRMED')
+            print('route_hops=',len(data['routePlan']),'price_impact=',data.get('priceImpactPct'))
+          PY
