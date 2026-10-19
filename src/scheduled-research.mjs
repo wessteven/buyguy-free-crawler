@@ -6,17 +6,26 @@ import {verifyPendingMints} from './risk-ops.mjs';
 import {retireDormantAssets} from './retirement.mjs';
 import {runPaperGame} from './paper-ops.mjs';
 import {screenTradeRoutes} from './route-ops.mjs';
+import {refreshKnownQuotes} from './price-refresh.mjs';
 export async function scheduledResearch(env,{
- market=cronScan,verify=verifyPendingMints,retire=retireDormantAssets,paper=runPaperGame,route=screenTradeRoutes
+ market=cronScan,verify=verifyPendingMints,retire=retireDormantAssets,paper=runPaperGame,route=screenTradeRoutes,refresh=refreshKnownQuotes
 }={}){
   if(!env?.DB)throw Error('D1 binding missing');
-  const report={market:'SKIPPED',risk:'SKIPPED',route:'SKIPPED',retirement:'SKIPPED',paper:'DISABLED'};
+  const report={market:'SKIPPED',refresh:'SKIPPED',risk:'SKIPPED',route:'SKIPPED',retirement:'SKIPPED',paper:'DISABLED'};
   try{
     report.market=await market(env);
   }catch(error){
     report.market='FAILED';
     console.warn('Market discovery interrupted:',error?.name||'UnknownError',
       '(no wallet changes)');
+  }
+  try{
+    const result=await refresh(env);
+    report.refresh=result?.refreshed??0;
+    if(result?.failedProviders?.length)console.warn('Some active quotes unavailable:',result.failedProviders.length);
+  }catch(error){
+    report.refresh='FAILED';
+    console.warn('Known asset quote refresh interrupted:',error?.name||'UnknownError');
   }
   if(env.HELIUS_RPC_URL){
     try{
