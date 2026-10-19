@@ -179,7 +179,13 @@ function saveValue(key,value){try{localStorage.setItem(key,JSON.stringify(value)
 function validOrder(maybe){
  const current=Array.isArray(maybe)?maybe.filter((key,index)=>
    typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
- return current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
+ const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
+ // For an older custom layout, inject newly introduced AUDIT immediately after Token.
+ if(!current.includes('audit')&&order.includes('symbol')){
+   order.splice(order.indexOf('audit'),1);
+   order.splice(order.indexOf('symbol')+1,0,'audit');
+ }
+ return order;
 }
 const savedFolds=storedValue(foldKey);
 let columnFolded={
