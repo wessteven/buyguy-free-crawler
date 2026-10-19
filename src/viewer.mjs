@@ -55,10 +55,14 @@ function saveValue(key,value){try{localStorage.setItem(key,JSON.stringify(value)
 function validOrder(maybe){
  const current=Array.isArray(maybe)?maybe.filter((key,index)=>typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
  const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
- // For an existing custom layout, introduce newly added Socials beside Token.
- if(!current.includes('socials')&&order.includes('symbol')){
-   const previous=order.indexOf('socials');if(previous>=0)order.splice(previous,1);
-   order.splice(order.indexOf('symbol')+1,0,'socials');
+ // Introduce new metadata columns beside Token without overwriting a chosen layout.
+ if(order.includes('symbol')){
+   let insertAfter=order.indexOf('symbol');
+   for(const key of ['socials','safety','momentum','direction']){
+     if(current.includes(key))continue;
+     const previous=order.indexOf(key);if(previous>=0)order.splice(previous,1);
+     order.splice(++insertAfter,0,key);
+   }
  }
  return order;
 }
