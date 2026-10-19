@@ -529,7 +529,7 @@ export default {async fetch(request,env){const path=new URL(request.url).pathnam
 if(path==='/health')return json({server:'online',scan_status:'not_verified'});
 if(path==='/'||path==='/dashboard')return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 const origin=request.headers.get('origin');
-if((path==='/api/login'||path==='/api/logout')&&origin&&origin!==new URL(request.url).origin)
+if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist')&&origin&&origin!==new URL(request.url).origin)
   return json({error:'forbidden'},403);
 if(path==='/api/login'){
  if(request.method!=='POST')return json({error:'method_not_allowed'},405);
@@ -551,22 +551,37 @@ if(path==='/api/logout'){
  output.headers.set('set-cookie',clearSessionCookie());
  return output;
 }
-if(path!=='/api/status')return json({error:'not_found'},404);
-if(request.method!=='GET')return json({error:'method_not_allowed'},405);
+if(path!=='/api/status'&&path!=='/api/watchlist')return json({error:'not_found'},404);
+if((path==='/api/status'&&request.method!=='GET')||(path==='/api/watchlist'&&request.method!=='POST'))
+ return json({error:'method_not_allowed'},405);
 const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
 const cookie=readSessionCookie(request.headers.get('cookie'));
 const authorized=auth(bearer,env.ADMIN_TOKEN||'')||await validSession(env.ADMIN_TOKEN||'',cookie);
 if(!authorized)return json({error:'unauthorized'},401);
 if(!env.DB)return json({error:'database_not_configured'},503);
+if(path==='/api/watchlist'){
+ if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+   return json({error:'unsupported_media_type'},415);
+ const length=Number(request.headers.get('content-length')||0);
+ if(length>1024)return json({error:'request_too_large'},413);
+ let input;
+ try{input=await request.json()}catch{return json({error:'invalid_json'},400)}
+ if(!input||typeof input!=='object'||Array.isArray(input))return json({error:'invalid_input'},422);
+ try{
+   const result=await addWatchedAddress(env.DB,input.chain,input.address);
+   return json(result.ok?result:{error:result.error},result.status);
+ }catch{return json({error:'watchlist_write_failed'},503)}
+}
 try{const list=async(sql)=>(await env.DB.prepare(sql).all()).results||[];
-const [runs,assets,wallet,predictions,routes]=await Promise.all([
+const [runs,assets,wallet,predictions,routes,pinned]=await Promise.all([
 list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
 list("SELECT a.*, (SELECT e.note FROM research_events e WHERE e.asset_key=a.asset_key AND e.kind='TOKEN_SOCIALS' ORDER BY e.id DESC LIMIT 1) AS socials_json FROM assets a WHERE a.status IN ('ALIVE','STATIC') ORDER BY a.score DESC LIMIT 500"),
 list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
 list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30"),
-list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 15")]);
+list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 15"),
+list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100")]);
 const paper=await getPaperSnapshot(env);
-return json({runs,assets,wallet:wallet[0]||null,predictions,paper,routes});
+return json({runs,assets,wallet:wallet[0]||null,predictions,paper,routes,pinned});
 }catch(e){return json({error:'D1 query failed',message:String(e).slice(0,180)},503)}
 },async scheduled(controller,env,ctx){
   await scheduledResearch(env);
