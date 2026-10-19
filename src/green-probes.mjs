@@ -2,6 +2,9 @@
 // Cannot establish LP locks, beneficial human owners or sellability.
 import {SPL_TOKEN,TOKEN_2022} from './token-risk.mjs';
 import {inspectPoolProtocol} from './pool-protocol.mjs';
+import {inspectProgramUpgradeAuthority} from './program-authority.mjs';
+import {PUMPSWAP} from './pumpswap.mjs';
+import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
 const b58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 async function rpcCall(url,method,params,fetcher){
  if(!/^https:\/\//.test(url||''))throw Error('Secure Helius RPC absent');
@@ -108,6 +111,13 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
       {verifiedPool:pool?.vaultsVerified?pool:null})}
    catch{failed++}
    // Persist compact, complete JSON. Never truncate a JSON string mid-field.
+   let upgrade={status:'PROGRAM_AUTHORITY_NOT_CHECKED',immutable:false,upgradeAuthorityPresent:null};
+   if(pool?.vaultsVerified&&['PUMPSWAP','RAYDIUM_CPMM'].includes(pool.protocol)){
+     const program=pool.protocol==='PUMPSWAP'?PUMPSWAP:RAYDIUM_CPMM;
+     try{upgrade=await inspectProgramUpgradeAuthority(program,env.HELIUS_RPC_URL,fetcher)}
+     catch{failed++;upgrade={program,status:'PROGRAM_UPGRADE_RPC_UNAVAILABLE',
+       immutable:false,upgradeAuthorityPresent:null}}
+   }
    const proof={
      assetKey:asset.asset_key,checkedAt:now,verifier:owner.verifier||null,
      status:owner.status,uniqueAuthorityCount:owner.uniqueAuthorityCount??null,
@@ -137,7 +147,14 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'OWNER_CLUSTER_PROBE',?)")
        .bind(now,asset.asset_key,JSON.stringify(proof)),
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'POOL_IDENTITY_PROBE',?)")
-       .bind(now,asset.asset_key,JSON.stringify(poolProof))
+       .bind(now,asset.asset_key,JSON.stringify(poolProof)),
+     env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'PROGRAM_UPGRADE_PROBE',?)")
+       .bind(now,asset.asset_key,JSON.stringify({
+         assetKey:asset.asset_key,program:upgrade.program||null,status:upgrade.status,
+         immutable:upgrade.immutable===true,upgradeAuthorityPresent:upgrade.upgradeAuthorityPresent,
+         upgradeAuthority:upgrade.upgradeAuthority||null,checkedAt:now,
+         note:'Program upgrade authority does not by itself verify pool liquidity locks, admin privileges or program source code.'
+       }))
    ]);
    checked++;
  }
