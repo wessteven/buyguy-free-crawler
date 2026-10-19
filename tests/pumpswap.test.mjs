@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {decodePumpSwapPool,verifyPumpSwapVaults,inspectPumpSwapPool,
   PUMPSWAP,PUMP_BONDING_CURVE,PUMPSWAP_POOL_DISCRIMINATOR} from '../src/pumpswap.mjs';
-import {SPL_TOKEN} from '../src/token-risk.mjs';
+import {SPL_TOKEN,TOKEN_2022} from '../src/token-risk.mjs';
 const alphabet='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const base='So11111111111111111111111111111111111111112';
 const quote='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
@@ -29,7 +29,7 @@ function state({owner=PUMPSWAP,discriminator=PUMPSWAP_POOL_DISCRIMINATOR,index=0
 function vault(mint){return {owner:SPL_TOKEN,data:{parsed:{type:'account',info:{
  mint,owner:pool,tokenAmount:{amount:'100000'}
 }}}}}
-const mintAccount=(supply='900000')=>({owner:SPL_TOKEN,data:{parsed:{type:'mint',info:{
+const mintAccount=(supply='900000')=>({owner:TOKEN_2022,data:{parsed:{type:'mint',info:{
  isInitialized:true,supply
 }}}});
 test('PumpSwap official program decodes correct 301-byte extended Pool layout',()=>{
