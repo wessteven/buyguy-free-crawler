@@ -78,6 +78,20 @@ def gecko_new_pools():
         })
     return found
 
+def pool_timestamp(value):
+    """Normalise pool creation time without inventing a timestamp."""
+    if value is None: return None
+    try:
+        if isinstance(value,(int,float)):
+            raw=float(value)
+            return dt.datetime.fromtimestamp(raw/1000 if raw>1e11 else raw,UTC).isoformat(timespec='seconds').replace('+00:00','Z')
+        if isinstance(value,str):
+            date=dt.datetime.fromisoformat(value.replace('Z','+00:00'))
+            if date.tzinfo is None:return None
+            return date.astimezone(UTC).isoformat(timespec='seconds').replace('+00:00','Z')
+    except (ValueError,OverflowError,TypeError):
+        return None
+    return None
 def discover():
     addresses={'solana':set(),'robinhood':set()}
     failures=[]
@@ -150,11 +164,11 @@ def execute():
                  VALUES(?,?,?,?,?,?)""",(k,q['chain'],q['address'],start,start,'STATIC'))
             streak=int(num(old.get('momentum_streak'))) + 1 if old and old.get('pool')==q['pool'] and s>=72 else (1 if s>=72 else 0)
             query("""UPDATE assets SET symbol=?,pool=?,provider=?,
-                status=?,last_seen=?,updated_at=?,observations=observations+1,misses=0,
+                status=?,last_seen=?,updated_at=?,pool_created=COALESCE(pool_created,?),observations=observations+1,misses=0,
                 score=?,momentum_streak=?,price=?,liquidity=?,market_cap=?,
                 buys_m5=?,sells_m5=?,tx_m5=?,change_h1=?,volume_h24=?,
                 last_action=? WHERE asset_key=?""",
-                (q['symbol'],q['pool'],q.get('source','UNKNOWN'),status,start,start,s,streak,q['price'],q['liquidity'],q['cap'],q['buys'],q['sells'],q['buys']+q['sells'],q['change'],q['volume'],'WATCH_ONLY — contract and execution risks unverified',k))
+                (q['symbol'],q['pool'],q.get('source','UNKNOWN'),status,start,start,pool_timestamp(q.get('created')),s,streak,q['price'],q['liquidity'],q['cap'],q['buys'],q['sells'],q['buys']+q['sells'],q['change'],q['volume'],'WATCH_ONLY — contract and execution risks unverified',k))
             query("""INSERT OR IGNORE INTO observations(asset_key,seen_at,pool,provider,price,liquidity,buys_m5,sells_m5,score)
                  VALUES(?,?,?,?,?,?,?,?,?)""",(k,start,q['pool'],q.get('source','UNKNOWN'),q['price'],q['liquidity'],q['buys'],q['sells'],s))
             if s>=55:
