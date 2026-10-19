@@ -150,3 +150,28 @@ test('Missing matching onchain program governance cannot inherit another pool au
    programUpgradeEvent:bad,now});
  assert.equal(res.green,false);
 });
+
+test('Verified migrate_v2 transaction is shown as provenance, never an LP lock or a green pass',()=>{
+ const migration=event('PUMP_MIGRATION_PROBE',{
+   verifier:'buyguy-pump-canonical-v1',assetKey:key,assetMint:asset.address,
+   pool:asset.pool,canonicalPool:true,lpSupplyZero:true,
+   status:'CANONICAL_LP_BURN_PATTERN',migrationTxVerified:false
+ });
+ const tx=event('PUMP_MIGRATION_TX_PROBE',{
+   verifier:'buyguy-pump-migration-tx-v1',assetKey:key,assetMint:asset.address,
+   pool:asset.pool,status:'MIGRATION_TRANSACTION_VERIFIED',
+   migrationTxVerified:true,kind:'migrate_v2',signature:'1'.repeat(88)
+ });
+ const pass=assessGreenLight(asset,{mintEvent:mint(),routeEvent:round(),
+   migrationEvent:migration,migrationTxEvent:tx,now});
+ assert.equal(pass.partial_probes.canonicalMigrationBurnPattern,true);
+ assert.equal(pass.partial_probes.migrationTxVerified,true);
+ assert.equal(pass.green,false);
+ assert.ok(pass.blocking.includes('Pool custody / LP lock'));
+ const spoof=event('PUMP_MIGRATION_TX_PROBE',{
+   ...JSON.parse(tx.note),pool:'another-pool'
+ });
+ const mismatch=assessGreenLight(asset,{migrationEvent:migration,
+   migrationTxEvent:spoof,now});
+ assert.equal(mismatch.partial_probes.migrationTxVerified,false);
+});
