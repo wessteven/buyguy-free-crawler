@@ -599,8 +599,8 @@ async function runAuditFromTable(key){
  const progress=document.getElementById('auditProgress');
  if(!dialog||!progress)return;
  auditInProgress=true;
- progress.textContent='AUDIT // '+(asset.symbol||'TOKEN')+'\n'+key+
-  '\nExact contract only. No buy/sell orders.\n';
+ progress.textContent='AUDIT // '+(asset.symbol||'TOKEN')+String.fromCharCode(10)+key+
+  String.fromCharCode(10)+'Exact contract only. No buy/sell orders.'+String.fromCharCode(10);
  if(!dialog.open)dialog.showModal();
  const append=(title,message,type)=>{
    const elem=document.createElement('div');
