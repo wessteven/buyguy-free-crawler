@@ -64,7 +64,9 @@ export async function cronScan(env,fetcher=fetch){
       statements.push(env.DB.prepare(`UPDATE assets SET
         symbol=?,pool=?,provider=?,updated_at=?,last_seen=?,pool_created=COALESCE(pool_created,?),
         score=?,price=?,liquidity=?,market_cap=?,buys_m5=?,sells_m5=?,tx_m5=?,change_h1=?,volume_h24=?,
-        observations=observations+1,misses=0
+        observations=observations+1,misses=0,
+        status=CASE WHEN status='DEAD' THEN 'STATIC' ELSE status END,
+        last_action=CASE WHEN status='DEAD' THEN 'REACTIVATED: observed fresh pool quote' ELSE last_action END
         WHERE asset_key=? AND status!='TRASH' AND updated_at<=?`)
         .bind(a.symbol,a.pool,a.source,stamp,stamp,a.pool_created,a.score,a.price,a.liquidity,a.market_cap,
         a.buys_m5,a.sells_m5,a.tx_m5,a.change_h1,a.volume_h24,a.asset_key,stamp));
