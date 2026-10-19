@@ -91,9 +91,9 @@ async function stageMint(db,asset,at,rpc,fetcher){
 }
 async function stagePool(db,asset,at,rpc,fetcher){
  if(asset.chain!=='solana')return publicStatus('UNSUPPORTED','pool','No Robinhood protocol-specific on-demand pool verifier is connected.');
- if(!rpc)return publicStatus('UNAVAILABLE','pool','Private Helius RPC is not configured.');
  if(!asset.pool||!recent(asset.last_seen,Date.parse(at),30))
    return publicStatus('SKIPPED','pool','Need a recent, exactly matched Solana liquidity pool before auditing.');
+ if(!rpc)return publicStatus('UNAVAILABLE','pool','Private Helius RPC is not configured.');
  const pool=await inspectPoolProtocol(asset.pool,asset.address,rpc,fetcher);
  // Only protocol-specific, verified vault identities qualify for partial evidence.
  const report={
