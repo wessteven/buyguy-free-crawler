@@ -66,7 +66,7 @@ test('Pinned addresses rotate through scan slots so slower tokens are not starve
 test('Previously DEAD/NOT token returns to fresh tracking on verified quote without deleting history',async()=>{
  const writes=[];
  const dormant={...asset,status:'DEAD',pinned:0,score:2,has_position:0,last_seen:'2026-10-15T00:00:00Z'};
- const DB={prepare(sql){return {bind(){return {async all(){return {results:[dormant]}}}},
+ const DB={prepare(sql){return {bind(...args){return {sql,args,async all(){return {results:[dormant]}}}},
    run:async()=>({})}},batch:async statements=>{writes.push(...statements);return []}};
  const out=await refreshKnownQuotes({DB},{fetcher:async()=>({
    ok:true,json:async()=>[example('oldPool',70000)]
