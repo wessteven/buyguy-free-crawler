@@ -1,7 +1,7 @@
 // Read-only Solana owner clustering and pool-account probe.
 // Cannot establish LP locks, beneficial human owners or sellability.
 import {SPL_TOKEN,TOKEN_2022} from './token-risk.mjs';
-import {inspectRaydiumCpmmPool} from './raydium-cpmm.mjs';
+import {inspectPoolProtocol} from './pool-protocol.mjs';
 const b58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 async function rpcCall(url,method,params,fetcher){
  if(!/^https:\/\//.test(url||''))throw Error('Secure Helius RPC absent');
@@ -102,7 +102,7 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
  for(const asset of list){
    let owner={status:'OWNER_RPC_UNAVAILABLE',beneficialOwnersVerified:false,vaultsExcluded:false};
    let pool={status:'POOL_RPC_UNAVAILABLE',controlsVerified:false,lpLockVerified:false};
-   try{pool=await inspectRaydiumCpmmPool(asset.pool,asset.address,env.HELIUS_RPC_URL,fetcher)}
+   try{pool=await inspectPoolProtocol(asset.pool,asset.address,env.HELIUS_RPC_URL,fetcher)}
    catch{failed++}
    try{owner=await probeLargestOwnerAccounts(asset.address,env.HELIUS_RPC_URL,fetcher,
       {verifiedPool:pool?.vaultsVerified?pool:null})}
@@ -121,10 +121,11 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
    };
    const poolProof={
      assetKey:asset.asset_key,chain:'solana',checkedAt:now,
-     verifier:'buyguy-raydium-cpmm-layout-v1',
+     verifier:'buyguy-pool-program-v2',
      status:pool.status,protocol:pool.protocol||null,
      program:pool.program||null,observedProgram:pool.observedProgram||null,
      lpMint:pool.lpMint||null,lpSupplyRaw:pool.lpSupplyRaw||null,
+     lpSupplyGapBps:pool.lpSupplyGapBps??null,
      pool:asset.pool,token0Mint:pool.token0Mint||null,token1Mint:pool.token1Mint||null,
      verifiedVaults:pool.vaultsVerified===true?pool.verifiedVaults:[],
      vaultsVerified:pool.vaultsVerified===true,lpLockVerified:false,
