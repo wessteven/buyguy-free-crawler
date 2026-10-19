@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseQuoteRefresh,refreshKnownQuotes} from '../src/price-refresh.mjs';
 const mint='So11111111111111111111111111111111111111112';
-const asset={asset_key:'solana:'+mint,chain:'solana',address:mint,symbol:'SOL',pool:'oldPool',has_position:1};
+const asset={asset_key:'solana:'+mint,chain:'solana',address:mint,symbol:'SOL',pool:'oldPool',status:'ALIVE',has_position:1,pinned:0};
 const example=(pool,liq=60000)=>({chainId:'solana',pairAddress:pool,baseToken:{address:mint,symbol:'SOL'},
   priceUsd:'160',liquidity:{usd:liq},marketCap:90000,txns:{m5:{buys:24,sells:8}},
   priceChange:{h1:10},volume:{h24:20000},pairCreatedAt:Date.parse('2026-10-18T18:00:00Z')});
