@@ -1,3 +1,4 @@
+import {collectSocialLinks} from './social-links.mjs';
 // Independent price refresh of known assets and any open paper positions.
 // Token identity is exact. Never infer same-ticker equivalence or executable liquidity.
 const root='https://api.dexscreener.com/tokens/v1/';
@@ -47,7 +48,8 @@ export function parseQuoteRefresh(pairs,tracked,nowMs=Date.now()){
       pool:p.pairAddress,matchedPool,price,liquidity:liq,market_cap:cap,
       buys_m5:Math.round(buys),sells_m5:Math.round(sells),tx_m5:Math.round(buys+sells),
       change_h1:change,volume_h24:volume,pool_created:created,
-      score,status:(score>=62&&liq>=50000)?'ALIVE':'STATIC'});
+      score,status:(score>=62&&liq>=50000)?'ALIVE':'STATIC',
+      socials:collectSocialLinks(p.info)});
   }
   return [...result.values()];
 }
@@ -88,6 +90,14 @@ export async function refreshKnownQuotes(env,{fetcher=fetch,now=new Date().toISO
         (asset_key,seen_at,pool,provider,price,liquidity,buys_m5,sells_m5,score)
         VALUES(?,?,?,'DEX Screener',?,?,?,?,?)`)
         .bind(q.asset_key,now,q.pool,q.price,q.liquidity,q.buys_m5,q.sells_m5,q.score));
+      if(q.socials.length){
+        const socials=JSON.stringify(q.socials);
+        stmts.push(env.DB.prepare(`INSERT INTO research_events(at,asset_key,kind,note)
+          SELECT ?,?,'TOKEN_SOCIALS',?
+          WHERE COALESCE((SELECT note FROM research_events
+            WHERE asset_key=? AND kind='TOKEN_SOCIALS' ORDER BY id DESC LIMIT 1),'') != ?`)
+          .bind(now,q.asset_key,socials,q.asset_key,socials));
+      }
     }
     await env.DB.batch(stmts);
   }
