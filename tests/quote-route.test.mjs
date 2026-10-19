@@ -7,7 +7,7 @@ const buy={inputMint:USDC,outputMint:mint,inAmount:'40000000',outAmount:'2500000
 const sell={inputMint:mint,outputMint:USDC,inAmount:'250000000',outAmount:'38800000',
  priceImpactPct:'0.001',routePlan:[{swapInfo:{label:'Sample AMM'}}]};
 test('USDC roundtrip quote can screen both directions, but is not an executable trade',()=>{
- const r=assessRoundTrip(buy,sell);
+ const r=assessRoundTrip(buy,sell,{decimals:9,marketPriceUsd:160});
  assert.equal(r.label,'BOTH_DIRECTIONS_QUOTED');
  assert.equal(r.buyRoute,true);
  assert.equal(r.sellRoute,true);
@@ -22,7 +22,7 @@ test('Route missing or enormous price impact always fails closed',()=>{
 });
 test('Read-only checks make two GET quote requests, never POST or trade',async()=>{
  const urls=[];
- const res=await getRoundTripQuotes(mint,{wait:async()=>{},fetcher:async(u,opt)=>{
+ const res=await getRoundTripQuotes(mint,{decimals:9,marketPriceUsd:160,wait:async()=>{},fetcher:async(u,opt)=>{
   urls.push({url:u,opts:opt});
   return {ok:true,json:async()=>urls.length===1?buy:sell};
  }});
