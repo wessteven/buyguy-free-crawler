@@ -55,6 +55,7 @@ jobs:
           }
           rank.sort((a,b)=>b.passed-a.passed);
           console.log('GREEN_AUDIT ASSETS',assets.length);
+          console.log('GREEN_AUDIT QUOTE_SAMPLE',JSON.stringify(assets.filter(x=>Number(x.liquidity)>=50000).sort((a,b)=>String(b.last_seen).localeCompare(String(a.last_seen))).slice(0,3).map(x=>({status:x.status,liquidity:x.liquidity,last_seen:x.last_seen,pool:!!x.pool}))));
           console.log('GREEN_AUDIT STATUS_COUNTS',JSON.stringify(statusCount));
           console.log('GREEN_AUDIT BLOCKERS',JSON.stringify(blockCounts));
           console.log('GREEN_AUDIT TOP_PROGRESS',JSON.stringify(rank.slice(0,10)));
