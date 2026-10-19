@@ -54,7 +54,7 @@ export function selectRefreshTargets(rows,{now=new Date().toISOString(),limit=20
  const tick=Number.isFinite(stamp)?Math.floor(stamp/600000):0;
  const src=Array.isArray(rows)?rows:[];
  const eligible=src.filter(x=>x&&x.status!=='TRASH'&&
-   ['ALIVE','STATIC','DEAD'].includes(x.status)||x&&x.pinned===1);
+   (['ALIVE','STATIC','DEAD'].includes(x.status)||x.pinned===1));
  const seen=new Set(),out=[];
  const append=list=>{for(const x of list){if(!x||seen.has(x.asset_key)||out.length>=cap)continue;
    seen.add(x.asset_key);out.push(x)}};
