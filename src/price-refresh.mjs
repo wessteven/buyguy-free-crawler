@@ -1,3 +1,4 @@
+import {selectRefreshTargets} from './token-tiers.mjs';
 import {collectSocialLinks} from './social-links.mjs';
 // Independent price refresh of known assets and any open paper positions.
 // Token identity is exact. Never infer same-ticker equivalence or executable liquidity.
@@ -56,28 +57,19 @@ export function parseQuoteRefresh(pairs,tracked,nowMs=Date.now()){
 export async function refreshKnownQuotes(env,{fetcher=fetch,now=new Date().toISOString(),limit=20}={}){
   if(!env?.DB)throw Error('Missing D1 DB');
   const max=Math.max(1,Math.min(25,limit));
-  const fields="a.asset_key,a.chain,a.address,a.symbol,a.pool,a.pool_created, "+
+  const fields="a.asset_key,a.chain,a.address,a.symbol,a.pool,a.pool_created,"+
+    "a.status,a.risk_status,a.score,a.price,a.liquidity,a.buys_m5,a.sells_m5,"+
+    "a.change_h1,a.last_seen,a.pinned,"+
     "CASE WHEN EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key "+
     "AND p.status='OPEN') THEN 1 ELSE 0 END AS has_position";
-  const held=(await env.DB.prepare("SELECT "+fields+" FROM assets a "+
-    "WHERE EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') "+
-    "ORDER BY a.score DESC LIMIT ?").bind(max).all()).results||[];
-  const watched=(await env.DB.prepare("SELECT "+fields+" FROM assets a WHERE a.pinned=1 "+
-    "ORDER BY a.asset_key LIMIT ?").bind(100).all()).results||[];
-  const other=(await env.DB.prepare("SELECT "+fields+" FROM assets a WHERE a.pinned=0 "+
-    "AND a.status IN ('ALIVE','STATIC') ORDER BY a.score DESC LIMIT ?").bind(max).all()).results||[];
-  const tracked=[],seen=new Set();
-  const append=a=>{if(a?.asset_key&&!seen.has(a.asset_key)&&tracked.length<max){
-    tracked.push(a);seen.add(a.asset_key);
-  }};
-  for(const item of held)append(item);
-  // Rotate pinned slots on each 10-minute interval; no pinned asset is permanently starved.
-  const slots=Math.max(0,max-tracked.length),rotation=Math.floor(Date.parse(now)/600000);
-  if(watched.length&&slots){
-    const offset=(Number.isFinite(rotation)?rotation*slots:0)%watched.length;
-    for(let i=0;i<watched.length&&tracked.length<max;i++)append(watched[(offset+i)%watched.length]);
-  }
-  for(const item of other)append(item);
+  // Pull the full retained research universe, including dormant DEAD tokens.
+  // HOT, pinned and background NOT queues each receive fair rotating slots.
+  const all=(await env.DB.prepare("SELECT "+fields+" FROM assets a "+
+    "WHERE a.status!='TRASH' AND "+
+    "(a.status IN ('ALIVE','STATIC','DEAD') OR a.pinned=1 OR "+
+    "EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN')) "+
+    "ORDER BY a.asset_key LIMIT ?").bind(500).all()).results||[];
+  const tracked=selectRefreshTargets(all,{now,limit:max});
   const accepted=[],failures=[];
   for(const chain of ['solana','robinhood']){
     const items=tracked.filter(t=>t.chain===chain&&
@@ -117,5 +109,5 @@ export async function refreshKnownQuotes(env,{fetcher=fetch,now=new Date().toISO
     }
     await env.DB.batch(stmts);
   }
-  return {tracked:tracked.length,refreshed:accepted.length,failedProviders:failures};
+  return {tracked:tracked.length,eligible:all.length,refreshed:accepted.length,failedProviders:failures};
 }
