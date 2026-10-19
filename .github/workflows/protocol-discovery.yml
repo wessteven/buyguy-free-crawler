@@ -1,0 +1,60 @@
+name: Identify BuyGuy Pool Protocols
+on:
+  push:
+    paths:
+      - '.github/workflows/protocol-discovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Identify on-chain programs for actual known Solana pools, no trading
+        env:
+          HELIUS_API_KEY: \${{ secrets.HELIUS_API_KEY }}
+          CF_ACCOUNT_ID: \${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: \${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: \${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os,json,collections
+          from urllib.request import Request,urlopen
+          def get(url,body,headers):
+              r=Request(url,data=json.dumps(body).encode(),headers=headers,method='POST')
+              with urlopen(r,timeout=25) as response:return json.load(response)
+          d1='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CF_ACCOUNT_ID']+'/d1/database/'+os.environ['CF_DATABASE_ID']+'/query'
+          sql="SELECT asset_key,symbol,pool,score FROM assets WHERE chain='solana' AND pool IS NOT NULL AND status IN ('ALIVE','STATIC') ORDER BY pinned DESC,score DESC LIMIT 35"
+          data=get(d1,{'sql':sql,'params':[]},{'authorization':'Bearer '+os.environ['CF_D1_API_TOKEN'],'content-type':'application/json'})
+          if not data.get('success') or not data.get('result', [{}])[0].get('success'):raise SystemExit('D1 query failed')
+          rows=data['result'][0]['results']
+          by_pool={}
+          for item in rows:
+              pool=item['pool']
+              if pool not in by_pool:by_pool[pool]=[]
+              by_pool[pool].append(item['symbol'])
+          pools=list(by_pool)
+          if not pools:raise SystemExit('No Solana pools available')
+          rpc='https://mainnet.helius-rpc.com/?api-key='+os.environ['HELIUS_API_KEY']
+          reply=get(rpc,{'jsonrpc':'2.0','id':1,'method':'getMultipleAccounts','params':[pools,{'encoding':'base64','commitment':'confirmed'}]},{'content-type':'application/json'})
+          if 'error' in reply:raise SystemExit('Helius pool RPC failed')
+          accounts=reply.get('result',{}).get('value',[])
+          program=collections.Counter()
+          reports=[]
+          labels={
+           'CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C':'RAYDIUM_CPMM',
+           'cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG':'METEORA_DAMM_V2',
+           '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8':'RAYDIUM_AMM_V4',
+           'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK':'RAYDIUM_CLMM'
+          }
+          for idx,(pool,account) in enumerate(zip(pools,accounts)):
+              owner=(account or {}).get('owner','NO_ACCOUNT')
+              key=labels.get(owner,owner)
+              program[key]+=1
+              reports.append({'symbols':by_pool[pool][:2],'program':key,'data_len':len((account or {}).get('data',[''])[0]) if account else 0})
+          print('POOLS_SAMPLED',len(pools))
+          print('PROGRAM_DISTRIBUTION',json.dumps(program.most_common()))
+          print('POOL_PROGRAM_SAMPLES',json.dumps(reports[:15]))
+          print('SECURITY','READ_ONLY_NO_TRANSACTIONS_NO_LP_LOCK_CLAIM')
+          PY
