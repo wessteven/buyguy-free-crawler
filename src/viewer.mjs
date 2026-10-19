@@ -1,13 +1,14 @@
 import {getPaperSnapshot} from './paper-ops.mjs';
 import {scheduledResearch} from './scheduled-research.mjs';
+import {issueSession,validSession,readSessionCookie,sessionCookie,clearSessionCookie} from './auth-session.mjs';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const page=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>BuyGuy Free Radar</title>
-<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}#assets .social-cell{white-space:nowrap;min-width:85px}#assets .social-link{display:inline-block;color:#b9ffd0;background:#234b32;border:1px solid #3d8053;border-radius:6px;padding:5px 7px;margin:1px 3px 1px 0;text-decoration:none;font-weight:650}#assets .social-link:focus-visible{outline:2px solid #b9ffd0}#assets .social-link:hover{text-decoration:underline}#assets .safety-cell{font-weight:700;font-variant-numeric:tabular-nums}#assets .risk-note{display:block;font-size:10px;font-weight:400;color:#bdcbbc}#assets .signal-cell{font-size:19px;text-align:center}#assets .direction-cell{font-weight:700;text-align:center;font-variant-numeric:tabular-nums}#assets .dir-arrow{display:inline-block;font-size:18px;transition:transform .35s ease}.indicator-legend{font-size:12px;line-height:1.6;margin:6px 0 12px}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}.bg-tablist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:16px 0 10px;position:sticky;top:0;z-index:5;background:#0a1610;padding:7px 0}.bg-tab{min-width:0;padding:12px 3px;font-size:clamp(10px,2.6vw,13px);font-weight:650;line-height:1.25;white-space:normal;background:#12271b;border:1px solid #416449;border-radius:9px;color:#b3d9bd;touch-action:manipulation}.bg-tab[aria-selected="true"]{background:#265b3e;color:#bfffd5;border-color:#8ddda8;box-shadow:inset 0 -3px #a1f3bb}.bg-tab:focus-visible{outline:2px solid #b7ffd2;outline-offset:2px}.tab-panel[hidden]{display:none!important}.tab-panel{min-height:160px}.tab-panel>section:first-child{margin-top:6px}@media(max-width:410px){body{padding:14px}.bg-tablist{gap:4px}.bg-tab{padding:11px 2px}} </style></head><body>
+<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}#remember{width:18px;height:18px;padding:0;margin:0;accent-color:#9cfdc6;flex:none}.remember-choice{display:flex;align-items:center;gap:10px;margin:12px 0;color:#c9efd4}.login-note{max-width:370px}.login-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#logout{padding:8px 12px}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}#assets .social-cell{white-space:nowrap;min-width:85px}#assets .social-link{display:inline-block;color:#b9ffd0;background:#234b32;border:1px solid #3d8053;border-radius:6px;padding:5px 7px;margin:1px 3px 1px 0;text-decoration:none;font-weight:650}#assets .social-link:focus-visible{outline:2px solid #b9ffd0}#assets .social-link:hover{text-decoration:underline}#assets .safety-cell{font-weight:700;font-variant-numeric:tabular-nums}#assets .risk-note{display:block;font-size:10px;font-weight:400;color:#bdcbbc}#assets .signal-cell{font-size:19px;text-align:center}#assets .direction-cell{font-weight:700;text-align:center;font-variant-numeric:tabular-nums}#assets .dir-arrow{display:inline-block;font-size:18px;transition:transform .35s ease}.indicator-legend{font-size:12px;line-height:1.6;margin:6px 0 12px}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}.bg-tablist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:16px 0 10px;position:sticky;top:0;z-index:5;background:#0a1610;padding:7px 0}.bg-tab{min-width:0;padding:12px 3px;font-size:clamp(10px,2.6vw,13px);font-weight:650;line-height:1.25;white-space:normal;background:#12271b;border:1px solid #416449;border-radius:9px;color:#b3d9bd;touch-action:manipulation}.bg-tab[aria-selected="true"]{background:#265b3e;color:#bfffd5;border-color:#8ddda8;box-shadow:inset 0 -3px #a1f3bb}.bg-tab:focus-visible{outline:2px solid #b7ffd2;outline-offset:2px}.tab-panel[hidden]{display:none!important}.tab-panel{min-height:160px}.tab-panel>section:first-child{margin-top:6px}@media(max-width:410px){body{padding:14px}.bg-tablist{gap:4px}.bg-tab{padding:11px 2px}} </style></head><body>
 <h1>BUYGUY // FREE RADAR</h1><p class="hint">Read-only research • Robinhood + Solana • Indicative prices • Paper wallet experimental</p>
-<div id="login"><input type="password" id="pass" placeholder="Dashboard secret" autocomplete="off"><button id="enter">Open</button><p id="msg"></p></div>
-<div id="board"><button id="refresh">Refresh data</button><div id="overview"></div>
+<div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p></div>
+<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button></div><div id="overview"></div>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
 <button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="true" tabindex="0">Token Research</button>
 <button class="bg-tab" id="tab-wallet" role="tab" type="button" data-tab="wallet" aria-controls="panel-wallet" aria-selected="false" tabindex="-1">Wallet</button>
@@ -25,7 +26,7 @@ const page=`<!doctype html><html><head><meta name="viewport" content="width=devi
 </div>
 <p class="hint">Research only. Top token accounts can include AMM pools, escrows and custodians, not unique holder wallets. Mint checks do not verify liquidity locks or executable exits. Paper trades remain disabled.</p>
 <script>
-let token='';
+// Authentication uses signed HttpOnly cookies; password exists only during login.
 const cell=v=>'<td>'+String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td>';
 function table(keys,rows){return '<table><thead><tr>'+keys.map(k=>'<th>'+k+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(cell).join('')+'</tr>').join('')+'</tbody></table>';}
 
@@ -350,11 +351,17 @@ function renderAssets(){
  else if(status&&assetRows.length&&!status.textContent)status.textContent='Sorting '+columnByKey[assetSort.key].name+' '+(assetSort.direction==='asc'?'ascending':'descending')+'.';
 }
 async function refresh(){try{
- const r=await fetch('/api/status',{headers:{authorization:'Bearer '+token},cache:'no-store'});
+ const r=await fetch('/api/status',{credentials:'same-origin',cache:'no-store'});
+ if(r.status===401){
+   document.getElementById('board').style.display='none';
+   document.getElementById('login').style.display='block';
+   return false;
+ }
  if(!r.ok)throw Error('HTTP '+r.status);
  const x=await r.json();
  document.getElementById('login').style.display='none';
  document.getElementById('board').style.display='block';
+ document.getElementById('msg').textContent='';
  const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
  document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
  document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
@@ -368,21 +375,74 @@ async function refresh(){try{
  table(['Token','Cost USD','Est. sale value','Unrealised P&L','Price stale'],(x.paper?.positions||[]).map(p=>[
  p.asset_key,p.cost,p.estimatedValue===null?'Unknown':p.estimatedValue,p.unrealized===null?'Unknown':p.unrealized,p.stale]));
  document.getElementById('predictions').innerHTML=table(['Token','Status','Horizon min','Change %'],(x.predictions||[]).map(p=>[p.asset_key,p.status,p.horizon_min,p.change_pct]));
-}catch(e){document.getElementById('msg').textContent='Access or service error: '+e.message}}
-document.getElementById('enter').onclick=()=>{token=document.getElementById('pass').value;document.getElementById('pass').value='';refresh()};
+}catch(e){document.getElementById('msg').textContent='Service error: '+e.message;return false}
+return true;
+}
+async function login(){
+ const input=document.getElementById('pass'),button=document.getElementById('enter');
+ const password=input.value,remember=document.getElementById('remember').checked;
+ input.value='';
+ if(!password){document.getElementById('msg').textContent='Enter your password.';return;}
+ button.disabled=true;
+ document.getElementById('msg').textContent='Signing in…';
+ try{
+   const r=await fetch('/api/login',{method:'POST',credentials:'same-origin',
+     headers:{'content-type':'application/json'},body:JSON.stringify({password,remember})});
+   if(!r.ok){document.getElementById('msg').textContent=r.status===401?'Incorrect password.':'Login unavailable. Try again.';return;}
+   await refresh();
+ }catch(e){document.getElementById('msg').textContent='Unable to connect. Try again.';}
+ finally{button.disabled=false;}
+}
+async function logout(){
+ try{await fetch('/api/logout',{method:'POST',credentials:'same-origin'});}catch{}
+ document.getElementById('board').style.display='none';
+ document.getElementById('login').style.display='block';
+ document.getElementById('msg').textContent='Signed out on this device.';
+}
+document.getElementById('enter').onclick=login;
+document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+document.getElementById('logout').onclick=logout;
 document.getElementById('refresh').onclick=refresh;
 document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
 initTabs();
+// Reopen automatically when a valid remembered session cookie is present.
+refresh();
 
 
 </script></body></html>`;
 function auth(given,secret){if(!secret||!given||given.length!==secret.length)return false;let n=0;for(let i=0;i<given.length;i++)n|=given.charCodeAt(i)^secret.charCodeAt(i);return n===0;}
 export default {async fetch(request,env){const path=new URL(request.url).pathname;
 if(path==='/health')return json({server:'online',scan_status:'not_verified'});
-if(path==='/'||path==='/dashboard')return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+if(path==='/'||path==='/dashboard')return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
+const origin=request.headers.get('origin');
+if((path==='/api/login'||path==='/api/logout')&&origin&&origin!==new URL(request.url).origin)
+  return json({error:'forbidden'},403);
+if(path==='/api/login'){
+ if(request.method!=='POST')return json({error:'method_not_allowed'},405);
+ if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+   return json({error:'unsupported_media_type'},415);
+ let body;
+ try{body=await request.json();}catch{return json({error:'invalid_request'},400)}
+ const password=body?.password,remember=body?.remember===true;
+ if(typeof password!=='string'||password.length>2048||!auth(password,env.ADMIN_TOKEN||''))
+   return json({error:'unauthorized'},401);
+ const session=await issueSession(env.ADMIN_TOKEN,{remember});
+ const output=json({ok:true,remember,expiresInSeconds:remember?2592000:43200});
+ output.headers.set('set-cookie',sessionCookie(session,{remember}));
+ return output;
+}
+if(path==='/api/logout'){
+ if(request.method!=='POST')return json({error:'method_not_allowed'},405);
+ const output=json({ok:true});
+ output.headers.set('set-cookie',clearSessionCookie());
+ return output;
+}
 if(path!=='/api/status')return json({error:'not_found'},404);
+if(request.method!=='GET')return json({error:'method_not_allowed'},405);
 const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
-if(!auth(bearer,env.ADMIN_TOKEN||''))return json({error:'unauthorized'},401);
+const cookie=readSessionCookie(request.headers.get('cookie'));
+const authorized=auth(bearer,env.ADMIN_TOKEN||'')||await validSession(env.ADMIN_TOKEN||'',cookie);
+if(!authorized)return json({error:'unauthorized'},401);
 if(!env.DB)return json({error:'database_not_configured'},503);
 try{const list=async(sql)=>(await env.DB.prepare(sql).all()).results||[];
 const [runs,assets,wallet,predictions,routes]=await Promise.all([
