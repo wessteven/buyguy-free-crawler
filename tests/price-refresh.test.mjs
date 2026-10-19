@@ -47,8 +47,8 @@ test('Provider 429 cannot write fabricated prices',async()=>{
 
 test('Pinned addresses rotate through scan slots so slower tokens are not starved',async()=>{
  const addresses=Array.from({length:12},(_,i)=>({
-   ...asset,asset_key:'solana:'+mint.slice(0,-2)+String(i).padStart(2,'0'),
-   address:mint.slice(0,-2)+String(i).padStart(2,'0'),
+   ...asset,asset_key:'solana:'+mint.slice(0,-2)+'A'+'123456789ABC'[i],
+   address:mint.slice(0,-2)+'A'+'123456789ABC'[i],
    has_position:0,pinned:1
  }));
  const db={prepare(sql){return {bind(){return {async all(){
