@@ -67,3 +67,23 @@ test('Missing secret or malformed pool leaves probes as unknown',async()=>{
  const pool=await probePoolProgram('not-a-solana-address','https://rpc.example/test');
  assert.equal(pool.status,'NO_SOLANA_POOL_ACCOUNT');
 });
+
+test('Only protocol-verified Raydium vault addresses are excluded from owner samples',()=>{
+ const verified={status:'POOL_VAULTS_VERIFIED',vaultsVerified:true,
+  token0Mint:mint,token1Mint:owner,verifiedVaults:[a1,a2]};
+ const hit=ownerClusterSample(mint,largest,accounts,{verifiedPool:verified});
+ assert.equal(hit.status,'UNAVAILABLE'); // all sampled accounts were vaults, no non-vault sample remains
+ assert.ok(hit.flags.includes('NO_NONVAULT_ACCOUNT_BALANCE'));
+ const part={...verified,verifiedVaults:[a1,owner]};
+ const observed=ownerClusterSample(mint,largest,accounts,{verifiedPool:part});
+ assert.equal(observed.status,'OWNER_SAMPLE_VAULTS_EXCLUDED');
+ assert.equal(observed.excludedVaultAccounts,1);
+ assert.equal(observed.uniqueAuthorityCount,1);
+ assert.equal(observed.beneficialOwnersVerified,false);
+ // A pool that is merely claimed in an unverified API response must never exclude anything.
+ const spoof=ownerClusterSample(mint,largest,accounts,{verifiedPool:{
+  ...part,status:'POOL_ACCOUNT_OBSERVED',vaultsVerified:false
+ }});
+ assert.equal(spoof.vaultsExcluded,false);
+ assert.equal(spoof.excludedVaultAccounts,0);
+});
