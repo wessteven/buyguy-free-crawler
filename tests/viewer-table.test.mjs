@@ -378,10 +378,10 @@ test('Trade on follows Copy address in all views and opens a chain-specific Moby
  page.evalJS('setAssetData('+JSON.stringify(rows)+')');
  const order=page.evalJS('assetOrder.join(",")').split(',');
  assert.equal(order[order.indexOf('address')+1],'trade_on');
- assert.match(page.assets.innerHTML,/href="https:\/\/twitter\.mobyscreener\.com\/solana\/So11111111111111111111111111111111111111112\?app_url=https%3A%2F%2Finvite\.mobyscreener\.com%2FcLJFHSHGm7b&amp;v=1792416904"/);
+ assert.match(page.assets.innerHTML,/href="https:\/\/mobyscreener\.com\/solana\/So11111111111111111111111111111111111111112"/);
  assert.match(page.assets.innerHTML,/href="https:\/\/www\.mobyscreener\.com\/token\/0x2cc0fac44b8252f6b10208b091aff2c94b4da77d"/);
- assert.match(page.ui.get('hotAssets').innerHTML,/Moby ↗/);
- assert.match(page.ui.get('notAssets').innerHTML,/Moby ↗/);
+ assert.match(page.ui.get('hotAssets').innerHTML,/Moby web ↗/);
+ assert.match(page.ui.get('notAssets').innerHTML,/Moby web ↗/);
  assert.match(page.assets.innerHTML,/target="_self" rel="nofollow"/);
  assert.equal(page.evalJS("mobyChartUrl('solana','<script>alert(1)</script>')"),null);
  assert.equal(page.evalJS("mobyChartUrl('robinhood','0xNOTANADDRESS')"),null);
@@ -407,16 +407,17 @@ test('Ten-minute scan timer shows countdown, overdue overtime and unknown runs w
  assert.match(page.html,/setInterval\(pollScanClock,30000\)/);
 });
 
-test('Moby confirmed Android handoff opens exact NEETOPIA and HIVEMIND mints with share parameters',async()=>{
+test('Moby Solana fallback never borrows token-specific NEETOPIA invite deep links',async()=>{
  const page=await tableSandbox();
  const mint='YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump';
- const query='?app_url=https%3A%2F%2Finvite.mobyscreener.com%2FcLJFHSHGm7b&v=1792416904';
- const expected='https://twitter.mobyscreener.com/solana/'+mint+query;
- assert.equal(page.evalJS("mobyChartUrl('solana','"+mint+"')"),expected);
  const hivemind='6NLUC3veg7NGuQBNewE1UM7G6ir2mymJM4PvwdkGpump';
- assert.equal(page.evalJS("mobyChartUrl('solana','"+hivemind+"')"),
-   'https://twitter.mobyscreener.com/solana/'+hivemind+query);
- assert.notEqual(expected,'https://www.mobyscreener.com/solana/'+mint);
+ const n=page.evalJS("mobyChartUrl('solana','"+mint+"')");
+ const h=page.evalJS("mobyChartUrl('solana','"+hivemind+"')");
+ assert.equal(n,'https://mobyscreener.com/solana/'+mint);
+ assert.equal(h,'https://mobyscreener.com/solana/'+hivemind);
+ assert.notEqual(n,h);
+ assert.equal(n.includes('app_url='),false);
+ assert.equal(h.includes('invite.mobyscreener.com'),false);
  assert.equal(page.evalJS("mobyChartUrl('solana','invalid-address!')"),null);
  const rh='0x2cc0fac44b8252f6b10208b091aff2c94b4da77d';
  assert.equal(page.evalJS("mobyChartUrl('robinhood','"+rh+"')"),
