@@ -1,0 +1,37 @@
+name: Diagnose Token 2022 extensions
+on:
+  push:
+    paths:
+      - '.github/workflows/token2022-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect structured on-chain extension types only
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from urllib.request import Request,urlopen
+          endpoint='https://mainnet.helius-rpc.com/?api-key='+os.environ['HELIUS_API_KEY']
+          addresses=['8j2G4CUi8vswXykzyp4PYNGKF9wuLBmYoT6Y4Fcnpump',
+             'ArpPsesHXKbGeJsHdquM6acT3uNs7BChyetJjiNYpump',
+             'GaPbQwLDPjSXGR9JxxG1aJLNthuxG58dM2XukBi8pump']
+          for addr in addresses:
+            body=json.dumps({'jsonrpc':'2.0','id':1,'method':'getAccountInfo',
+              'params':[addr,{'encoding':'jsonParsed'}]}).encode()
+            with urlopen(Request(endpoint,body,{'content-type':'application/json'}),timeout=20) as r:
+              p=json.load(r)
+            value=p.get('result',{}).get('value') or {}
+            parsed=((value.get('data') or {}).get('parsed') or {})
+            info=parsed.get('info') or {}
+            print('mint:',addr,'owner:',value.get('owner'),'parsed_type:',parsed.get('type'),
+              'data_encoding:',type(value.get('data')).__name__,'info_field_names:',sorted(info.keys()),
+              'extension_types:',[(e.get('extension') or e.get('type') or 'unknown')
+                for e in (info.get('extensions') or parsed.get('extensions') or []) if isinstance(e,dict)])
+          PY
