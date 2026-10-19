@@ -1,0 +1,82 @@
+name: Verify Pump Canonical Migration Identity
+on:
+  push:
+    paths:
+      - '.github/workflows/live-pump-migration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run offline mint and PDA safety regression tests
+        run: node --test tests/pump-migration.test.mjs tests/pumpswap.test.mjs
+      - name: Independently cross-check canonical authority PDA with Solana reference library
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund @solana/web3.js@1.98.4 >/dev/null 2>&1
+          node --input-type=module <<'JS'
+          import {PublicKey} from '@solana/web3.js';
+          import {canonicalPumpCreator} from './src/pump-migration.mjs';
+          import {PUMP_BONDING_CURVE} from './src/pumpswap.mjs';
+          const mint='So11111111111111111111111111111111111111112';
+          const expected=PublicKey.findProgramAddressSync([
+            Buffer.from('pool-authority'),new PublicKey(mint).toBuffer()],
+            new PublicKey(PUMP_BONDING_CURVE))[0].toBase58();
+          const actual=(await canonicalPumpCreator(mint)).address;
+          if(actual!==expected)throw Error('Custom PDA disagrees with Solana reference library');
+          console.log('INDEPENDENT_SOLANA_PDA_CROSSCHECK',actual===expected);
+          JS
+      - name: Verify real PumpSwap migration provenance from private Helius, without trading
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          node --input-type=module <<'JS'
+          import {inspectPoolProtocol} from './src/pool-protocol.mjs';
+          import {assessPumpMigration} from './src/pump-migration.mjs';
+          const endpoint='https://api.cloudflare.com/client/v4/accounts/'+process.env.CF_ACCOUNT_ID+
+            '/d1/database/'+process.env.CF_DATABASE_ID+'/query';
+          const r=await fetch(endpoint,{method:'POST',headers:{
+            authorization:'Bearer '+process.env.CF_D1_API_TOKEN,
+            'content-type':'application/json'},body:JSON.stringify({
+              sql:"SELECT asset_key,address,pool,symbol FROM assets WHERE chain='solana' AND pool IS NOT NULL AND status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 20",
+              params:[]})});
+          const data=await r.json();
+          if(!data.success||!data?.result?.[0]?.success)throw Error('D1 read failed');
+          const rpc='https://mainnet.helius-rpc.com/?api-key='+process.env.HELIUS_API_KEY;
+          let sample=0,canonical=0,burned=0,ordinary=0,unverified=0;
+          const matches=[];
+          const seen=new Set();
+          for(const asset of data.result[0].results){
+            if(seen.has(asset.pool))continue;seen.add(asset.pool);
+            try{
+              const verified=await inspectPoolProtocol(asset.pool,asset.address,rpc);
+              if(verified.protocol!=='PUMPSWAP')continue;
+              const result=await assessPumpMigration(verified);
+              sample++;
+              if(result.canonicalPool)canonical++;
+              if(result.status==='CANONICAL_LP_BURN_PATTERN')burned++;
+              if(result.status==='NONCANONICAL_POOL')ordinary++;
+              if(result.status==='UNVERIFIED')unverified++;
+              matches.push({symbol:asset.symbol,status:result.status,index:verified.poolIndex,
+                creatorMatches:result.canonicalCreatorMatches,
+                lpSupplyZero:result.lpSupplyZero,migrationTxVerified:result.migrationTxVerified,
+                lpLockVerified:result.lpLockVerified,programGovernance:'SEPARATE_VERIFICATION_REQUIRED'});
+              if(sample>=8)break;
+            }catch(e){console.warn('One RPC pool check unavailable:',e?.name||'Error')}
+          }
+          console.log('REAL_PUMP_PROVENANCE_COUNTS',JSON.stringify({sample,canonical,burned,ordinary,unverified}));
+          console.log('REAL_PUMP_PROVENANCE_SAMPLES',JSON.stringify(matches));
+          if(!sample)throw Error('No real PumpSwap samples verified; no claim can be made');
+          if(matches.some(p=>p.migrationTxVerified||p.lpLockVerified))
+            throw Error('Evidence must not claim migrate transaction or an LP lock');
+          console.log('PROVENANCE_READ_ONLY_NO_TRADES_NO_AUTOMATIC_GREEN');
+          JS
