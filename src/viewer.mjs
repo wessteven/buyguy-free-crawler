@@ -133,7 +133,7 @@ function renderAssets(){
    const c=columnByKey[key],active=assetSort.key===key;
    const indicator=active?(assetSort.direction==='asc'?' ▲':' ▼'):' ↕';
    const aria=active?(assetSort.direction==='asc'?'ascending':'descending'):'none';
-   return '<th scope="col" tabindex="0" role="button" data-col="'+key+'" aria-sort="'+aria+'" aria-label="Sort by '+c.name+'; drag to move">'+c.name+
+   return '<th scope="col" tabindex="0" data-col="'+key+'" aria-sort="'+aria+'" aria-label="Sort by '+c.name+'; drag to move">'+c.name+
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></th>';
  }).join('');
  const rows=orderedAssetRows().map(row=>'<tr>'+assetOrder.map(key=>cell(columnValue(row,key))).join('')+'</tr>').join('');
