@@ -66,6 +66,33 @@ tbody tr:hover{background:#174029}
 #assets .green-progress{font-size:9px;color:#9cc3a4;display:block}
 
 @media(max-width:400px){body{padding:4px!important}.bg-tab{font-size:9px!important}.stat{padding:2px 4px!important}th,td{padding:3px 4px!important}}
+/* The token table owns vertical scroll, so the column header remains visible.
+   Both directions are scrolled by the same native element on Android. */
+#assets,.asset-view{height:min(70dvh,750px)!important;max-height:70dvh!important;
+ overflow:auto!important;overscroll-behavior:contain;position:relative;
+ -webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
+#assets table,.asset-view table{min-width:max-content;width:max-content}
+#assets thead,.asset-view thead{position:sticky;top:0;z-index:12}
+#assets th,.asset-view th{position:sticky!important;top:0!important;z-index:12!important;
+ background:#14321d!important;box-shadow:0 2px 0 #3c7951}
+#assets .head-controls,.asset-view .head-controls{display:inline-flex;gap:2px;
+ align-items:center;margin-left:4px;vertical-align:middle}
+#assets .head-controls button,.asset-view .head-controls button{min-height:19px!important;
+ padding:0 3px!important;border:1px solid #386c47!important;line-height:16px;
+ background:#1e462b!important;font-size:12px!important;touch-action:manipulation}
+#assets .social-cell,.asset-view .social-cell{max-width:175px;white-space:normal}
+#assets .social-cell.folded,.asset-view .social-cell.folded{white-space:nowrap;max-width:108px}
+#assets .social-cell .social-extra,.asset-view .social-cell .social-extra{display:none!important}
+#assets .social-cell.expanded .social-extra,.asset-view .social-cell.expanded .social-extra{display:inline-block!important}
+#assets .social-link,.asset-view .social-link{padding:2px 3px!important;margin:0 1px!important;
+ border-radius:2px!important;font-size:10px!important}
+#assets .social-count,.asset-view .social-count{color:#a2e2b1;margin-left:3px}
+#assets .flags-cell,.asset-view .flags-cell{max-width:225px;white-space:normal!important;
+ overflow-wrap:anywhere;word-break:break-word}
+#assets .flags-cell.folded,.asset-view .flags-cell.folded{white-space:nowrap!important;max-width:170px}
+#assets .flags-full,.asset-view .flags-full{display:inline-block;max-width:210px;white-space:normal;
+ overflow-wrap:anywhere}
+
 </style></head><body>
 <pre class="ascii-title" role="heading" aria-level="1">+----------------------------+
 | the   BUYGUY GOGET         |
@@ -121,46 +148,49 @@ const cell=v=>'<td>'+String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 function table(keys,rows){return '<table><thead><tr>'+keys.map(k=>'<th>'+k+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(cell).join('')+'</tr>').join('')+'</tbody></table>';}
 
 // Only display preferences go to this device's storage. Never store the login token.
-const layoutKey='buyguy.assetColumns.v1',sortKey='buyguy.assetSort.v1';
+const layoutKey='buyguy.assetColumns.v2',sortKey='buyguy.assetSort.v1',foldKey='buyguy.columnFolds.v1';
+// Buying decision -> market structure -> token safety -> contract -> supporting details.
 const assetColumns=[
- {key:'tier',name:'Lane',type:'text'},
- {key:'quote_age',name:'Quote age',type:'number'},
- {key:'chain',name:'Chain',type:'text'},
  {key:'symbol',name:'Token',type:'text'},
- {key:'socials',name:'Socials',type:'number'},
- {key:'safety',name:'Safety',type:'number'},
+ {key:'audit',name:'Audit',type:'text'},
+ {key:'chain',name:'Chain',type:'text'},
+ {key:'price',name:'Price $',type:'number'},
+ {key:'liquidity',name:'Liquidity $',type:'number'},
+ {key:'market_cap',name:'Cap $',type:'number'},
+ {key:'buys_m5',name:'5m buys/sells',type:'number'},
  {key:'momentum',name:'Signal',type:'number'},
  {key:'direction',name:'Direction 1h',type:'number'},
  {key:'score',name:'Score',type:'number'},
+ {key:'quote_age',name:'Quote age',type:'number'},
+ {key:'tier',name:'Lane',type:'text'},
  {key:'status',name:'Status',type:'text'},
- {key:'liquidity',name:'Liquidity $',type:'number'},
- {key:'market_cap',name:'Cap $',type:'number'},
- {key:'price',name:'Price $',type:'number'},
- {key:'buys_m5',name:'5m buys/sells',type:'number'},
- {key:'risk',name:'Mint review',type:'text'},
- {key:'topBps',name:'Top acct %',type:'number'},
- {key:'flags',name:'Mint/holder flags',type:'text'},
  {key:'provider',name:'Provider',type:'text'},
- {key:'audit',name:'Audit',type:'text'},
- {key:'address',name:'Token Address',type:'text'}
+ {key:'safety',name:'Safety',type:'number'},
+ {key:'topBps',name:'Top acct %',type:'number'},
+ {key:'address',name:'Copy address',type:'text'},
+ {key:'socials',name:'Socials',type:'number'},
+ {key:'risk',name:'Mint review',type:'text'},
+ {key:'flags',name:'Mint/holder flags',type:'text'}
 ];
 const columnByKey=Object.fromEntries(assetColumns.map(c=>[c.key,c]));
 const initialColumnKeys=assetColumns.map(c=>c.key);
 function storedValue(key){try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}}
 function saveValue(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
 function validOrder(maybe){
- const current=Array.isArray(maybe)?maybe.filter((key,index)=>typeof key==='string'&&key!=='address'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
- const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
- // Introduce new metadata columns beside Token without overwriting a chosen layout.
- if(order.includes('symbol')){
-   let insertAfter=order.indexOf('symbol');
-   for(const key of ['audit','socials','safety','momentum','direction']){
-     if(current.includes(key))continue;
-     const previous=order.indexOf(key);if(previous>=0)order.splice(previous,1);
-     order.splice(++insertAfter,0,key);
-   }
- }
- return order.filter(key=>key!=='address').concat('address');
+ const current=Array.isArray(maybe)?maybe.filter((key,index)=>
+   typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
+ return current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
+}
+const savedFolds=storedValue(foldKey);
+let columnFolded={
+ socials:savedFolds?.socials===false?false:true,
+ flags:savedFolds?.flags===false?false:true
+};
+function toggleColumnFold(key){
+ if(!['socials','flags'].includes(key))return false;
+ columnFolded[key]=!columnFolded[key];
+ saveValue(foldKey,columnFolded);
+ renderAssets();return true;
 }
 let assetOrder=validOrder(storedValue(layoutKey));
 const savedSort=storedValue(sortKey);
@@ -245,9 +275,21 @@ async function copyAddress(address){
 }
 function socialCell(row){
  if(!row.socialLinks||!row.socialLinks.length)return '<td class="social-cell">—</td>';
- return '<td class="social-cell">'+row.socialLinks.map(link=>
-   '<a class="social-link" href="'+escapeSocial(link.url)+'" target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer" title="Unverified project-supplied social link" aria-label="Open unverified '+escapeSocial(link.label)+' for '+escapeSocial(row.symbol)+'">'+escapeSocial(link.label)+'</a>'
- ).join('')+'</td>';
+ const links=row.socialLinks.map((link,i)=>
+   '<a class="social-link'+(columnFolded.socials&&i>=2?' social-extra':'')+
+   '" href="'+escapeSocial(link.url)+'" target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer" title="Unverified project-supplied social link" aria-label="Open unverified '+escapeSocial(link.label)+' for '+escapeSocial(row.symbol)+'">'+escapeSocial(link.label)+'</a>'
+ ).join('');
+ const hidden=columnFolded.socials&&row.socialLinks.length>2?
+   '<span class="social-count">+'+(row.socialLinks.length-2)+'</span>':'';
+ return '<td class="social-cell'+(columnFolded.socials?' folded':' expanded')+'">'+links+hidden+'</td>';
+}
+function flagsCell(row){
+ const content=String(row.flags||'Not fully reviewed'),long=content.length>25;
+ if(!long)return '<td class="flags-cell" title="'+escapeSocial(content)+'">'+escapeSocial(content)+'</td>';
+ return '<td class="flags-cell '+(columnFolded.flags?'folded':'expanded')+
+   '" title="'+escapeSocial(content)+'">'+
+   (columnFolded.flags?'<span class="flags-short">'+escapeSocial(content.slice(0,21))+'…</span>':
+     '<span class="flags-full">'+escapeSocial(content)+'</span>')+'</td>';
 }
 function recentEnough(value,minutes){
  const ts=Date.parse(value||''),age=Date.now()-ts;
@@ -384,7 +426,7 @@ function sortAssets(key){
  renderAssets();
 }
 function moveAssetColumn(from,to,after=false){
- if(!columnByKey[from]||!columnByKey[to]||from===to||from==='address'||to==='address')return false;
+ if(!columnByKey[from]||!columnByKey[to]||from===to)return false;
  const order=assetOrder.filter(key=>key!==from);
  const index=order.indexOf(to);
  if(index<0)return false;
@@ -394,9 +436,20 @@ function moveAssetColumn(from,to,after=false){
 }
 function resetAssetColumns(){
  assetOrder=[...initialColumnKeys];
+ columnFolded={socials:true,flags:true};saveValue(foldKey,columnFolded);
  assetSort={key:'score',direction:'desc'};
  saveValue(layoutKey,assetOrder);saveValue(sortKey,assetSort);
  renderAssets();
+}
+function moveColumnByStep(key,step){
+ const i=assetOrder.indexOf(key),next=assetOrder[i+step];
+ if(!next)return false;
+ return moveAssetColumn(key,next,step>0);
+}
+function moveColumnToEnd(key){
+ if(!columnByKey[key])return false;
+ assetOrder=assetOrder.filter(item=>item!==key).concat(key);
+ saveValue(layoutKey,assetOrder);renderAssets();return true;
 }
 function setAssetData(records,routes=[]){assetRows=(Array.isArray(records)?records:[]).map(a=>assetRow(a,routes));renderAssets()}
 let drag=null,suppressSortUntil=0;
@@ -415,22 +468,45 @@ function renderAssets(){
  for(const [view,id] of [['all','assets'],['hot','hotAssets'],['not','notAssets']]){
  const wrap=document.getElementById(id);
  if(!wrap)continue;
- const left=wrap.scrollLeft;
+ const left=wrap.scrollLeft,top=wrap.scrollTop;
  const colHtml=assetOrder.map(key=>{
    const c=columnByKey[key],active=assetSort.key===key;
    const indicator=active?(assetSort.direction==='asc'?' ▲':' ▼'):' ↕';
    const aria=active?(assetSort.direction==='asc'?'ascending':'descending'):'none';
-   return '<th scope="col" tabindex="0" data-col="'+key+'" aria-sort="'+aria+'" aria-label="Sort by '+c.name+'; drag to move">'+c.name+
-     '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></th>';
+   // Mobile: explicit repositioning buttons for unusually wide supporting columns.
+   const controls=['socials','flags'].includes(key)?
+     '<span class="head-controls">'+
+     '<button type="button" class="head-step" data-step="-1" aria-label="Move '+c.name+' left">‹</button>'+
+     '<button type="button" class="head-step" data-step="1" aria-label="Move '+c.name+' right">›</button>'+
+     '<button type="button" class="head-end" aria-label="Move '+c.name+' to last column">⇥</button>'+
+     '<button type="button" class="head-fold" data-fold-col="'+key+'" aria-expanded="'+
+       String(!columnFolded[key])+'" aria-label="'+(columnFolded[key]?'Expand ':'Collapse ')+c.name+
+       '">'+(columnFolded[key]?'⊞':'⊟')+'</button></span>':'';
+   return '<th scope="col" tabindex="0" data-col="'+key+'" aria-sort="'+aria+
+     '" aria-label="Sort by '+c.name+'; drag to move"><span class="head-label">'+c.name+
+     '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></span>'+controls+'</th>';
  }).join('');
  const rows=orderedAssetRows().filter(row=>view==='all'||(view==='hot')===(row.tier==='HOT')).map(row=>'<tr>'+assetOrder.map(key=>
- key==='socials'?socialCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='symbol'?tokenCell(row):
+ key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='symbol'?tokenCell(row):
  ['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))
  ).join('')+'</tr>').join('');
  wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
- wrap.scrollLeft=left;
+ wrap.scrollLeft=left;wrap.scrollTop=top;
  wrap.querySelectorAll('th[data-col]').forEach(th=>{
-   th.addEventListener('click',()=>{
+   th.querySelectorAll('.head-controls button').forEach(btn=>{
+     btn.addEventListener('pointerdown',e=>e.stopPropagation());
+     btn.addEventListener('click',e=>{
+       e.stopPropagation();e.preventDefault();
+       const key=th.dataset.col;
+       if(btn.classList.contains('head-step'))moveColumnByStep(key,Number(btn.dataset.step));
+       else if(btn.classList.contains('head-end'))moveColumnToEnd(key);
+       else if(btn.classList.contains('head-fold'))toggleColumnFold(key);
+       const status=document.getElementById('assetOrderStatus');
+       if(status)status.textContent='Column preference saved on this device.';
+     });
+   });
+   th.addEventListener('click',e=>{
+     if(e.target?.closest?.('.head-controls'))return;
      if(Date.now()<suppressSortUntil)return;
      sortAssets(th.dataset.col);
    });
@@ -444,11 +520,13 @@ function renderAssets(){
      }else if(e.key==='Enter'||e.key===' '){e.preventDefault();sortAssets(th.dataset.col);}
    });
    th.addEventListener('pointerdown',e=>{
+     if(e.target?.closest?.('.head-controls'))return;
      if(e.button!==undefined&&e.button!==0)return;
      drag={key:th.dataset.col,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,moving:false,x:e.clientX,y:e.clientY};
      try{th.setPointerCapture(e.pointerId)}catch{}
    });
    th.addEventListener('pointermove',e=>{
+     if(e.target?.closest?.('.head-controls'))return;
      if(!drag||drag.pointerId!==e.pointerId)return;
      const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;
      if(!drag.moving&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.1)drag.moving=true;
