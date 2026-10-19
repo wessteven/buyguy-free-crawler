@@ -108,9 +108,9 @@ async function rpc(url,method,params,fetcher){
  if(json?.error||!json?.result)throw Error('Helius pool RPC unavailable');
  return json.result;
 }
-export async function inspectRaydiumCpmmPool(pool,targetMint,rpcEndpoint,fetcher=fetch){
+export async function inspectRaydiumCpmmPool(pool,targetMint,rpcEndpoint,fetcher=fetch,{prefetchedAccount=null}={}){
  if(!pubkey.test(pool||'')||!pubkey.test(targetMint||''))throw Error('Invalid exact Solana address');
- const state=await rpc(rpcEndpoint,'getAccountInfo',[pool,
+ const state=prefetchedAccount?{value:prefetchedAccount}:await rpc(rpcEndpoint,'getAccountInfo',[pool,
   {encoding:'base64',commitment:'confirmed'}],fetcher);
  const decoded=decodeRaydiumCpmmPool(pool,state.value);
  if(decoded.status!=='CPMM_LAYOUT_VERIFIED')return decoded;
