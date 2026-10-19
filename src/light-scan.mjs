@@ -1,3 +1,4 @@
+import {collectSocialLinks} from './social-links.mjs';
 import {dexFallback} from './dex-fallback.mjs';
 // Lightweight Cloudflare Free cron discovery. Never places paper or real trades.
 // Official GeckoTerminal new-pool data; source and timestamps remain explicit.
@@ -33,7 +34,7 @@ export function parseNewPools(data,limit=8){
       pool:poolAddress,price,liquidity:liq,market_cap:cap,
       buys_m5:Math.round(buys),sells_m5:Math.round(sells),tx_m5:Math.round(buys+sells),
       change_h1:change,volume_h24:volume,score,pool_created:at.pool_created_at||null,
-      source:'GeckoTerminal'});
+      source:'GeckoTerminal',socials:collectSocialLinks(token,at)});
   }
   return candidates.sort((a,b)=>b.score-a.score||b.liquidity-a.liquidity).slice(0,limit);
 }
@@ -73,6 +74,15 @@ export async function cronScan(env,fetcher=fetch){
         (SELECT 1 FROM assets WHERE asset_key=? AND status!='TRASH')`)
         .bind(a.asset_key,stamp,a.pool,a.source,a.price,a.liquidity,a.buys_m5,a.sells_m5,
         a.score,a.asset_key));
+      if(a.socials?.length){
+        const socials=JSON.stringify(a.socials);
+        statements.push(env.DB.prepare(`INSERT INTO research_events(at,asset_key,kind,note)
+          SELECT ?,?,'TOKEN_SOCIALS',?
+          WHERE EXISTS (SELECT 1 FROM assets WHERE asset_key=? AND status!='TRASH')
+          AND COALESCE((SELECT note FROM research_events WHERE asset_key=?
+            AND kind='TOKEN_SOCIALS' ORDER BY id DESC LIMIT 1),'') != ?`)
+          .bind(stamp,a.asset_key,socials,a.asset_key,a.asset_key,socials));
+      }
     }
     statements.push(env.DB.prepare(`INSERT INTO runs
       (started_at,completed_at,state,discovered,observed,provider_errors)
