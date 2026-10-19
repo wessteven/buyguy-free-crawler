@@ -3,6 +3,7 @@ import {scheduledResearch} from './scheduled-research.mjs';
 import {issueSession,validSession,readSessionCookie,sessionCookie,clearSessionCookie} from './auth-session.mjs';
 import {addWatchedAddress} from './watchlist.mjs';
 import {assessGreenLight} from './green-gate.mjs';
+import {tokenTier,countCoverage} from './token-tiers.mjs';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,15 +20,15 @@ table{font-family:inherit!important;font-size:10px!important;line-height:1.22}
 th,td{padding:3px 5px!important;border-bottom:1px solid #25432e!important;vertical-align:middle}
 tbody tr:nth-child(even){background:#0c2013}
 tbody tr:hover{background:#174029}
-#assets th{min-width:42px!important;top:0;background:#142d1b!important}
-#assets{border:1px solid #2d5536}
+#assets th,.asset-view th{min-width:42px!important;top:0;background:#142d1b!important}
+#assets,.asset-view{border:1px solid #2d5536;overflow:auto;max-width:100%}
 #assets .social-link{padding:2px 3px!important;margin:0 1px!important;border-radius:2px!important}
 #assets .risk-note{font-size:9px}
 #assets .signal-cell,#assets .dir-arrow{font-size:13px!important}
 .asset-toolbar{margin:2px 0 4px!important;gap:4px!important}
 #overview{padding:3px;border-top:1px solid #294a31}
 .stat{border:0!important;border-right:1px solid #335e41!important;border-radius:0!important;background:transparent!important;padding:3px 6px!important;margin:0!important;font-size:10px}
-.bg-tablist{grid-template-columns:repeat(5,minmax(0,1fr));margin:0!important;padding:3px!important;gap:2px!important;background:#0b2012!important;position:sticky;top:0}
+.bg-tablist{grid-template-columns:repeat(4,minmax(0,1fr));margin:0!important;padding:3px!important;gap:2px!important;background:#0b2012!important;position:sticky;top:0}
 .bg-tab{font-size:10px!important;padding:5px 2px!important;min-height:29px;border-radius:2px!important;white-space:nowrap}
 .tab-panel{min-height:70px!important}
 .login-actions{padding:3px;gap:4px}
@@ -50,7 +51,7 @@ tbody tr:hover{background:#174029}
 #greenDialog .audit-check{border-bottom:1px solid #34543e;padding:6px 0;white-space:normal}
 #greenDialog .audit-detail{font-size:10px;color:#a3c7a8;white-space:normal}
 #greenDialog .audit-title{font-weight:800;color:#d5ffdc}
-#assets .green-button{min-height:0!important;padding:1px 2px!important;border:0!important;background:transparent!important;font-weight:800;line-height:1.15;white-space:nowrap}
+#assets .green-button,.asset-view .green-button{min-height:0!important;padding:1px 2px!important;border:0!important;background:transparent!important;font-weight:800;line-height:1.15;white-space:nowrap}
 #assets .green-progress{font-size:9px;color:#9cc3a4;display:block}
 
 @media(max-width:400px){body{padding:4px!important}.bg-tab{font-size:9px!important}.stat{padding:2px 4px!important}th,td{padding:3px 4px!important}}
@@ -62,6 +63,8 @@ tbody tr:hover{background:#174029}
 <div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button></div><div id="overview"></div>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
 <button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="true" tabindex="0">TOKEN DATA</button>
+<button class="bg-tab" id="tab-hot" role="tab" type="button" data-tab="hot" aria-controls="panel-hot" aria-selected="false" tabindex="-1">🔥 HOT</button>
+<button class="bg-tab" id="tab-not" role="tab" type="button" data-tab="not" aria-controls="panel-not" aria-selected="false" tabindex="-1">🥱 NOT</button>
 <button class="bg-tab" id="tab-wallet" role="tab" type="button" data-tab="wallet" aria-controls="panel-wallet" aria-selected="false" tabindex="-1">Wallet</button>
 <button class="bg-tab" id="tab-runs" role="tab" type="button" data-tab="runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Recent Runs</button>
 <button class="bg-tab" id="tab-outcomes" role="tab" type="button" data-tab="outcomes" aria-controls="panel-outcomes" aria-selected="false" tabindex="-1">Outcomes</button>
@@ -74,6 +77,14 @@ tbody tr:hover{background:#174029}
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
 <section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend">Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Tap a safety score to inspect the seven checks.  Score is 0–100 based on evidence, <strong>not a guarantee of safety</strong>. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
 </div>
+<div class="tab-panel" id="panel-hot" role="tabpanel" aria-labelledby="tab-hot" hidden>
+<section><h2>HOT // FRESH MOMENTUM <span id="hotCount" class="hint"></span></h2>
+<p class="hint">Fresh buyer momentum, not a safety verdict. Shared TOKEN DATA columns and sorting.</p>
+<div class="asset-view" id="hotAssets" aria-label="Live HOT token subset"></div></section></div>
+<div class="tab-panel" id="panel-not" role="tabpanel" aria-labelledby="tab-not" hidden>
+<section><h2>NOT // COOLING + DORMANT <span id="notCount" class="hint"></span></h2>
+<p class="hint">Archived from HOT, not deleted. Kept for rotating refresh and automatic return to HOT.</p>
+<div class="asset-view" id="notAssets" aria-label="Background monitored NOT token subset"></div></section></div>
 <div class="tab-panel" id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" hidden><section><h2>Paper wallet</h2><div id="wallet"></div></section></div>
 <div class="tab-panel" id="panel-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><section><h2>Recent runs</h2><div id="runs"></div></section></div>
 <div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
@@ -96,6 +107,8 @@ function table(keys,rows){return '<table><thead><tr>'+keys.map(k=>'<th>'+k+'</th
 // Only display preferences go to this device's storage. Never store the login token.
 const layoutKey='buyguy.assetColumns.v1',sortKey='buyguy.assetSort.v1';
 const assetColumns=[
+ {key:'tier',name:'Lane',type:'text'},
+ {key:'quote_age',name:'Quote age',type:'number'},
  {key:'chain',name:'Chain',type:'text'},
  {key:'symbol',name:'Token',type:'text'},
  {key:'socials',name:'Socials',type:'number'},
@@ -138,7 +151,7 @@ let assetSort=(savedSort&&columnByKey[savedSort.key]&&['asc','desc'].includes(sa
  savedSort:{key:'score',direction:'desc'};
 let assetRows=[];
 const tabKey='buyguy.activeTab.v1';
-const dashboardTabs=['research','wallet','runs','outcomes','address'];
+const dashboardTabs=['research','hot','not','wallet','runs','outcomes','address'];
 let activeTab=dashboardTabs.includes(storedValue(tabKey))?storedValue(tabKey):'research';
 function activateTab(tab,{focus=false}={}){
  if(!dashboardTabs.includes(tab))return false;
@@ -294,6 +307,7 @@ function assetRow(a,routes=[]){
  const socialLinks=supplied.filter(item=>item&&typeof item==='object'&&safeExternalLink(item.url))
     .slice(0,24).map(item=>({label:String(item.label||'Link').slice(0,18),url:safeExternalLink(item.url)}));
  return {...a,buys_m5:Number(a.buys_m5)||0,sells_m5:Number(a.sells_m5)||0,
+   tier:a.tier||'NOT',tier_reason:a.tier_reason||'QUOTE_UNVERIFIED',quote_age:a.quote_age??null,
    socials:socialLinks.length,socialLinks,
    safety:safetyInfo.score,momentum:signalInfo.rank,direction:directionInfo.value,
    safetyInfo,signalInfo,directionInfo,
@@ -309,6 +323,8 @@ function formatUsd(raw){
 function columnValue(row,key){
  if(key==='buys_m5')return row.buys_m5+'/'+row.sells_m5;
  if(key==='topBps')return row.topBps===null?'Unknown':(row.topBps/100).toFixed(1)+'%';
+ if(key==='quote_age')return row.quote_age===null?'—':row.quote_age+'m';
+ if(key==='tier')return row.tier==='HOT'?'🔥 HOT':'🥱 NOT';
  if(['liquidity','market_cap','price'].includes(key))return formatUsd(row[key]);
  return row[key]??'—';
 }
@@ -365,16 +381,17 @@ function headerAt(x,y){
  const hits=document.elementsFromPoint?document.elementsFromPoint(x,y):[document.elementFromPoint(x,y)];
  for(const node of hits){
    const th=node&&node.closest?node.closest('th[data-col]'):null;
-   if(th&&document.getElementById('assets').contains(th))return th;
+   if(th&&['assets','hotAssets','notAssets'].some(id=>document.getElementById(id)?.contains(th)))return th;
  }
  return null;
 }
 function clearDropHighlight(){
- document.querySelectorAll('#assets th').forEach(th=>th.classList.remove('drop-target','drag-active'));
+ document.querySelectorAll('#assets th, #hotAssets th, #notAssets th').forEach(th=>th.classList.remove('drop-target','drag-active'));
 }
 function renderAssets(){
- const wrap=document.getElementById('assets');
- if(!wrap)return;
+ for(const [view,id] of [['all','assets'],['hot','hotAssets'],['not','notAssets']]){
+ const wrap=document.getElementById(id);
+ if(!wrap)continue;
  const left=wrap.scrollLeft;
  const colHtml=assetOrder.map(key=>{
    const c=columnByKey[key],active=assetSort.key===key;
@@ -383,7 +400,7 @@ function renderAssets(){
    return '<th scope="col" tabindex="0" data-col="'+key+'" aria-sort="'+aria+'" aria-label="Sort by '+c.name+'; drag to move">'+c.name+
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></th>';
  }).join('');
- const rows=orderedAssetRows().map(row=>'<tr>'+assetOrder.map(key=>
+ const rows=orderedAssetRows().filter(row=>view==='all'||(view==='hot')===(row.tier==='HOT')).map(row=>'<tr>'+assetOrder.map(key=>
  key==='socials'?socialCell(row):key==='address'?addressCell(row):key==='symbol'?tokenCell(row):
  ['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))
  ).join('')+'</tr>').join('');
@@ -438,6 +455,7 @@ function renderAssets(){
    th.addEventListener('pointerup',endDrag);
    th.addEventListener('pointercancel',()=>{drag=null;clearDropHighlight()});
  });
+ }
  const status=document.getElementById('assetOrderStatus');
  if(status&&!assetRows.length)status.textContent='No token data returned.';
  else if(status&&assetRows.length&&!status.textContent)status.textContent='Sorting '+columnByKey[assetSort.key].name+' '+(assetSort.direction==='asc'?'ascending':'descending')+'.';
@@ -455,7 +473,218 @@ async function refresh(){try{
  document.getElementById('board').style.display='block';
  document.getElementById('msg').textContent='';
  const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
- document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
+ const coverage=x.coverage||{};
+ document.getElementById('overview').innerHTML='<div class="stat">Cash: 
+ document.getElementById('watchList').innerHTML=watchlistTable(x.pinned);
+ document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
+ setAssetData(x.assets,x.routes);
+ document.getElementById('routeReviews').innerHTML=table(['UTC','Mint','Result','Approx. round-trip loss','Top impact'],(x.routes||[]).map(r=>{
+ let report={};try{report=JSON.parse(r.note||'{}')}catch{}
+ return [r.at,r.asset_key,report.label||'Unknown',report.estimatedRoundTripLossPct===null||report.estimatedRoundTripLossPct===undefined?'Unknown':report.estimatedRoundTripLossPct+'%',report.maxImpactPct===null||report.maxImpactPct===undefined?'Unknown':report.maxImpactPct+'%'];
+ }));
+ document.getElementById('wallet').innerHTML=table(['Starting','Cash','Realised P&L','Estimated equity','Stale marks'],[[
+ x.paper?.starting_cash,x.paper?.cash,x.paper?.realised,x.paper?.estimated_total===null?'Unknown':x.paper?.estimated_total,x.paper?.unknown_marks]])+
+ table(['Token','Cost USD','Est. sale value','Unrealised P&L','Price stale'],(x.paper?.positions||[]).map(p=>[
+ p.asset_key,p.cost,p.estimatedValue===null?'Unknown':p.estimatedValue,p.unrealized===null?'Unknown':p.unrealized,p.stale]));
+ document.getElementById('predictions').innerHTML=table(['Token','Status','Horizon min','Change %'],(x.predictions||[]).map(p=>[p.asset_key,p.status,p.horizon_min,p.change_pct]));
+}catch(e){document.getElementById('msg').textContent='Service error: '+e.message;return false}
+return true;
+}
+async function login(){
+ const input=document.getElementById('pass'),button=document.getElementById('enter');
+ const password=input.value,remember=document.getElementById('remember').checked;
+ input.value='';
+ if(!password){document.getElementById('msg').textContent='Enter your password.';return;}
+ button.disabled=true;
+ document.getElementById('msg').textContent='Signing in…';
+ try{
+   const r=await fetch('/api/login',{method:'POST',credentials:'same-origin',
+     headers:{'content-type':'application/json'},body:JSON.stringify({password,remember})});
+   if(!r.ok){document.getElementById('msg').textContent=r.status===401?'Incorrect password.':'Login unavailable. Try again.';return;}
+   await refresh();
+ }catch(e){document.getElementById('msg').textContent='Unable to connect. Try again.';}
+ finally{button.disabled=false;}
+}
+async function logout(){
+ try{await fetch('/api/logout',{method:'POST',credentials:'same-origin'});}catch{}
+ document.getElementById('board').style.display='none';
+ document.getElementById('login').style.display='block';
+ document.getElementById('msg').textContent='Signed out on this device.';
+}
+document.getElementById('enter').onclick=login;
+document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+document.getElementById('logout').onclick=logout;
+document.getElementById('refresh').onclick=refresh;
+document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
+function inspectGreen(key){
+ const row=assetRows.find(x=>x.asset_key===key);
+ if(!row)return;
+ const gate=row.green;
+ const dialog=document.getElementById('greenDialog'),details=document.getElementById('greenDetails');
+ if(!dialog||!details)return;
+ const title=escapeSocial(row.symbol||row.asset_key);
+ if(!gate){details.textContent='No verified green-light evaluation is available.';dialog.showModal();return;}
+ const icon=gate.status==='RISK'?'🔴':gate.green?'🟢':gate.status==='UNASSESSED'?'⚫':'🟡';
+ details.innerHTML='<p><strong>'+title+'</strong> '+icon+' <strong>'+gate.passed+'/'+gate.total+
+  ' checks</strong> · '+escapeSocial(gate.status)+'</p>'+
+  gate.checks.map(c=>'<div class="audit-check"><div class="audit-title">'+(c.passed?'✓ ':'✕ ')+
+  escapeSocial(c.name)+'</div><div class="audit-detail">'+escapeSocial(c.reason)+'</div></div>').join('')+
+  '<p class="hint">'+(gate.partial_probes?.uniqueAuthorityCount!==null&&gate.partial_probes?.uniqueAuthorityCount!==undefined?
+   'Owner sample: '+escapeSocial(gate.partial_probes.uniqueAuthorityCount)+' account authorities. ':'')+
+   (gate.partial_probes?.poolAccountProgram?'Pool program: '+escapeSocial(gate.partial_probes.poolAccountProgram)+'. ':'')+
+   (gate.partial_probes?.poolVaultsVerified?'✓ Verified Raydium CPMM vault identities. ':'')+
+   (gate.partial_probes?.excludedVerifiedVaultAccounts>0?
+     'Excluded verified pool vault token accounts: '+Number(gate.partial_probes.excludedVerifiedVaultAccounts)+'. ':'')+
+   (gate.partial_probes?.poolProtocol?'Protocol: '+escapeSocial(gate.partial_probes.poolProtocol)+'. ':'')+
+   (gate.partial_probes?.migrationStatus?
+      'Migration profile: '+escapeSocial(gate.partial_probes.migrationStatus)+'. ':'')+
+   (gate.partial_probes?.canonicalMigrationBurnPattern?
+      'Canonical Pump authority + zero LP mint supply verified. ':'')+
+   (gate.partial_probes?.migrationTxVerified?
+     '✓ Historical Pump migrate transaction independently verified. ':
+     'Historical migrate transaction not confirmed. ')+
+   (gate.partial_probes?.programGovernance?
+     'Code governance: '+escapeSocial(gate.partial_probes.programGovernance)+
+     (gate.partial_probes.programUpgradeAuthorityPresent===true?' (upgrade authority present). ':' . '):'')+
+   (Number.isFinite(gate.partial_probes?.lpSupplyGapBps)?
+     'LP supply difference: '+(gate.partial_probes.lpSupplyGapBps/100).toFixed(1)+'% (not a confirmed lock). ':'')+
+   escapeSocial(gate.partial_probes?.caveat||'')+'</p>'+
+  '<p class="hint">'+escapeSocial(gate.warning)+'</p>'+
+  '<p class="hint">Read-only screening. No real or paper order was placed by this check.</p>';
+ if(!dialog.open)dialog.showModal();
+}
+for(const id of ['assets','hotAssets','notAssets']){
+ document.getElementById(id)?.addEventListener('click',event=>{
+ const copy=event.target?.closest?.('button[data-address]');
+ if(copy){copyAddress(copy.dataset.address);return;}
+ const inspect=event.target?.closest?.('button[data-green-key]');
+ if(inspect)inspectGreen(inspect.dataset.greenKey);
+ });
+}
+document.getElementById('greenClose').onclick=()=>document.getElementById('greenDialog').close();
+function watchlistTable(pins){
+ const rows=(Array.isArray(pins)?pins:[]).map(a=>[
+ a.chain,a.symbol==='PENDING'||!a.symbol?'AWAITING QUOTE':a.symbol,
+ a.status,a.risk_status||'UNVERIFIED',a.address
+ ]);
+ return table(['CHAIN','TOKEN','STATE','RISK','CONTRACT'],rows);
+}
+async function submitWatch(event){
+ event.preventDefault();
+ const chain=document.getElementById('watchChain').value,
+       input=document.getElementById('watchAddress'),
+       button=document.getElementById('watchSubmit'),
+       status=document.getElementById('watchMsg');
+ const address=input.value.trim();
+ if(!address){status.textContent='Paste a token contract first.';return;}
+ button.disabled=true;status.textContent='Validating and pinning…';
+ try{
+   const r=await fetch('/api/watchlist',{method:'POST',credentials:'same-origin',
+     headers:{'content-type':'application/json'},body:JSON.stringify({chain,address})});
+   const data=await r.json();
+   if(!r.ok){status.textContent=data.error||'Unable to add token';return;}
+   input.value='';
+   await refresh();
+   activateTab('address');
+   status.textContent='WATCHING '+data.asset_key+'. Market data will populate when a verified pool quote is available.';
+ }catch{status.textContent='Network error, try again.'}
+ finally{button.disabled=false;}
+}
+document.getElementById('watchForm').addEventListener('submit',submitWatch);
+initTabs();
+// Reopen automatically when a valid remembered session cookie is present.
+refresh();
+
+
+</script></body></html>`;
+function auth(given,secret){if(!secret||!given||given.length!==secret.length)return false;let n=0;for(let i=0;i<given.length;i++)n|=given.charCodeAt(i)^secret.charCodeAt(i);return n===0;}
+export default {async fetch(request,env){const path=new URL(request.url).pathname;
+if(path==='/health')return json({server:'online',scan_status:'not_verified'});
+if(path==='/'||path==='/dashboard')return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
+const origin=request.headers.get('origin');
+if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist')&&origin&&origin!==new URL(request.url).origin)
+  return json({error:'forbidden'},403);
+if(path==='/api/login'){
+ if(request.method!=='POST')return json({error:'method_not_allowed'},405);
+ if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+   return json({error:'unsupported_media_type'},415);
+ let body;
+ try{body=await request.json();}catch{return json({error:'invalid_request'},400)}
+ const password=body?.password,remember=body?.remember===true;
+ if(typeof password!=='string'||password.length>2048||!auth(password,env.ADMIN_TOKEN||''))
+   return json({error:'unauthorized'},401);
+ const session=await issueSession(env.ADMIN_TOKEN,{remember});
+ const output=json({ok:true,remember,expiresInSeconds:remember?2592000:43200});
+ output.headers.set('set-cookie',sessionCookie(session,{remember}));
+ return output;
+}
+if(path==='/api/logout'){
+ if(request.method!=='POST')return json({error:'method_not_allowed'},405);
+ const output=json({ok:true});
+ output.headers.set('set-cookie',clearSessionCookie());
+ return output;
+}
+if(path!=='/api/status'&&path!=='/api/watchlist')return json({error:'not_found'},404);
+if((path==='/api/status'&&request.method!=='GET')||(path==='/api/watchlist'&&request.method!=='POST'))
+ return json({error:'method_not_allowed'},405);
+const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
+const cookie=readSessionCookie(request.headers.get('cookie'));
+const authorized=auth(bearer,env.ADMIN_TOKEN||'')||await validSession(env.ADMIN_TOKEN||'',cookie);
+if(!authorized)return json({error:'unauthorized'},401);
+if(!env.DB)return json({error:'database_not_configured'},503);
+if(path==='/api/watchlist'){
+ if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+   return json({error:'unsupported_media_type'},415);
+ const length=Number(request.headers.get('content-length')||0);
+ if(length>1024)return json({error:'request_too_large'},413);
+ let input;
+ try{input=await request.json()}catch{return json({error:'invalid_json'},400)}
+ if(!input||typeof input!=='object'||Array.isArray(input))return json({error:'invalid_input'},422);
+ try{
+   const result=await addWatchedAddress(env.DB,input.chain,input.address);
+   return json(result.ok?result:{error:result.error},result.status);
+ }catch{return json({error:'watchlist_write_failed'},503)}
+}
+try{const list=async(sql)=>(await env.DB.prepare(sql).all()).results||[];
+const [runs,assets,wallet,predictions,routes,pinned,greenEvents]=await Promise.all([
+list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
+list("SELECT a.*, (SELECT e.note FROM research_events e WHERE e.asset_key=a.asset_key AND e.kind='TOKEN_SOCIALS' ORDER BY e.id DESC LIMIT 1) AS socials_json FROM assets a WHERE a.status IN ('ALIVE','STATIC','DEAD') ORDER BY a.score DESC LIMIT 500"),
+list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
+list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30"),
+list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 15"),
+list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100"),
+list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','PROGRAM_UPGRADE_PROBE','PUMP_MIGRATION_PROBE','PUMP_MIGRATION_TX_PROBE') ORDER BY id DESC LIMIT 2000")]);
+const recent=new Map();
+for(const event of greenEvents){
+ const key=event.asset_key+'|'+event.kind;
+ if(!recent.has(key))recent.set(key,event);
+}
+const now=Date.now();
+const evaluated=assets.map(asset=>({...asset,...(()=>{const item=tokenTier(asset,now);return {tier:item.tier,tier_reason:item.reason,quote_age:item.ageMinutes};})(),green:assessGreenLight(asset,{
+ mintEvent:recent.get(asset.asset_key+'|MINT_AUTHORITY_REVIEW'),
+ routeEvent:recent.get(asset.asset_key+'|ROUNDTRIP_QUOTE'),
+ ownerEvent:recent.get(asset.asset_key+'|BENEFICIAL_OWNER_AUDIT'),
+ poolEvent:recent.get(asset.asset_key+'|POOL_CUSTODY_AUDIT'),
+ ownerProbeEvent:recent.get(asset.asset_key+'|OWNER_CLUSTER_PROBE'),
+ poolProbeEvent:recent.get(asset.asset_key+'|POOL_IDENTITY_PROBE'),
+ programUpgradeEvent:recent.get(asset.asset_key+'|PROGRAM_UPGRADE_PROBE'),
+ migrationEvent:recent.get(asset.asset_key+'|PUMP_MIGRATION_PROBE'),
+ migrationTxEvent:recent.get(asset.asset_key+'|PUMP_MIGRATION_TX_PROBE'),now
+})}));
+const paper=await getPaperSnapshot(env);
+return json({runs,assets:evaluated,coverage:countCoverage(assets,now),wallet:wallet[0]||null,predictions,paper,routes,pinned});
+}catch(e){return json({error:'D1 query failed',message:String(e).slice(0,180)},503)}
+},async scheduled(controller,env,ctx){
+  await scheduledResearch(env);
+}
+};
++Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Discovery: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div>'+
+ '<div class="stat">Tracked: '+(coverage.total??x.assets?.length??0)+'</div>'+
+ '<div class="stat">🔥 HOT: '+(coverage.hot??0)+'</div><div class="stat">🥱 NOT: '+(coverage.not??0)+'</div>'+
+ '<div class="stat">Fresh ≤30m: '+(coverage.fresh30??0)+' / '+(coverage.total??0)+'</div>';
+ const hot=document.getElementById('hotCount'),not=document.getElementById('notCount');
+ if(hot)hot.textContent='('+Number(coverage.hot??0)+')';
+ if(not)not.textContent='('+Number(coverage.not??0)+')';
  document.getElementById('watchList').innerHTML=watchlistTable(x.pinned);
  document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
  setAssetData(x.assets,x.routes);
