@@ -211,3 +211,19 @@ test('Momentums distinguish acceleration, increasing, declining, quiet, inactive
    [{...sample,status:'DEAD'},'☠️']];
  for(const [a,icon] of expected)assert.equal(ui.evalJS('signalAssessment('+JSON.stringify(a)+')').icon,icon);
 });
+
+test('Legend and column instructions appear below research table and quote checks, not above them',async()=>{
+ const {html}=await tableSandbox();
+ const panel=html.slice(html.indexOf('id="panel-research"'),html.indexOf('id="panel-wallet"'));
+ const heading=panel.indexOf('<h2>Token research</h2>');
+ const table=panel.indexOf('id="assets"');
+ const quotes=panel.indexOf('id="routeReviews"');
+ const guide=panel.indexOf('Guide &amp; indicators');
+ const legend=panel.indexOf('Safety: 🟢');
+ const gestures=panel.indexOf('Tap a heading to sort');
+ assert.ok(heading>=0&&table>heading,'Token Research must open directly with the table');
+ assert.ok(quotes>table,'Quote results follow research table');
+ assert.ok(guide>quotes&&legend>quotes&&gestures>quotes,'Guide belongs at the end');
+ assert.equal(panel.match(/Tap a heading to sort/g)?.length,1,'Instructions must appear exactly once');
+ assert.equal(panel.match(/Safety: 🟢/g)?.length,1,'Legend must appear exactly once');
+});
