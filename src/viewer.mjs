@@ -133,7 +133,7 @@ function latestRoute(row,routes){
 function safetyAssessment(row,routes=[]){
  const status=row.risk_status||'UNVERIFIED',audit=riskInfo(row);
  if(status==='UNVERIFIED')return {score:null,icon:'⚫',label:'Unassessed',detail:'No on-chain authority review; score unavailable.'};
- const mint=['MINT_CONTROLS_REVOKED','PARTIAL_ONCHAIN_REVIEW','HOLDER_DATA_UNAVAILABLE','TOKEN_2022_METADATA_ONLY','HOLDER_CONCENTRATION_RISK'].includes(status)?35:0;
+ const mint=['MINT_CONTROLS_REVOKED','PARTIAL_ONCHAIN_REVIEW','HOLDER_DATA_UNAVAILABLE','TOKEN_2022_METADATA_ONLY','HOLDER_CONCENTRATION_RISK','FULL_REVIEW_PASSED'].includes(status)?35:0;
  const holders=audit.holderStatus==='TOKEN_ACCOUNT_BALANCES_SCREENED'?20:0;
  const liq=Number(row.liquidity);
  const liquidity=Number.isFinite(liq)&&liq>=50000?15:Number.isFinite(liq)&&liq>=25000?8:0;
