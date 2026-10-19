@@ -474,7 +474,19 @@ async function refresh(){try{
  document.getElementById('msg').textContent='';
  const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
  const coverage=x.coverage||{};
- document.getElementById('overview').innerHTML='<div class="stat">Cash: 
+ const items=[
+   'Cash: USD '+Number(x.wallet?.cash??0).toFixed(2),
+   'Discovery: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)'),
+   'Tracked: '+Number(coverage.total??x.assets?.length??0),
+   'HOT: '+Number(coverage.hot??0),
+   'NOT: '+Number(coverage.not??0),
+   'Fresh 30m: '+Number(coverage.fresh30??0)+' / '+Number(coverage.total??0)
+ ];
+ document.getElementById('overview').innerHTML=items.map(s=>'<span class="stat">'+s+'</span>').join('');
+ const hotLabel=document.getElementById('hotCount');
+ const notLabel=document.getElementById('notCount');
+ if(hotLabel)hotLabel.textContent='('+Number(coverage.hot??0)+')';
+ if(notLabel)notLabel.textContent='('+Number(coverage.not??0)+')';
  document.getElementById('watchList').innerHTML=watchlistTable(x.pinned);
  document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
  setAssetData(x.assets,x.routes);
