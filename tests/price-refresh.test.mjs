@@ -44,3 +44,21 @@ test('Provider 429 cannot write fabricated prices',async()=>{
  assert.equal(r.failedProviders.length,1);
  assert.equal(writes.length,0);
 });
+
+test('Pinned addresses rotate through scan slots so slower tokens are not starved',async()=>{
+ const addresses=Array.from({length:12},(_,i)=>({
+   ...asset,asset_key:'solana:'+mint.slice(0,-2)+String(i).padStart(2,'0'),
+   address:mint.slice(0,-2)+String(i).padStart(2,'0'),
+   has_position:0,pinned:1
+ }));
+ const db={prepare(sql){return {bind(){return {async all(){
+   if(sql.includes('a.pinned=1'))return {results:addresses};
+   return {results:[]};
+ }}}}}};
+ const seen=[];
+ const fetcher=async url=>{seen.push(url);return {ok:true,json:async()=>[]}};
+ await refreshKnownQuotes({DB:db},{fetcher,limit:5,now:'2026-10-19T00:00:00Z'});
+ await refreshKnownQuotes({DB:db},{fetcher,limit:5,now:'2026-10-19T00:10:00Z'});
+ assert.equal(seen.length,2);
+ assert.notEqual(seen[0],seen[1]);
+});
