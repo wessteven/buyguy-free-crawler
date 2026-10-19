@@ -19,6 +19,7 @@ async function tableSandbox(storage=new Map()){
   const doc={
     getElementById:id=>{
       if(!ui.has(id))ui.set(id,{onclick:null,value:'',textContent:'',innerHTML:'',style:{},hidden:false,
+        querySelectorAll(){return []},querySelector(){return null},scrollLeft:0,contains(){return false},
         attributes:{},listeners:{},tabIndex:-1,
         setAttribute(name,value){this.attributes[name]=value},
         addEventListener(name,listener){this.listeners[name]=listener},
@@ -95,9 +96,9 @@ test('Malicious saved layout and token symbol are sanitized',async()=>{
   assert.match(ui.assets.innerHTML,/&lt;img src=x/);
 });
 
-test('Navigation order is research, wallet, recent runs, then outcomes',async()=>{
+test('Navigation order is TOKEN DATA, HOT, NOT, wallet, recent runs, outcomes, address',async()=>{
  const {html,evalJS,ui}=await tableSandbox();
- const names=['tab-research','tab-wallet','tab-runs','tab-outcomes'];
+ const names=['tab-research','tab-hot','tab-not','tab-wallet','tab-runs','tab-outcomes','tab-address'];
  for(let i=1;i<names.length;i++)assert.ok(html.indexOf('id="'+names[i-1]+'"')<html.indexOf('id="'+names[i]+'"'));
  assert.equal(evalJS('activeTab'),'research');
  assert.equal(ui.get('panel-research').hidden,false);
@@ -272,4 +273,26 @@ test('Tap-to-inspect green checklist is a compact button, with unknowns visible'
  assert.match(page.assets.innerHTML,/data-green-key="solana:test-mint"/);
  assert.match(page.assets.innerHTML,/3\/7 CHECKS/);
  assert.match(page.html,/id="greenDialog"/);
+});
+
+test('HOT and NOT tabs use the same columns, preserve master tokens and sorting',async()=>{
+ const page=await tableSandbox();
+ const hot={...example[0],asset_key:'solana:hot',tier:'HOT',quote_age:5};
+ const not={...example[1],asset_key:'robinhood:not',tier:'NOT',quote_age:230,status:'DEAD'};
+ page.evalJS('setAssetData('+JSON.stringify([hot,not])+')');
+ assert.match(page.ui.get('hotAssets').innerHTML,/B_DOG/);
+ assert.doesNotMatch(page.ui.get('hotAssets').innerHTML,/A_CAT/);
+ assert.match(page.ui.get('notAssets').innerHTML,/A_CAT/);
+ assert.doesNotMatch(page.ui.get('notAssets').innerHTML,/B_DOG/);
+ assert.match(page.assets.innerHTML,/B_DOG/);
+ assert.match(page.assets.innerHTML,/A_CAT/);
+ const original=page.evalJS('assetOrder.join(",")');
+ page.evalJS("sortAssets('score')");
+ assert.equal(page.evalJS('assetOrder.join(",")'),original);
+ assert.match(page.ui.get('hotAssets').innerHTML,/data-col="address"/);
+ assert.match(page.ui.get('notAssets').innerHTML,/data-col="address"/);
+ assert.equal(page.evalJS("activateTab('hot')"),true);
+ assert.equal(page.ui.get('panel-hot').hidden,false);
+ assert.equal(page.evalJS("activateTab('not')"),true);
+ assert.equal(page.ui.get('panel-not').hidden,false);
 });
