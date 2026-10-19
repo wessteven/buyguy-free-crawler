@@ -296,3 +296,18 @@ test('HOT and NOT tabs use the same columns, preserve master tokens and sorting'
  assert.equal(page.evalJS("activateTab('not')"),true);
  assert.equal(page.ui.get('panel-not').hidden,false);
 });
+
+test('AUDIT action is reachable beside the token in TOKEN DATA, HOT and NOT; address stays last',async()=>{
+ const page=await tableSandbox();
+ const sample={...example[0],asset_key:'solana:So11111111111111111111111111111111111111112',
+  address:'So11111111111111111111111111111111111111112',tier:'HOT'};
+ page.evalJS('setAssetData('+JSON.stringify([sample])+')');
+ const order=page.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(order[order.indexOf('symbol')+1],'audit');
+ assert.equal(order.at(-1),'address');
+ assert.match(page.assets.innerHTML,/data-audit-key="solana:So11111111111111111111111111111111111111112"/);
+ assert.match(page.ui.get('hotAssets').innerHTML,/class="audit-btn"/);
+ assert.match(page.html,/id="auditDialog"/);
+ const saved=await tableSandbox(new Map([['buyguy.assetColumns.v1',JSON.stringify(['symbol','chain','score'])]]));
+ assert.equal(saved.evalJS("assetOrder.indexOf('audit')"),saved.evalJS("assetOrder.indexOf('symbol')")+1);
+});
