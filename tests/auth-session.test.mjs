@@ -106,3 +106,27 @@ test('Authenticated user can pin a contract; unauthenticated and foreign-origin 
  assert.equal(writes.length,1);
  assert.equal(writes[0].sql.includes('pinned=1'),true);
 });
+
+test('Scan countdown endpoint is cookie-protected, read-only, and returns actual last recorded run',async()=>{
+ const cookie=sessionCookie(await issueSession(secret)).split(';')[0];
+ let calls=0;
+ const db={prepare(sql){
+   assert.match(sql,/^SELECT started_at,state FROM runs ORDER BY id DESC LIMIT 1$/);
+   calls++;
+   return {first:async()=>({started_at:'2026-10-20T02:10:00Z',state:'PARTIAL'})};
+ }};
+ const secured={ADMIN_TOKEN:secret,DB:db};
+ const anonymous=await worker.fetch(request('/api/scan-clock'),secured);
+ assert.equal(anonymous.status,401);
+ assert.equal(calls,0);
+ const wrongMethod=await worker.fetch(request('/api/scan-clock',{method:'POST',headers:{cookie}}),secured);
+ assert.equal(wrongMethod.status,405);
+ assert.equal(calls,0);
+ const response=await worker.fetch(request('/api/scan-clock',{headers:{cookie}}),secured);
+ assert.equal(response.status,200);
+ assert.equal(response.headers.get('content-type')?.includes('application/json'),true);
+ assert.deepEqual(await response.json(),{
+   started_at:'2026-10-20T02:10:00Z',state:'PARTIAL',expected_interval_seconds:600
+ });
+ assert.equal(calls,1);
+});
