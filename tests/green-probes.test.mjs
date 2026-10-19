@@ -56,11 +56,12 @@ test('Cron records provisional evidence and leaves every green/trading permissio
  };
  const r=await runGreenProbes(env,{now:'2026-10-19T12:00:00Z',fetcher});
  assert.equal(r.checked,1);assert.equal(r.fullGreenApprovals,0);assert.equal(r.lpLocksVerified,0);
- assert.equal(statements.length,4);
+ assert.equal(statements.length,5);
  assert.ok(statements[0].args[2].includes('"beneficialOwnersVerified":false'));
  assert.ok(statements[1].args[2].includes('"lpLockVerified":false'));
  assert.ok(statements[2].args[2].includes('"migrationTxVerified":false'));
- assert.ok(statements[3].args[2].includes('"immutable":false'));
+ assert.ok(statements[3].args[2].includes('"migrationTxVerified":false'));
+ assert.ok(statements[4].args[2].includes('"immutable":false'));
  assert.ok(statements.every(x=>!x.sql.includes('UPDATE assets')));
  assert.ok(statements.every(x=>!x.sql.includes('UPDATE assets')));
 });
