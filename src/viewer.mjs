@@ -55,6 +55,15 @@ tbody tr:hover{background:#174029}
 #auditProgress{white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere}
 .audit-row{border-bottom:1px solid #30523b;padding:6px 0}
 .audit-status{color:#a3dfb5;font-size:10px}
+#scanClock{display:inline-flex;align-items:center;white-space:nowrap;font-size:11px;
+ padding:4px 6px;background:#0d2919;color:#a8f7bf;border:1px solid #2d5e3f;
+ border-radius:2px;min-width:112px;justify-content:center;font-variant-numeric:tabular-nums}
+#scanClock.overdue{color:#ffd185;border-color:#926d38;background:#362516}
+#scanClock.unknown{color:#9eae9e}
+.moby-chart-link{color:#b8ffce!important;border:1px solid #376c4a;
+ border-radius:2px;padding:3px 5px;white-space:nowrap;text-decoration:none;
+ background:#173e26;font-weight:bold;display:inline-block}
+.moby-chart-link:focus-visible{outline:2px solid #a1ffc0}
 .research-guide{font-size:10px}
 #greenDialog{background:#09190e;color:#bbfccc;border:1px solid #467553;font:11px ui-monospace,Consolas,monospace;
  width:min(92vw,520px);max-height:76vh;overflow:auto;padding:12px}
@@ -116,7 +125,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 | the   BUYGUY GOGET         |
 +----------------------------+</pre><p class="hint">[ RH + SOL ] // RESEARCH // PAPER EXPERIMENT // NO REAL TRADES</p>
 <div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p></div>
-<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button></div><div id="overview"></div>
+<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
 <button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="true" tabindex="0">TOKEN DATA</button>
 <button class="bg-tab" id="tab-hot" role="tab" type="button" data-tab="hot" aria-controls="panel-hot" aria-selected="false" tabindex="-1">🔥 HOT</button>
@@ -186,6 +195,7 @@ const assetColumns=[
  {key:'safety',name:'Safety',type:'number'},
  {key:'topBps',name:'Top acct %',type:'number'},
  {key:'address',name:'Copy address',type:'text'},
+ {key:'trade_on',name:'Trade on',type:'text'},
  {key:'socials',name:'Socials',type:'number'},
  {key:'risk',name:'Mint review',type:'text'},
  {key:'flags',name:'Mint/holder flags',type:'text'}
@@ -198,10 +208,14 @@ function validOrder(maybe){
  const current=Array.isArray(maybe)?maybe.filter((key,index)=>
    typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
  const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
- // For an older custom layout, inject newly introduced AUDIT immediately after Token.
+ // Inject newly introduced columns into saved layouts without resetting other positions.
  if(!current.includes('audit')&&order.includes('symbol')){
    order.splice(order.indexOf('audit'),1);
    order.splice(order.indexOf('symbol')+1,0,'audit');
+ }
+ if(!current.includes('trade_on')&&order.includes('address')){
+   order.splice(order.indexOf('trade_on'),1);
+   order.splice(order.indexOf('address')+1,0,'trade_on');
  }
  return order;
 }
@@ -276,6 +290,24 @@ function auditCell(row){
  if(!address)return '<td>—</td>';
  return '<td><button type="button" class="audit-btn" data-audit-key="'+escapeSocial(address)+
   '" aria-label="Run live audit of '+escapeSocial(row.symbol||'token')+'">⚡ AUDIT</button></td>';
+}
+// Existing Moby contract-specific URLs; Android decides whether registered links
+// open in the installed app. A link is never an automated trade.
+function mobyChartUrl(chain,address){
+ const token=String(address||'');
+ if(chain==='solana'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token))
+   return 'https://www.mobyscreener.com/solana/'+token;
+ if(chain==='robinhood'&&/^0x[0-9a-fA-F]{40}$/.test(token))
+   return 'https://www.mobyscreener.com/token/'+token.toLowerCase();
+ return null;
+}
+function tradeOnCell(row){
+ const url=mobyChartUrl(row.chain,row.address);
+ if(!url)return '<td>—</td>';
+ return '<td><a class="moby-chart-link" href="'+escapeSocial(url)+
+   '" target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer" '+
+   'title="Open this contract in Moby. App opening depends on Android link settings; never places a trade." '+
+   'aria-label="Open '+escapeSocial(row.symbol||'token')+' on Moby">Moby ↗</a></td>';
 }
 function addressCell(row){
  const address=String(row.address||'');
@@ -511,7 +543,7 @@ function renderAssets(){
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></span>'+controls+'</th>';
  }).join('');
  const rows=orderedAssetRows().filter(row=>view==='all'||(view==='hot')===(row.tier==='HOT')).map(row=>'<tr>'+assetOrder.map(key=>
- key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='symbol'?tokenCell(row):
+ key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='trade_on'?tradeOnCell(row):key==='symbol'?tokenCell(row):
  ['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))
  ).join('')+'</tr>').join('');
  wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
@@ -585,6 +617,45 @@ function renderAssets(){
  if(status&&!assetRows.length)status.textContent='No token data returned.';
  else if(status&&assetRows.length&&!status.textContent)status.textContent='Sorting '+columnByKey[assetSort.key].name+' '+(assetSort.direction==='asc'?'ascending':'descending')+'.';
 }
+// Countdown is anchored to a real recorded scan; it is not a guaranteed run time.
+let scanClockAnchor=null,scanClockStatus=null;
+function scanCountdown(lastStarted,now=Date.now()){
+ const time=Date.parse(lastStarted||'');
+ if(!Number.isFinite(time)||time>now+60000)return {text:'NEXT SCAN --:--',overdue:false,unknown:true};
+ const seconds=Math.floor((time+600000-now)/1000);
+ const late=seconds<0;
+ const magnitude=late?-seconds:seconds;
+ const mm=String(Math.floor(magnitude/60)).padStart(2,'0');
+ const ss=String(magnitude%60).padStart(2,'0');
+ return {text:(late?'OVERDUE +':'NEXT ')+mm+':'+ss,
+   overdue:late,unknown:false};
+}
+function showScanCountdown(){
+ const clock=document.getElementById('scanClock');
+ if(!clock)return;
+ const state=scanCountdown(scanClockAnchor);
+ clock.textContent=state.text;
+ clock.classList.toggle('overdue',state.overdue);
+ clock.classList.toggle('unknown',state.unknown);
+ const status=scanClockStatus?' · '+scanClockStatus:'';
+ clock.title='Approx. 10 minutes after last recorded scan'+status+'. Actual Cloudflare runs can be late.';
+}
+async function pollScanClock(){
+ // Lightweight timestamp-only endpoint prevents a full 500-asset D1 query every 30 seconds.
+ if(document.getElementById('board')?.style.display==='none')return;
+ try{
+   const response=await fetch('/api/scan-clock',{credentials:'same-origin',cache:'no-store'});
+   if(!response.ok)return;
+   const data=await response.json();
+   if(data.started_at)scanClockAnchor=data.started_at;
+   scanClockStatus=data.state||null;
+   showScanCountdown();
+ }catch{}
+}
+if(typeof setInterval==='function'){
+ setInterval(showScanCountdown,1000);
+ setInterval(pollScanClock,30000);
+}
 async function refresh(){try{
  const r=await fetch('/api/status',{credentials:'same-origin',cache:'no-store'});
  if(r.status===401){
@@ -598,6 +669,9 @@ async function refresh(){try{
  document.getElementById('board').style.display='block';
  document.getElementById('msg').textContent='';
  const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
+ if(recent.started_at)scanClockAnchor=recent.started_at;
+ scanClockStatus=recent.state||null;
+ showScanCountdown();
  const coverage=x.coverage||{};
  const items=[
    'Cash: USD '+Number(x.wallet?.cash??0).toFixed(2),
@@ -806,14 +880,21 @@ if(path==='/api/logout'){
  output.headers.set('set-cookie',clearSessionCookie());
  return output;
 }
-if(path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit')return json({error:'not_found'},404);
-if((path==='/api/status'&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit')&&request.method!=='POST'))
+if(path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock')return json({error:'not_found'},404);
+if(((path==='/api/status'||path==='/api/scan-clock')&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit')&&request.method!=='POST'))
  return json({error:'method_not_allowed'},405);
 const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
 const cookie=readSessionCookie(request.headers.get('cookie'));
 const authorized=auth(bearer,env.ADMIN_TOKEN||'')||await validSession(env.ADMIN_TOKEN||'',cookie);
 if(!authorized)return json({error:'unauthorized'},401);
 if(!env.DB)return json({error:'database_not_configured'},503);
+if(path==='/api/scan-clock'){
+ try{
+   const latest=await env.DB.prepare('SELECT started_at,state FROM runs ORDER BY id DESC LIMIT 1').first();
+   return json({started_at:latest?.started_at||null,state:latest?.state||null,
+     expected_interval_seconds:600});
+ }catch{return json({error:'scan_clock_unavailable'},503)}
+}
 if(path==='/api/audit'){
  if((request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site')
    return json({error:'forbidden'},403);
