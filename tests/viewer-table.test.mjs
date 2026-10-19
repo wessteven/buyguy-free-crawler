@@ -17,7 +17,11 @@ async function tableSandbox(storage=new Map()){
   const ui=new Map([['assets',assets],['assetOrderStatus',{textContent:''}]]);
   const doc={
     getElementById:id=>{
-      if(!ui.has(id))ui.set(id,{onclick:null,value:'',textContent:'',innerHTML:'',style:{}});
+      if(!ui.has(id))ui.set(id,{onclick:null,value:'',textContent:'',innerHTML:'',style:{},hidden:false,
+        attributes:{},listeners:{},tabIndex:-1,
+        setAttribute(name,value){this.attributes[name]=value},
+        addEventListener(name,listener){this.listeners[name]=listener},
+        focus(){this.focused=true}});
       return ui.get(id);
     },
     querySelectorAll:()=>[],
@@ -31,7 +35,7 @@ async function tableSandbox(storage=new Map()){
     JSON,String,Array,Object,Math,console,fetch:()=>{throw Error('Network not needed for table test');}});
   vm.runInContext(match[1],context,{timeout:2000});
   const evalJS=code=>vm.runInContext(code,context,{timeout:2000});
-  return {evalJS,assets,storage,html};
+  return {evalJS,assets,storage,html,ui};
 }
 const example=[
   {chain:'solana',symbol:'B_DOG',score:20,status:'STATIC',liquidity:500000,
@@ -88,4 +92,50 @@ test('Malicious saved layout and token symbol are sanitized',async()=>{
   assert.ok(ui.assets.innerHTML.indexOf('data-col="symbol"')<ui.assets.innerHTML.indexOf('data-col="chain"'));
   assert.doesNotMatch(ui.assets.innerHTML,/<img src=x/);
   assert.match(ui.assets.innerHTML,/&lt;img src=x/);
+});
+
+test('Navigation order is research, wallet, recent runs, then outcomes',async()=>{
+ const {html,evalJS,ui}=await tableSandbox();
+ const names=['tab-research','tab-wallet','tab-runs','tab-outcomes'];
+ for(let i=1;i<names.length;i++)assert.ok(html.indexOf('id="'+names[i-1]+'"')<html.indexOf('id="'+names[i]+'"'));
+ assert.equal(evalJS('activeTab'),'research');
+ assert.equal(ui.get('panel-research').hidden,false);
+ assert.equal(ui.get('panel-wallet').hidden,true);
+ assert.equal(ui.get('panel-runs').hidden,true);
+ assert.equal(ui.get('panel-outcomes').hidden,true);
+ assert.match(html,/id="panel-research"[\s\S]*?id="routeReviews"/);
+});
+test('Tabs switch without rebuilding token table or changing sort/order and persist across refresh',async()=>{
+ const first=await setup();
+ first.evalJS("moveAssetColumn('symbol','chain',false)");
+ const htmlBefore=first.assets.innerHTML;
+ assert.equal(first.evalJS("activateTab('wallet')"),true);
+ assert.equal(first.ui.get('panel-research').hidden,true);
+ assert.equal(first.ui.get('panel-wallet').hidden,false);
+ assert.equal(first.assets.innerHTML,htmlBefore);
+ assert.equal(first.evalJS("activateTab('runs')"),true);
+ assert.equal(first.ui.get('panel-runs').hidden,false);
+ assert.equal(first.evalJS("activateTab('outcomes')"),true);
+ const reload=await setup(first.storage);
+ assert.equal(reload.evalJS('activeTab'),'outcomes');
+ assert.equal(reload.ui.get('panel-outcomes').hidden,false);
+ assert.equal(reload.ui.get('panel-runs').hidden,true);
+ assert.ok(reload.assets.innerHTML.indexOf('data-col="symbol"')<reload.assets.innerHTML.indexOf('data-col="chain"'));
+ assert.equal(reload.storage.has('loginToken'),false);
+});
+test('Tabs support tap/click and arrow-key keyboard navigation',async()=>{
+ const page=await tableSandbox();
+ page.ui.get('tab-wallet').listeners.click();
+ assert.equal(page.evalJS('activeTab'),'wallet');
+ let prevented=false;
+ page.ui.get('tab-wallet').listeners.keydown({key:'ArrowRight',preventDefault(){prevented=true}});
+ assert.equal(prevented,true);
+ assert.equal(page.evalJS('activeTab'),'runs');
+ assert.equal(page.ui.get('tab-runs').focused,true);
+ assert.equal(page.ui.get('tab-runs').attributes['aria-selected'],'true');
+ assert.equal(page.ui.get('tab-wallet').attributes['aria-selected'],'false');
+ page.ui.get('tab-runs').listeners.keydown({key:'Home',preventDefault(){}});
+ assert.equal(page.evalJS('activeTab'),'research');
+ assert.equal(page.evalJS("activateTab('injected')"),false);
+ assert.equal(page.evalJS('activeTab'),'research');
 });
