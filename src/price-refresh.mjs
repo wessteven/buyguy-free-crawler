@@ -55,13 +55,29 @@ export function parseQuoteRefresh(pairs,tracked,nowMs=Date.now()){
 }
 export async function refreshKnownQuotes(env,{fetcher=fetch,now=new Date().toISOString(),limit=20}={}){
   if(!env?.DB)throw Error('Missing D1 DB');
-  const tracked=(await env.DB.prepare(`SELECT a.asset_key,a.chain,a.address,a.symbol,a.pool,a.pool_created,
-    CASE WHEN EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key
-    AND p.status='OPEN') THEN 1 ELSE 0 END AS has_position
-    FROM assets a WHERE a.status IN ('ALIVE','STATIC') OR a.pinned=1
-    OR EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN')
-    ORDER BY has_position DESC,a.pinned DESC,a.score DESC LIMIT ?`)
-    .bind(Math.max(1,Math.min(25,limit))).all()).results||[];
+  const max=Math.max(1,Math.min(25,limit));
+  const fields="a.asset_key,a.chain,a.address,a.symbol,a.pool,a.pool_created, "+
+    "CASE WHEN EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key "+
+    "AND p.status='OPEN') THEN 1 ELSE 0 END AS has_position";
+  const held=(await env.DB.prepare("SELECT "+fields+" FROM assets a "+
+    "WHERE EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') "+
+    "ORDER BY a.score DESC LIMIT ?").bind(max).all()).results||[];
+  const watched=(await env.DB.prepare("SELECT "+fields+" FROM assets a WHERE a.pinned=1 "+
+    "ORDER BY a.asset_key LIMIT ?").bind(100).all()).results||[];
+  const other=(await env.DB.prepare("SELECT "+fields+" FROM assets a WHERE a.pinned=0 "+
+    "AND a.status IN ('ALIVE','STATIC') ORDER BY a.score DESC LIMIT ?").bind(max).all()).results||[];
+  const tracked=[],seen=new Set();
+  const append=a=>{if(a?.asset_key&&!seen.has(a.asset_key)&&tracked.length<max){
+    tracked.push(a);seen.add(a.asset_key);
+  }};
+  for(const item of held)append(item);
+  // Rotate pinned slots on each 10-minute interval; no pinned asset is permanently starved.
+  const slots=Math.max(0,max-tracked.length),rotation=Math.floor(Date.parse(now)/600000);
+  if(watched.length&&slots){
+    const offset=(Number.isFinite(rotation)?rotation*slots:0)%watched.length;
+    for(let i=0;i<watched.length&&tracked.length<max;i++)append(watched[(offset+i)%watched.length]);
+  }
+  for(const item of other)append(item);
   const accepted=[],failures=[];
   for(const chain of ['solana','robinhood']){
     const items=tracked.filter(t=>t.chain===chain&&
