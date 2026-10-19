@@ -1,3 +1,4 @@
+import {collectSocialLinks} from './social-links.mjs';
 // Public DEX Screener discovery, only used when GeckoTerminal is unavailable.
 // Never claims a promotion feed is organic momentum or that a pool is safe.
 const base='https://api.dexscreener.com';
@@ -5,7 +6,8 @@ const base58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0;};
 export const PROFILES=base+'/token-profiles/latest/v1';
 
-export function parseDexQuotes(rows, limit=8){
+export function parseDexQuotes(rows, limit=8, profiles=[]){
+  const byMint=new Map(profiles.filter(p=>p?.chainId==='solana'&&base58.test(p?.tokenAddress||'')).map(p=>[p.tokenAddress,p]));
   if(!Array.isArray(rows))throw Error('Invalid DEX Screener token list');
   const byKey=new Map();
   for(const x of rows){
@@ -25,7 +27,8 @@ export function parseDexQuotes(rows, limit=8){
       market_cap:cap,buys_m5:Math.round(buys),sells_m5:Math.round(sells),
       tx_m5:Math.round(buys+sells),change_h1:change,volume_h24:volume,
       pool_created:x.pairCreatedAt?new Date(x.pairCreatedAt).toISOString():null,
-      score:Math.max(0,Math.min(100,score)),source:'DEX Screener'};
+      score:Math.max(0,Math.min(100,score)),source:'DEX Screener',
+      socials:collectSocialLinks(x.info,byMint.get(address))};
     if(!byKey.has(address)||byKey.get(address).liquidity<liq)byKey.set(address,candidate);
   }
   return [...byKey.values()].sort((a,b)=>b.score-a.score||b.liquidity-a.liquidity).slice(0,limit);
@@ -39,5 +42,5 @@ export async function dexFallback(fetcher=fetch){
   if(!addresses.length)return [];
   const result=await fetcher(base+'/tokens/v1/solana/'+addresses.join(','),{headers:{accept:'application/json'}});
   if(!result.ok)throw Error('DEX Screener quotes HTTP '+result.status);
-  return parseDexQuotes(await result.json());
+  return parseDexQuotes(await result.json(),8,data);
 }
