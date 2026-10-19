@@ -59,7 +59,8 @@ test('Cron records provisional evidence and leaves every green/trading permissio
  assert.equal(statements.length,4);
  assert.ok(statements[0].args[2].includes('"beneficialOwnersVerified":false'));
  assert.ok(statements[1].args[2].includes('"lpLockVerified":false'));
- assert.ok(statements[2].args[2].includes('"immutable":false'));
+ assert.ok(statements[2].args[2].includes('"migrationTxVerified":false'));
+ assert.ok(statements[3].args[2].includes('"immutable":false'));
  assert.ok(statements.every(x=>!x.sql.includes('UPDATE assets')));
  assert.ok(statements.every(x=>!x.sql.includes('UPDATE assets')));
 });
