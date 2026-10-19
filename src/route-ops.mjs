@@ -7,7 +7,7 @@ export async function screenTradeRoutes(env,{now=new Date().toISOString(),limit=
   // Check route only when mint + account concentration screen previously passed.
   // A router returning a quote does NOT establish liquidity lock or executable sale.
   const since=new Date(Date.parse(now)-60*60000).toISOString();
-  const rows=(await env.DB.prepare(`SELECT a.asset_key,a.address,a.score,a.market_cap,
+  const rows=(await env.DB.prepare(`SELECT a.asset_key,a.address,a.score,a.market_cap,a.price,a.risk_note,
     a.liquidity,a.observations,a.last_seen,a.pool_created FROM assets a
     WHERE a.chain='solana' AND a.status='ALIVE'
     AND a.risk_status='PARTIAL_ONCHAIN_REVIEW'
@@ -21,7 +21,10 @@ export async function screenTradeRoutes(env,{now=new Date().toISOString(),limit=
   for(const asset of rows){
     let result;
     try{
-      result=await getRoundTripQuotes(asset.address,{fetcher,key:env.JUPITER_API_KEY||null});
+      let note={};
+      try{note=JSON.parse(asset.risk_note||'{}')}catch{}
+      result=await getRoundTripQuotes(asset.address,{fetcher,key:env.JUPITER_API_KEY||null,
+        marketPriceUsd:asset.price,decimals:note.decimals});
     }catch(err){
       result={label:'QUOTE_PROVIDER_UNAVAILABLE',source:'Jupiter read-only quotes',
         flags:['QUOTE_SERVICE_UNAVAILABLE'],errorClass:String(err?.message||'').match(/HTTP\s+\d+/)?.[0]||'NO_ROUTE_DATA',
