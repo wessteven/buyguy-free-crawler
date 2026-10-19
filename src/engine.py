@@ -4,7 +4,7 @@ Market quotes are indicative; not contract certification or executable trades.
 """
 import os, sys, json, re, time, uuid, datetime as dt
 from urllib.request import Request, urlopen
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 UTC=dt.timezone.utc
 BASE='https://api.dexscreener.com'
@@ -39,6 +39,44 @@ def initialization():
         if statement.strip(): query(statement)
     query('INSERT OR IGNORE INTO paper_account(account,starting_cash,cash,realised,updated_at) VALUES(?,?,?,?,?)',('buyguy-v3',1000,1000,0,now()))
     query('INSERT OR IGNORE INTO leases(name,expires_at,token) VALUES(?,?,?)',('crawler',0,''))
+def social_links(*sources):
+    """Unverified project-advertised metadata; only HTTPS URLs for exact token identity."""
+    found=[]; seen=set()
+    names={'twitter':'X','x':'X','telegram':'TG','tg':'TG','website':'Web',
+           'web':'Web','discord':'Discord','github':'GitHub','youtube':'YouTube',
+           'medium':'Medium','instagram':'Instagram','tiktok':'TikTok',
+           'docs':'Docs','documentation':'Docs','whitepaper':'Paper','reddit':'Reddit'}
+    def add(kind,url):
+        if not isinstance(url,str) or len(url)>1200 or not url.lower().startswith('https://'):return
+        if any(ord(ch)<32 or ord(ch)==127 for ch in url):return
+        try:
+            u=urlsplit(url.strip())
+            if u.scheme.lower()!='https' or not u.hostname or u.username or u.password:return
+            if u.hostname.lower()=='localhost' or u.hostname.lower().endswith('.local'):return
+            label=names.get(str(kind or 'website').lower().replace(' ','').replace('-',''),'Web')
+            key=url.rstrip('/').lower()
+            if key not in seen:
+                seen.add(key); found.append({'label':label,'url':url})
+        except ValueError:pass
+    for data in sources:
+        if not isinstance(data,dict):continue
+        for field in ('websites','socials','links'):
+            value=data.get(field) or []
+            if not isinstance(value,list):continue
+            for item in value:
+                if isinstance(item,str):add('website',item)
+                elif isinstance(item,dict):add(item.get('type') or item.get('label') or 'website',item.get('url'))
+        for field,kind in [('website_url','website'),('discord_url','discord')]:
+            add(kind,data.get(field))
+        for field,kind,domain in [('twitter_handle','twitter','x.com'),('telegram_handle','telegram','t.me')]:
+            handle=data.get(field)
+            if isinstance(handle,str):
+                if re.fullmatch(r'@?[A-Za-z0-9_]{3,32}',handle):
+                    add(kind,'https://'+domain+'/'+handle.lstrip('@'))
+                elif handle.startswith('https://'):add(kind,handle)
+    priority={'X':0,'TG':1,'Web':2,'Discord':3,'GitHub':4}
+    return sorted(found,key=lambda r:priority.get(r['label'],20))[:24]
+
 def quote_normalize(x):
     chain=x.get('chainId'); address=(x.get('baseToken') or {}).get('address','')
     if not valid(chain,address) or not x.get('pairAddress'): return None
@@ -49,7 +87,8 @@ def quote_normalize(x):
       'pool':x['pairAddress'],'price':price,'liquidity':liq,
       'cap':num(x.get('marketCap') or x.get('fdv')),'buys':int(num(tx.get('buys'))),
       'sells':int(num(tx.get('sells'))),'change':num((x.get('priceChange') or {}).get('h1')),
-      'volume':num((x.get('volume') or {}).get('h24')),'created':x.get('pairCreatedAt'),'source':'DEX Screener'}
+      'volume':num((x.get('volume') or {}).get('h24')),'created':x.get('pairCreatedAt'),'source':'DEX Screener',
+      'socials':social_links(x.get('info'))}
 def gecko_new_pools():
     """Secondary independent new-pool discovery. Never converts h1 tx to m5 figures."""
     payload=get('https://api.geckoterminal.com/api/v2/networks/solana/new_pools?include=base_token&page=1')
@@ -74,7 +113,8 @@ def gecko_new_pools():
             'buys':int(num(tx.get('buys'))),'sells':int(num(tx.get('sells'))),
             'change':num((attrs.get('price_change_percentage') or {}).get('h1')),
             'volume':num((attrs.get('volume_usd') or {}).get('h24')),
-            'created':attrs.get('pool_created_at'),'source':'GeckoTerminal'
+            'created':attrs.get('pool_created_at'),'source':'GeckoTerminal',
+            'socials':social_links(meta,attrs)
         })
     return found
 
@@ -95,11 +135,15 @@ def pool_timestamp(value):
 def discover():
     addresses={'solana':set(),'robinhood':set()}
     failures=[]
+    advertised={}
     for endpoint in ('/token-boosts/latest/v1','/token-profiles/latest/v1','/token-boosts/top/v1','/community-takeovers/latest/v1'):
         try:
             for item in get(BASE+endpoint)[:80]:
                 chain=item.get('chainId'); addr=item.get('tokenAddress','')
-                if valid(chain,addr): addresses[chain].add(addr)
+                if valid(chain,addr):
+                    addresses[chain].add(addr)
+                    links=social_links(item)
+                    if links:advertised[identity(chain,addr)]=links
         except Exception as exc: failures.append(endpoint+': '+str(exc)[:100])
     tracked=rows("SELECT chain,address FROM assets WHERE status IN ('ALIVE','STATIC') OR pinned=1 ORDER BY score DESC LIMIT 70")
     positions=rows("SELECT a.chain,a.address FROM assets a JOIN paper_positions p ON a.asset_key=p.asset_key WHERE p.status='OPEN'")
@@ -122,6 +166,13 @@ def discover():
                     k=identity(token['chain'],token['address'])
                     if k not in bykey or bykey[k]['liquidity']<token['liquidity']:bykey[k]=token
             except Exception as exc:failures.append(chain+': '+str(exc)[:120])
+    for k,q in bykey.items():
+        combined=q.get('socials') or []
+        seen={item['url'].lower().rstrip('/') for item in combined}
+        for item in advertised.get(k,[]):
+            if item['url'].lower().rstrip('/') not in seen:
+                combined.append(item);seen.add(item['url'].lower().rstrip('/'))
+        q['socials']=combined[:24]
     return list(bykey.values()),failures
 def rank(q,old=None):
     tx=q['buys']+q['sells']
@@ -171,6 +222,13 @@ def execute():
                 (q['symbol'],q['pool'],q.get('source','UNKNOWN'),status,start,start,pool_timestamp(q.get('created')),s,streak,q['price'],q['liquidity'],q['cap'],q['buys'],q['sells'],q['buys']+q['sells'],q['change'],q['volume'],'WATCH_ONLY — contract and execution risks unverified',k))
             query("""INSERT OR IGNORE INTO observations(asset_key,seen_at,pool,provider,price,liquidity,buys_m5,sells_m5,score)
                  VALUES(?,?,?,?,?,?,?,?,?)""",(k,start,q['pool'],q.get('source','UNKNOWN'),q['price'],q['liquidity'],q['buys'],q['sells'],s))
+            if q.get('socials'):
+                links=json.dumps(q['socials'],separators=(',',':'),ensure_ascii=False)
+                query("""INSERT INTO research_events(at,asset_key,kind,note)
+                    SELECT ?,?,'TOKEN_SOCIALS',?
+                    WHERE COALESCE((SELECT note FROM research_events
+                      WHERE asset_key=? AND kind='TOKEN_SOCIALS'
+                      ORDER BY id DESC LIMIT 1),'') != ?""",(start,k,links,k,links))
             if s>=55:
                 prev=rows('SELECT created_at FROM predictions WHERE asset_key=? ORDER BY created_at DESC LIMIT 1',(k,))
                 if not prev or (dt.datetime.now(UTC)-dt.datetime.fromisoformat(prev[0]['created_at'].replace('Z','+00:00'))).total_seconds()>3600:
