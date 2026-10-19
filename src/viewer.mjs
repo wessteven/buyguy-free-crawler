@@ -4,6 +4,7 @@ import {issueSession,validSession,readSessionCookie,sessionCookie,clearSessionCo
 import {addWatchedAddress} from './watchlist.mjs';
 import {assessGreenLight} from './green-gate.mjs';
 import {tokenTier,countCoverage} from './token-tiers.mjs';
+import {runTokenAuditStage} from './on-demand-audit.mjs';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -44,6 +45,16 @@ tbody tr:hover{background:#174029}
 #login{margin:8px 0;padding:8px;border:1px solid #315b3d}
 #login>label{display:block;margin-bottom:5px}
 #login #pass{min-width:180px}
+#assets .audit-btn,.asset-view .audit-btn{font-size:10px!important;min-height:22px!important;
+ color:#acffd0!important;background:#163c26!important;border:1px solid #4d9866!important;
+ padding:2px 5px!important;white-space:nowrap}
+#auditDialog{background:#08160c;color:#d5ffe3;border:1px solid #407653;
+ font:11px ui-monospace,Consolas,monospace;width:min(94vw,520px);
+ max-height:82vh;overflow:auto;padding:10px}
+#auditDialog::backdrop{background:rgba(0,0,0,.8)}
+#auditProgress{white-space:pre-wrap;line-height:1.65;overflow-wrap:anywhere}
+.audit-row{border-bottom:1px solid #30523b;padding:6px 0}
+.audit-status{color:#a3dfb5;font-size:10px}
 .research-guide{font-size:10px}
 #greenDialog{background:#09190e;color:#bbfccc;border:1px solid #467553;font:11px ui-monospace,Consolas,monospace;
  width:min(92vw,520px);max-height:76vh;overflow:auto;padding:12px}
@@ -96,6 +107,10 @@ tbody tr:hover{background:#174029}
 <p id="watchMsg" role="status" aria-live="polite"></p>
 <h2>PINNED // WATCHLIST</h2><div id="watchList"></div>
 </section></div>
+<dialog id="auditDialog" aria-labelledby="auditTitle"><h2 id="auditTitle">TOKEN AUDIT</h2>
+<p class="hint">Direct Cloudflare check • stored D1 evidence • no trades.</p>
+<div id="auditProgress" role="status" aria-live="polite"></div>
+<button id="auditClose" type="button">CLOSE</button></dialog>
 <dialog id="greenDialog" aria-labelledby="greenTitle"><h2 id="greenTitle">GREEN LIGHT CHECK</h2>
 <div id="greenDetails"></div><button id="greenClose" type="button">CLOSE</button></dialog>
 </div>
@@ -126,6 +141,7 @@ const assetColumns=[
  {key:'topBps',name:'Top acct %',type:'number'},
  {key:'flags',name:'Mint/holder flags',type:'text'},
  {key:'provider',name:'Provider',type:'text'},
+ {key:'audit',name:'Audit',type:'text'},
  {key:'address',name:'Token Address',type:'text'}
 ];
 const columnByKey=Object.fromEntries(assetColumns.map(c=>[c.key,c]));
@@ -200,6 +216,12 @@ function tokenCell(row){
  const ticker=escapeSocial(row.symbol||'PENDING'),name=row.name?escapeSocial(row.name):'';
  return '<td><strong class="ticker">'+ticker+'</strong>'+(name&&name!==ticker?
    '<span class="hint" style="margin-left:4px;font-weight:800">'+name+'</span>':'')+'</td>';
+}
+function auditCell(row){
+ const address=String(row.asset_key||'');
+ if(!address)return '<td>—</td>';
+ return '<td><button type="button" class="audit-btn" data-audit-key="'+escapeSocial(address)+
+  '" aria-label="Run live audit of '+escapeSocial(row.symbol||'token')+'">⚡ AUDIT</button></td>';
 }
 function addressCell(row){
  const address=String(row.address||'');
@@ -402,7 +424,7 @@ function renderAssets(){
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></th>';
  }).join('');
  const rows=orderedAssetRows().filter(row=>view==='all'||(view==='hot')===(row.tier==='HOT')).map(row=>'<tr>'+assetOrder.map(key=>
- key==='socials'?socialCell(row):key==='address'?addressCell(row):key==='symbol'?tokenCell(row):
+ key==='socials'?socialCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='symbol'?tokenCell(row):
  ['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))
  ).join('')+'</tr>').join('');
  wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
@@ -566,14 +588,59 @@ function inspectGreen(key){
   '<p class="hint">Read-only screening. No real or paper order was placed by this check.</p>';
  if(!dialog.open)dialog.showModal();
 }
+let auditInProgress=false;
+const auditStages=[['market','01 MARKET'],['mint','02 MINT + HOLDERS'],
+ ['pool','03 POOL + ADMIN'],['route','04 BUY / SELL ROUTE']];
+async function runAuditFromTable(key){
+ if(auditInProgress)return;
+ const asset=assetRows.find(x=>x.asset_key===key);
+ if(!asset)return;
+ const dialog=document.getElementById('auditDialog');
+ const progress=document.getElementById('auditProgress');
+ if(!dialog||!progress)return;
+ auditInProgress=true;
+ progress.textContent='AUDIT // '+(asset.symbol||'TOKEN')+'\n'+key+
+  '\nExact contract only. No buy/sell orders.\n';
+ if(!dialog.open)dialog.showModal();
+ const append=(title,message,type)=>{
+   const elem=document.createElement('div');
+   elem.className='audit-row';
+   const name=document.createElement('strong');name.textContent=title;
+   const status=document.createElement('div');status.className='audit-status';
+   status.textContent=(type||'')+' '+message;
+   elem.append(name,status);progress.append(elem);
+ };
+ for(const [stage,label] of auditStages){
+   append(label,'Checking provider…','⌛');
+   const active=progress.lastChild?.lastChild;
+   try{
+     const result=await fetch('/api/audit',{method:'POST',credentials:'same-origin',
+       headers:{'content-type':'application/json'},body:JSON.stringify({assetKey:key,stage})});
+     const body=await result.json();
+     const summary=body.message||body.error||'No evidence returned.';
+     const state=body.status||('HTTP '+result.status);
+     if(active)active.textContent=(body.updated?'✓ ':'• ')+state+' — '+summary+
+       (body.retryAfterSeconds?' (retry in '+body.retryAfterSeconds+'s)':'');
+     // Fetch newly written D1 evidence between stages without altering current tab.
+     if(body.updated)await refresh();
+   }catch{
+     if(active)active.textContent='⚠ NETWORK ERROR — previous evidence unchanged.';
+   }
+ }
+ append('FINISHED','Inspect Safety for current 7-check result. No trade sent.','✓');
+ auditInProgress=false;
+}
 for(const id of ['assets','hotAssets','notAssets']){
  document.getElementById(id)?.addEventListener('click',event=>{
  const copy=event.target?.closest?.('button[data-address]');
  if(copy){copyAddress(copy.dataset.address);return;}
  const inspect=event.target?.closest?.('button[data-green-key]');
- if(inspect)inspectGreen(inspect.dataset.greenKey);
+ if(inspect){inspectGreen(inspect.dataset.greenKey);return;}
+ const audit=event.target?.closest?.('button[data-audit-key]');
+ if(audit)runAuditFromTable(audit.dataset.auditKey);
  });
 }
+document.getElementById('auditClose').onclick=()=>document.getElementById('auditDialog').close();
 document.getElementById('greenClose').onclick=()=>document.getElementById('greenDialog').close();
 function watchlistTable(pins){
  const rows=(Array.isArray(pins)?pins:[]).map(a=>[
@@ -615,7 +682,7 @@ export default {async fetch(request,env){const path=new URL(request.url).pathnam
 if(path==='/health')return json({server:'online',scan_status:'not_verified'});
 if(path==='/'||path==='/dashboard')return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 const origin=request.headers.get('origin');
-if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist')&&origin&&origin!==new URL(request.url).origin)
+if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist'||path==='/api/audit')&&origin&&origin!==new URL(request.url).origin)
   return json({error:'forbidden'},403);
 if(path==='/api/login'){
  if(request.method!=='POST')return json({error:'method_not_allowed'},405);
@@ -637,14 +704,33 @@ if(path==='/api/logout'){
  output.headers.set('set-cookie',clearSessionCookie());
  return output;
 }
-if(path!=='/api/status'&&path!=='/api/watchlist')return json({error:'not_found'},404);
-if((path==='/api/status'&&request.method!=='GET')||(path==='/api/watchlist'&&request.method!=='POST'))
+if(path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit')return json({error:'not_found'},404);
+if((path==='/api/status'&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit')&&request.method!=='POST'))
  return json({error:'method_not_allowed'},405);
 const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
 const cookie=readSessionCookie(request.headers.get('cookie'));
 const authorized=auth(bearer,env.ADMIN_TOKEN||'')||await validSession(env.ADMIN_TOKEN||'',cookie);
 if(!authorized)return json({error:'unauthorized'},401);
 if(!env.DB)return json({error:'database_not_configured'},503);
+if(path==='/api/audit'){
+ if((request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site')
+   return json({error:'forbidden'},403);
+ if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+   return json({error:'unsupported_media_type'},415);
+ if(Number(request.headers.get('content-length')||0)>512)
+   return json({error:'request_too_large'},413);
+ let input;
+ try{input=await request.json()}catch{return json({error:'invalid_json'},400)}
+ if(!input||typeof input!=='object'||Array.isArray(input))
+   return json({error:'invalid_input'},422);
+ try{
+   const result=await runTokenAuditStage(env,{
+     assetKey:input.assetKey,stage:input.stage});
+   const output=json(result,result.httpStatus||200);
+   if(result.httpStatus===429)output.headers.set('retry-after',String(result.retryAfterSeconds||90));
+   return output;
+ }catch{return json({error:'audit_unavailable'},503)}
+}
 if(path==='/api/watchlist'){
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
    return json({error:'unsupported_media_type'},415);
