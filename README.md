@@ -35,6 +35,18 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 - A quote merely shows that Jupiter produced a *possible route at that instant*. It cannot establish that a later trade succeeds, that LP liquidity is locked, or that a real wallet could sell.
 - Route results are saved in `research_events` under `ROUNDTRIP_QUOTE` and displayed on the mobile dashboard. **No current route test automatically grants PAPER_ELIGIBLE or triggers a paper fill.**
 
+## Green-light pool protocol engineering (19 October 2026)
+
+- A live read-only survey of 35 tracked Solana pools found **19 PumpSwap AMM**, **13 Pump.fun bonding curves**, **2 other protocols**, and **1 Meteora DAMM V2**. Raydium CPMM was not present in that sample. Programs are identified from `getMultipleAccounts` *account owner*, not by symbol.
+- `src/pool-protocol.mjs` dispatches exact pool accounts by on-chain owner. `src/pumpswap.mjs` decodes the official PumpSwap Pool discriminator/layout, verifies both vault accounts and their mint/authority links, verifies the Token-2022 LP mint, and records the discrepancy between the pool LP supply and mint supply. That discrepancy **is not automatically a lock certificate**.
+- `src/raydium-cpmm.mjs` implements the corresponding exact-account verifier for known Raydium CPMM program accounts. No Raydium evidence is applied to PumpSwap, Meteora, or bonding curves.
+- `src/green-probes.mjs` excludes **only protocol-verified vault token accounts** from a limited top-token-account owner sample. Remaining addresses may still be custodians or multiple wallets controlled by one entity, so `beneficialOwnersVerified` stays false.
+- `src/program-authority.mjs` reads official Solana BPF upgradeable-loader metadata. **Live PumpSwap is upgradeable, with an upgrade authority present**. BuyGuy records this as protocol governance risk, not proof of malicious behavior.
+- Independent custody lock/unlock proof AND immutable or separately verified time-locked governance remain mandatory for a green screen. `src/green-gate.mjs` never turns 🟢 from an LP-supply gap, pool owner name, unsupported protocol, stale mint metadata or nominal safety score.
+- GitHub Actions `live-pumpswap-probe.yml` verified **both real PumpSwap token vaults and Token-2022 LP mint** for a tracked pool; `live-program-authority.yml` independently verified upgradeability. Neither workflow signs or sends transactions.
+
+Authoritative technical sources: [PumpSwap docs](https://github.com/pump-fun/pump-public-docs/blob/main/docs/PUMP_SWAP_README.md), [PumpSwap Anchor IDL](https://github.com/pump-fun/pump-public-docs/blob/main/idl/pump_amm.json), [Solana program deployment](https://solana.com/docs/core/programs/program-deployment), [Raydium CPMM pool source](https://github.com/raydium-io/raydium-cp-swap/blob/master/programs/cp-swap/src/states/pool.rs).
+
 ## GREEN LIGHT — 7/7 independent evidence screen
 
 **Green is a narrowly defined completed evidence screen, not a guarantee of safety and not buy permission.** In TOKEN DATA, tap a safety cell to inspect each prerequisite and the current pass count. The existing 0–100 numeric evidence score is distinct from these hard gates: a token with 85/100 can still be amber.
