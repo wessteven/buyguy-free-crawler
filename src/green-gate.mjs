@@ -18,7 +18,7 @@ function noteOf(event,assetKey,now,maxMinutes){
 const positive=(value)=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 const part=(name,passed,reason)=>({name,passed:Boolean(passed),reason});
 export function assessGreenLight(asset,{
-  mintEvent=null,routeEvent=null,ownerEvent=null,poolEvent=null,ownerProbeEvent=null,poolProbeEvent=null,now=Date.now()
+  mintEvent=null,routeEvent=null,ownerEvent=null,poolEvent=null,ownerProbeEvent=null,poolProbeEvent=null,programUpgradeEvent=null,now=Date.now()
 }={}){
  const key=String(asset?.asset_key||''),chain=asset?.chain;
  const response={version:'GREEN_V1',asset_key:key,green:false,status:'UNASSESSED',
@@ -34,6 +34,10 @@ export function assessGreenLight(asset,{
  const p=noteOf(poolEvent,key,now,6*60);
  const ownerProbe=noteOf(ownerProbeEvent,key,now,6*60);
  const poolProbe=noteOf(poolProbeEvent,key,now,6*60);
+ const programGov=noteOf(programUpgradeEvent,key,now,24*60);
+ const programGovernance=programGov?.verifier==='buyguy-program-authority-v1'&&
+   programGov?.program===poolProbe?.program?
+   programGov:null;
  response.partial_probes={
    uniqueAuthorityCount:ownerProbe?.verifier==='buyguy-owner-sample-v1'?
      ownerProbe.uniqueAuthorityCount??null:null,
@@ -45,6 +49,8 @@ export function assessGreenLight(asset,{
      poolProbe.vaultsVerified===true&&poolProbe.pool===asset.pool,
    poolProtocol:poolProbe?.verifier==='buyguy-pool-program-v2'?(poolProbe.protocol||null):null,
    lpSupplyGapBps:poolProbe?.verifier==='buyguy-pool-program-v2'?(poolProbe.lpSupplyGapBps??null):null,
+   programGovernance:programGovernance?.status||null,
+   programUpgradeAuthorityPresent:programGovernance?.upgradeAuthorityPresent??null,
    poolAccountProgram:['POOL_ACCOUNT_OBSERVED','POOL_VAULTS_VERIFIED','CPMM_LAYOUT_VERIFIED'].includes(poolProbe?.status)?
      poolProbe.program||null:null,
    caveat:'Known protocol vaults can be excluded from sampled holder accounts only. An LP supply gap is not a verified lock; custody and ultimate owner identities remain unproven.'
@@ -83,12 +89,19 @@ export function assessGreenLight(asset,{
    Boolean(asset.pool)&&!['TRASH','DEAD'].includes(asset.status);
  response.checks.push(part('Current pool liquidity',liquid,
    'Fresh matching pool quote with >=US$50k reported liquidity (20m)'));
+ // Permanent mint/LP burns are not sufficient when the AMM itself can be upgraded.
+ // The v1 green gate only accepts immutable governance or an independently
+ // verified time-locked upgrade-governance review (no such producer exists yet).
+ const governanceOK=Boolean(programGovernance?.immutable===true&&
+   programGovernance?.upgradeAuthorityPresent===false||
+   programGovernance?.status==='PROGRAM_UPGRADEABLE'&&
+   p?.independentTimelockedUpgradeAudit===true&&p?.timelockReviewed===true);
  const custody=Boolean(p?.verifier==='buyguy-pool-custody-v1'&&p.assetKey===key&&
    p.pool===asset.pool&&p.chain===chain&&p.verdict==='LOCK_VERIFIED'&&
-   p.onchainSource==='VERIFIED_POOL_STATE'&&p.adminControlsReviewed===true&&
+   p.onchainSource==='VERIFIED_POOL_STATE'&&p.adminControlsReviewed===true&&governanceOK&&
    Number.isFinite(p.unlockAfterMs)&&p.unlockAfterMs>now+7*86400000);
  response.checks.push(part('Pool custody / LP lock',custody,
-   'Independent on-chain pool ownership, lock/unlock and upgrade/admin review required (6h); not provided by DEX quote'));
+   'Independent on-chain LP custody, lock/unlock AND immutable or audited time-locked program governance required. Burn/supply gaps alone never qualify'));
  const roundTrip=Boolean(q?.source==='Jupiter read-only buy/sell route quotes'&&
    q.label==='BOTH_DIRECTIONS_QUOTED'&&q.buyRoute===true&&q.sellRoute===true&&
    Array.isArray(q.flags)&&q.flags.length===0&&
