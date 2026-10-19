@@ -4,7 +4,7 @@ const root='https://api.dexscreener.com/tokens/v1/';
 const evm=/^0x[0-9a-fA-F]{40}$/,sol=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const n=v=>{const x=Number(v);return Number.isFinite(x)?x:0};
 const identity=(chain,addr)=>chain+':'+(chain==='robinhood'?addr.toLowerCase():addr);
-export function parseQuoteRefresh(pairs,tracked){
+export function parseQuoteRefresh(pairs,tracked,nowMs=Date.now()){
   if(!Array.isArray(pairs))throw Error('DEX quote list malformed');
   const requested=new Map(tracked.map(t=>[identity(t.chain,t.address),t]));
   const result=new Map();
@@ -39,7 +39,7 @@ export function parseQuoteRefresh(pairs,tracked){
       created=old.pool_created;
     }
     if(created){
-      const age=Date.now()-Date.parse(created);
+      const age=nowMs-Date.parse(created);
       if(age>=0 && age<=24*3600000)score+=18;
     }
     score=Math.min(100,Math.max(0,score));
@@ -69,7 +69,7 @@ export async function refreshKnownQuotes(env,{fetcher=fetch,now=new Date().toISO
       const url=root+chain+'/'+items.map(x=>x.address).join(',');
       const response=await fetcher(url,{headers:{accept:'application/json'}});
       if(!response.ok)throw Error('DEX refresh HTTP '+response.status);
-      accepted.push(...parseQuoteRefresh(await response.json(),items));
+      accepted.push(...parseQuoteRefresh(await response.json(),items,Date.parse(now)));
     }catch(e){
       failures.push(chain+': '+String(e?.message||'UnknownError').slice(0,70));
     }
