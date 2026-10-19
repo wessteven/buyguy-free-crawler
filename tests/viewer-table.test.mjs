@@ -251,3 +251,25 @@ test('Watch Address tab remains accessible after saved navigation preference',as
  const saved=await tableSandbox(ui.storage);
  assert.equal(saved.evalJS('activeTab'),'address');
 });
+
+test('A status label or big numerical safety score alone cannot trigger green lamp',async()=>{
+ const page=await tableSandbox();
+ const sample={chain:'solana',asset_key:'solana:demo',symbol:'DEMO',
+   risk_status:'FULL_REVIEW_PASSED',liquidity:100000,
+   risk_note:JSON.stringify({holderStatus:'TOKEN_ACCOUNT_BALANCES_SCREENED'}),
+   last_seen:new Date().toISOString()};
+ const badge=page.evalJS('safetyAssessment('+JSON.stringify(sample)+')');
+ assert.equal(badge.icon,'🟡');
+ assert.equal(badge.score,65); // no independently verified mint state or route credit
+});
+test('Tap-to-inspect green checklist is a compact button, with unknowns visible',async()=>{
+ const page=await tableSandbox();
+ const sample={...example[0],asset_key:'solana:test-mint',risk_status:'PARTIAL_ONCHAIN_REVIEW',
+   green:{version:'GREEN_V1',green:false,passed:3,total:7,status:'PARTIAL',
+     checks:[{name:'Pool custody / LP lock',passed:false,reason:'On-chain proof pending'}],
+     warning:'Research only'}};
+ page.evalJS('setAssetData('+JSON.stringify([sample])+')');
+ assert.match(page.assets.innerHTML,/data-green-key="solana:test-mint"/);
+ assert.match(page.assets.innerHTML,/3\/7 CHECKS/);
+ assert.match(page.html,/id="greenDialog"/);
+});
