@@ -27,6 +27,26 @@ test('Real mainnet Token-2022 program ID is recognized; unknown extensions remai
   assert.ok(result.flags.includes('TOKEN_2022_EXTENSIONS_UNREVIEWED'));
   assert.equal(result.riskStatus,'TOKEN_2022_REVIEW_REQUIRED');
 });
+test('Metadata-only Token-2022 mint receives limited screen, never trading approval',()=>{
+  const rpc=fixture(null,null,TOKEN_2022);
+  rpc.result.value.data.parsed.info.extensions=[
+    {extension:'metadataPointer',state:{authority:'Authority'}},
+    {extension:'tokenMetadata',state:{name:'Demo'}}
+  ];
+  const risk=assessMintAccount(mint,rpc);
+  assert.equal(risk.riskStatus,'TOKEN_2022_METADATA_ONLY');
+  assert.equal(risk.paperEligible,false);
+  assert.deepEqual(risk.extensionTypes,['metadataPointer','tokenMetadata']);
+  assert.ok(risk.notes[0].includes('metadata'));
+});
+test('Transfer-hook and fee extensions remain blocked even with revoked mint control',()=>{
+  for(const kind of ['transferHook','transferFeeConfig','permanentDelegate','nonTransferable']){
+    const rpc=fixture(null,null,TOKEN_2022);
+    rpc.result.value.data.parsed.info.extensions=[{extension:kind}];
+    const risk=assessMintAccount(mint,rpc);
+    assert.equal(risk.riskStatus,'TOKEN_2022_REVIEW_REQUIRED',kind);
+  }
+});
 test('Token-2022 unknown extensions are not cleared',()=>{
   const risk=assessMintAccount(mint,fixture(null,null,TOKEN_2022));
   assert.ok(risk.flags.includes('TOKEN_2022_EXTENSIONS_UNREVIEWED'));
