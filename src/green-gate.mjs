@@ -18,7 +18,7 @@ function noteOf(event,assetKey,now,maxMinutes){
 const positive=(value)=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 const part=(name,passed,reason)=>({name,passed:Boolean(passed),reason});
 export function assessGreenLight(asset,{
-  mintEvent=null,routeEvent=null,ownerEvent=null,poolEvent=null,ownerProbeEvent=null,poolProbeEvent=null,programUpgradeEvent=null,now=Date.now()
+  mintEvent=null,routeEvent=null,ownerEvent=null,poolEvent=null,ownerProbeEvent=null,poolProbeEvent=null,programUpgradeEvent=null,migrationEvent=null,now=Date.now()
 }={}){
  const key=String(asset?.asset_key||''),chain=asset?.chain;
  const response={version:'GREEN_V1',asset_key:key,green:false,status:'UNASSESSED',
@@ -35,6 +35,11 @@ export function assessGreenLight(asset,{
  const ownerProbe=noteOf(ownerProbeEvent,key,now,6*60);
  const poolProbe=noteOf(poolProbeEvent,key,now,6*60);
  const programGov=noteOf(programUpgradeEvent,key,now,24*60);
+ const migrationProbe=noteOf(migrationEvent,key,now,6*60);
+ const canonical=Boolean(migrationProbe?.verifier==='buyguy-pump-canonical-v1'&&
+   migrationProbe.assetKey===key&&migrationProbe.pool===asset.pool&&
+   migrationProbe.assetMint===asset.address&&migrationProbe.canonicalPool===true&&
+   migrationProbe.lpSupplyZero===true&&migrationProbe.status==='CANONICAL_LP_BURN_PATTERN');
  const programGovernance=programGov?.verifier==='buyguy-program-authority-v1'&&
    programGov?.program===poolProbe?.program?
    programGov:null;
@@ -49,6 +54,10 @@ export function assessGreenLight(asset,{
      poolProbe.vaultsVerified===true&&poolProbe.pool===asset.pool,
    poolProtocol:poolProbe?.verifier==='buyguy-pool-program-v2'?(poolProbe.protocol||null):null,
    lpSupplyGapBps:poolProbe?.verifier==='buyguy-pool-program-v2'?(poolProbe.lpSupplyGapBps??null):null,
+   canonicalMigrationBurnPattern:canonical,
+   migrationStatus:migrationProbe?.assetKey===key&&migrationProbe.pool===asset.pool?
+     migrationProbe.status:null,
+   migrationTxVerified:false,
    programGovernance:programGovernance?.status||null,
    programUpgradeAuthorityPresent:programGovernance?.upgradeAuthorityPresent??null,
    poolAccountProgram:['POOL_ACCOUNT_OBSERVED','POOL_VAULTS_VERIFIED','CPMM_LAYOUT_VERIFIED'].includes(poolProbe?.status)?
