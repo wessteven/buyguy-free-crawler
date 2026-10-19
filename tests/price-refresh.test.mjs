@@ -62,3 +62,16 @@ test('Pinned addresses rotate through scan slots so slower tokens are not starve
  assert.equal(seen.length,2);
  assert.notEqual(seen[0],seen[1]);
 });
+
+test('Previously DEAD/NOT token returns to fresh tracking on verified quote without deleting history',async()=>{
+ const writes=[];
+ const dormant={...asset,status:'DEAD',pinned:0,score:2,has_position:0,last_seen:'2026-10-15T00:00:00Z'};
+ const DB={prepare(sql){return {bind(){return {async all(){return {results:[dormant]}}}},
+   run:async()=>({})}},batch:async statements=>{writes.push(...statements);return []}};
+ const out=await refreshKnownQuotes({DB},{fetcher:async()=>({
+   ok:true,json:async()=>[example('oldPool',70000)]
+ }),now:'2026-10-19T07:30:00Z',limit:20});
+ assert.equal(out.refreshed,1);
+ assert.ok(writes.some(s=>s.sql.includes('status=?')&&s.args.includes('ALIVE')));
+ assert.ok(!writes.some(s=>/DELETE FROM assets|UPDATE paper/.test(s.sql)));
+});
