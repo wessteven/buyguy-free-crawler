@@ -291,15 +291,17 @@ function auditCell(row){
  return '<td><button type="button" class="audit-btn" data-audit-key="'+escapeSocial(address)+
   '" aria-label="Run live audit of '+escapeSocial(row.symbol||'token')+'">⚡ AUDIT</button></td>';
 }
-// Moby-generated Android share links use twitter.mobyscreener.com/solana/MINT.
-// Do not copy another user's referral app_url or v cache-busting timestamp.
-// The share host is the user-supplied Moby token-chart route, not the retired
-// public web screener. Direct chart opening still depends on Android app-link
-// association and device settings. Robinhood share format remains unverified.
+// Verified by the user on Android: the bare twitter.mobyscreener.com/solana/MINT
+// route redirects to the website, while the full Moby share URL, including the
+// user-supplied Moby invitation app_url and v, hands off to the correct token
+// chart in the installed app (NEETOPIA and HIVEMIND). Keep mint-specific paths.
+// This is a chart/navigation link only, not a trade or an audit endorsement.
+// Robinhood share format remains unverified.
+const MOBY_SOLANA_SHARE_QUERY='?app_url=https%3A%2F%2Finvite.mobyscreener.com%2FcLJFHSHGm7b&v=1792416904';
 function mobyChartUrl(chain,address){
  const token=String(address||'');
  if(chain==='solana'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token))
-   return 'https://twitter.mobyscreener.com/solana/'+token;
+   return 'https://twitter.mobyscreener.com/solana/'+token+MOBY_SOLANA_SHARE_QUERY;
  if(chain==='robinhood'&&/^0x[0-9a-fA-F]{40}$/.test(token))
    return 'https://www.mobyscreener.com/token/'+token.toLowerCase();
  return null;
