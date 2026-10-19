@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {retireDormantAssets} from '../src/retirement.mjs';
-import {verifyPendingMints} from '../src/risk-ops.mjs';
+import {verifyPendingMints,combineRisk} from '../src/risk-ops.mjs';
 test('Retirement only archives after thresholds, protects held or pinned tokens',async()=>{
  const statements=[];
  const DB={prepare(sql){return {bind(...params){return {sql,params}}}},
@@ -44,4 +44,12 @@ test('Supported exact mint gets recorded as limited audit, NOT paper eligible',a
  assert.equal(calls[0].args[0],'PARTIAL_ONCHAIN_REVIEW');
  assert.ok(calls[0].args[1].includes('"top1Bps":2000'));
  assert.equal(calls[0].args[1].includes('"paperEligible":false'),true);
+});
+\ntest('Metadata-only Token-2022 with screened balances stays partial, not safe',()=>{
+  assert.equal(combineRisk({riskStatus:'TOKEN_2022_METADATA_ONLY'},
+    {status:'TOKEN_ACCOUNT_BALANCES_SCREENED'}),'PARTIAL_ONCHAIN_REVIEW');
+  assert.equal(combineRisk({riskStatus:'TOKEN_2022_REVIEW_REQUIRED'},
+    {status:'TOKEN_ACCOUNT_BALANCES_SCREENED'}),'TOKEN_2022_REVIEW_REQUIRED');
+  assert.equal(combineRisk({riskStatus:'TOKEN_2022_METADATA_ONLY'},
+    {status:'CONCENTRATION_WARNING'}),'HOLDER_CONCENTRATION_RISK');
 });
