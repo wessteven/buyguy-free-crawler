@@ -115,6 +115,76 @@ function socialCell(row){
    '<a class="social-link" href="'+escapeSocial(link.url)+'" target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer" title="Unverified project-supplied social link" aria-label="Open unverified '+escapeSocial(link.label)+' for '+escapeSocial(row.symbol)+'">'+escapeSocial(link.label)+'</a>'
  ).join('')+'</td>';
 }
+function recentEnough(value,minutes){
+ const ts=Date.parse(value||''),age=Date.now()-ts;
+ return Number.isFinite(ts)&&age>=0&&age<=minutes*60000;
+}
+function latestRoute(row,routes){
+ if(!Array.isArray(routes))return null;
+ const match=routes.find(x=>x.asset_key===row.asset_key&&recentEnough(x.at,60));
+ if(!match)return null;
+ try{return JSON.parse(match.note||'{}')}catch{return null}
+}
+// Evidence score 0–100. Controls 35, token accounts 20, DEX liquidity 15,
+// two-way indicative quote 15, freshness 15. Unknown != safe; LP locks unverified.
+function safetyAssessment(row,routes=[]){
+ const status=row.risk_status||'UNVERIFIED',audit=riskInfo(row);
+ if(status==='UNVERIFIED')return {score:null,icon:'⚫',label:'Unassessed',detail:'No on-chain authority review; score unavailable.'};
+ const mint=['MINT_CONTROLS_REVOKED','PARTIAL_ONCHAIN_REVIEW','HOLDER_DATA_UNAVAILABLE','TOKEN_2022_METADATA_ONLY','HOLDER_CONCENTRATION_RISK'].includes(status)?35:0;
+ const holders=audit.holderStatus==='TOKEN_ACCOUNT_BALANCES_SCREENED'?20:0;
+ const liq=Number(row.liquidity);
+ const liquidity=Number.isFinite(liq)&&liq>=50000?15:Number.isFinite(liq)&&liq>=25000?8:0;
+ const route=latestRoute(row,routes)?.label==='BOTH_DIRECTIONS_QUOTED'?15:0;
+ const fresh=recentEnough(row.last_seen,20)?15:recentEnough(row.last_seen,120)?7:0;
+ let score=mint+holders+liquidity+route+fresh;
+ const flags=Array.isArray(audit.mintFlags)?audit.mintFlags:[];
+ const risky=status==='MINT_CONTROL_RISK'||status==='HOLDER_CONCENTRATION_RISK'||
+   flags.some(x=>x==='MINT_AUTHORITY_ACTIVE'||x==='FREEZE_AUTHORITY_ACTIVE');
+ if(risky)score=Math.min(score,25);
+ const full=status==='FULL_REVIEW_PASSED'&&route===15&&score>=85;
+ const icon=risky?'🔴':full?'🟢':'🟡';
+ const label=risky?'Identified risk':full?'Verified screen':'Partial evidence';
+ const detail='Evidence '+score+'/100: mint '+mint+'/35, token accounts '+
+   holders+'/20, liquidity '+liquidity+'/15, two-way quote '+route+'/15, quote freshness '+
+   fresh+'/15. '+(risky?'Critical risk caps the score at 25. ':'')+
+   'Not proof of safety, locked liquidity or a successful sale.';
+ return {score,icon,label,detail};
+}
+function signalAssessment(row){
+ const change=Number(row.change_h1),score=Number(row.score);
+ const buys=Number(row.buys_m5)||0,sells=Number(row.sells_m5)||0,liq=Number(row.liquidity);
+ if(row.status==='DEAD'||row.status==='TRASH'||(Number.isFinite(liq)&&liq<=0))
+   return {rank:0,icon:'☠️',label:'Inactive or no liquidity'};
+ if(!recentEnough(row.last_seen,120)||row.change_h1===null||!Number.isFinite(change))
+   return {rank:1,icon:'🥱',label:'No recent movement evidence'};
+ if(score>=80&&change>=12&&buys>=Math.max(8,sells*1.5)&&liq>=50000)
+   return {rank:5,icon:'🚀',label:'Acceleration signal, not a buy recommendation'};
+ if(change>=2&&buys>=sells)return {rank:4,icon:'📈',label:'Rising with buy pressure'};
+ if(change<=-2||sells>buys*1.3)return {rank:2,icon:'📉',label:'Falling or sell pressure'};
+ return {rank:1,icon:'🥱',label:'Quiet / sideways'};
+}
+function directionAssessment(row){
+ if(!recentEnough(row.last_seen,120)||row.change_h1===null||row.change_h1===undefined)
+   return {value:null,icon:'⚫',label:'One-hour direction unavailable'};
+ const value=Number(row.change_h1);
+ if(!Number.isFinite(value))return {value:null,icon:'⚫',label:'One-hour direction unavailable'};
+ const icon=value>=12?'⬆️':value>=2?'↗️':value<=-12?'⬇️':value<=-2?'↘️':'➡️';
+ return {value,icon,label:'Recorded 1-hour change '+(value>=0?'+':'')+value.toFixed(1)+'% (not forecast)'};
+}
+function indicatorCell(row,key){
+ if(key==='safety'){
+   const s=row.safetyInfo;
+   return '<td class="safety-cell" title="'+escapeSocial(s.detail)+'">'+s.icon+' '+
+     (s.score===null?'—':s.score+'/100')+'<span class="risk-note">'+escapeSocial(s.label)+'</span></td>';
+ }
+ if(key==='momentum')return '<td class="signal-cell" title="'+escapeSocial(row.signalInfo.label)+'">'+row.signalInfo.icon+'</td>';
+ if(key==='direction'){
+   const d=row.directionInfo;
+   return '<td class="direction-cell" title="'+escapeSocial(d.label)+'"><span class="dir-arrow">'+d.icon+'</span> '+
+     (d.value===null?'—':(d.value>=0?'+':'')+d.value.toFixed(1)+'%')+'</td>';
+ }
+ return '';
+}
 function assetRow(a){
  const audit=riskInfo(a);
  const flags=[...(Array.isArray(audit.mintFlags)?audit.mintFlags:[]),
