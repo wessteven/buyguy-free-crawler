@@ -1,12 +1,53 @@
 import {getPaperSnapshot} from './paper-ops.mjs';
 import {scheduledResearch} from './scheduled-research.mjs';
 import {issueSession,validSession,readSessionCookie,sessionCookie,clearSessionCookie} from './auth-session.mjs';
+import {addWatchedAddress} from './watchlist.mjs';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const page=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>BuyGuy Free Radar</title>
-<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}#remember{width:18px;height:18px;padding:0;margin:0;accent-color:#9cfdc6;flex:none}.remember-choice{display:flex;align-items:center;gap:10px;margin:12px 0;color:#c9efd4}.login-note{max-width:370px}.login-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#logout{padding:8px 12px}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}#assets .social-cell{white-space:nowrap;min-width:85px}#assets .social-link{display:inline-block;color:#b9ffd0;background:#234b32;border:1px solid #3d8053;border-radius:6px;padding:5px 7px;margin:1px 3px 1px 0;text-decoration:none;font-weight:650}#assets .social-link:focus-visible{outline:2px solid #b9ffd0}#assets .social-link:hover{text-decoration:underline}#assets .safety-cell{font-weight:700;font-variant-numeric:tabular-nums}#assets .risk-note{display:block;font-size:10px;font-weight:400;color:#bdcbbc}#assets .signal-cell{font-size:19px;text-align:center}#assets .direction-cell{font-weight:700;text-align:center;font-variant-numeric:tabular-nums}#assets .dir-arrow{display:inline-block;font-size:18px;transition:transform .35s ease}.indicator-legend{font-size:12px;line-height:1.6;margin:6px 0 12px}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}.bg-tablist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:16px 0 10px;position:sticky;top:0;z-index:5;background:#0a1610;padding:7px 0}.bg-tab{min-width:0;padding:12px 3px;font-size:clamp(10px,2.6vw,13px);font-weight:650;line-height:1.25;white-space:normal;background:#12271b;border:1px solid #416449;border-radius:9px;color:#b3d9bd;touch-action:manipulation}.bg-tab[aria-selected="true"]{background:#265b3e;color:#bfffd5;border-color:#8ddda8;box-shadow:inset 0 -3px #a1f3bb}.bg-tab:focus-visible{outline:2px solid #b7ffd2;outline-offset:2px}.tab-panel[hidden]{display:none!important}.tab-panel{min-height:160px}.tab-panel>section:first-child{margin-top:6px}@media(max-width:410px){body{padding:14px}.bg-tablist{gap:4px}.bg-tab{padding:11px 2px}} </style></head><body>
-<h1>BUYGUY // FREE RADAR</h1><p class="hint">Read-only research • Robinhood + Solana • Indicative prices • Paper wallet experimental</p>
+<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}#remember{width:18px;height:18px;padding:0;margin:0;accent-color:#9cfdc6;flex:none}.remember-choice{display:flex;align-items:center;gap:10px;margin:12px 0;color:#c9efd4}.login-note{max-width:370px}.login-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}#logout{padding:8px 12px}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}#assets .social-cell{white-space:nowrap;min-width:85px}#assets .social-link{display:inline-block;color:#b9ffd0;background:#234b32;border:1px solid #3d8053;border-radius:6px;padding:5px 7px;margin:1px 3px 1px 0;text-decoration:none;font-weight:650}#assets .social-link:focus-visible{outline:2px solid #b9ffd0}#assets .social-link:hover{text-decoration:underline}#assets .safety-cell{font-weight:700;font-variant-numeric:tabular-nums}#assets .risk-note{display:block;font-size:10px;font-weight:400;color:#bdcbbc}#assets .signal-cell{font-size:19px;text-align:center}#assets .direction-cell{font-weight:700;text-align:center;font-variant-numeric:tabular-nums}#assets .dir-arrow{display:inline-block;font-size:18px;transition:transform .35s ease}.indicator-legend{font-size:12px;line-height:1.6;margin:6px 0 12px}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}.bg-tablist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:16px 0 10px;position:sticky;top:0;z-index:5;background:#0a1610;padding:7px 0}.bg-tab{min-width:0;padding:12px 3px;font-size:clamp(10px,2.6vw,13px);font-weight:650;line-height:1.25;white-space:normal;background:#12271b;border:1px solid #416449;border-radius:9px;color:#b3d9bd;touch-action:manipulation}.bg-tab[aria-selected="true"]{background:#265b3e;color:#bfffd5;border-color:#8ddda8;box-shadow:inset 0 -3px #a1f3bb}.bg-tab:focus-visible{outline:2px solid #b7ffd2;outline-offset:2px}.tab-panel[hidden]{display:none!important}.tab-panel{min-height:160px}.tab-panel>section:first-child{margin-top:6px}@media(max-width:410px){body{padding:14px}.bg-tablist{gap:4px}.bg-tab{padding:11px 2px}} .ascii-title{white-space:pre;margin:0 0 4px;overflow:hidden;color:#91ffae;font-size:clamp(10px,2.9vw,13px);line-height:1.18;font-weight:700;letter-spacing:.05em}
+body{padding:7px!important;max-width:none!important;min-height:100vh;background:#07100a!important;color:#b7f9c6!important;font-family:ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',Menlo,monospace!important;font-size:11px!important;line-height:1.3}
+#board{border:1px solid #2f5638;background:#09180f}
+h2{font-size:12px!important;font-weight:800;color:#96ffb0;letter-spacing:.02em;margin:0 0 5px;text-transform:uppercase}
+.hint{font-size:10px!important;color:#82aa8a!important}
+section{margin:0!important;padding:5px!important;overflow:visible!important;border-top:1px solid #294a31}
+button,input,select{font-family:inherit!important;font-size:11px!important;border-radius:2px!important;padding:5px 7px!important}
+button{min-height:27px}input,select{max-width:100%}
+table{font-family:inherit!important;font-size:10px!important;line-height:1.22}
+th,td{padding:3px 5px!important;border-bottom:1px solid #25432e!important;vertical-align:middle}
+tbody tr:nth-child(even){background:#0c2013}
+tbody tr:hover{background:#174029}
+#assets th{min-width:42px!important;top:0;background:#142d1b!important}
+#assets{border:1px solid #2d5536}
+#assets .social-link{padding:2px 3px!important;margin:0 1px!important;border-radius:2px!important}
+#assets .risk-note{font-size:9px}
+#assets .signal-cell,#assets .dir-arrow{font-size:13px!important}
+.asset-toolbar{margin:2px 0 4px!important;gap:4px!important}
+#overview{padding:3px;border-top:1px solid #294a31}
+.stat{border:0!important;border-right:1px solid #335e41!important;border-radius:0!important;background:transparent!important;padding:3px 6px!important;margin:0!important;font-size:10px}
+.bg-tablist{grid-template-columns:repeat(5,minmax(0,1fr));margin:0!important;padding:3px!important;gap:2px!important;background:#0b2012!important;position:sticky;top:0}
+.bg-tab{font-size:10px!important;padding:5px 2px!important;min-height:29px;border-radius:2px!important;white-space:nowrap}
+.tab-panel{min-height:70px!important}
+.login-actions{padding:3px;gap:4px}
+.copy-address{border:0!important;background:transparent!important;color:#93ffae!important;text-decoration:underline;white-space:nowrap;font-size:10px!important;padding:2px!important;min-height:0!important}
+.ticker{font-weight:900;color:#e3ffec;letter-spacing:.03em}
+#copyStatus{font-size:10px;display:block;min-height:0}
+#address-entry-panel{margin:0;padding:0}
+#watchForm{display:flex;align-items:flex-end;flex-wrap:wrap;gap:5px}
+#watchForm label{display:flex;flex-direction:column;gap:3px;min-width:90px}
+#watchAddress{width:min(94vw,480px);flex:1;min-width:220px}
+#watchList{margin-top:8px;max-width:100%;overflow:auto}
+#watchMsg{font-size:11px;min-height:13px}
+#login{margin:8px 0;padding:8px;border:1px solid #315b3d}
+#login>label{display:block;margin-bottom:5px}
+#login #pass{min-width:180px}
+.research-guide{font-size:10px}
+@media(max-width:400px){body{padding:4px!important}.bg-tab{font-size:9px!important}.stat{padding:2px 4px!important}th,td{padding:3px 4px!important}}
+</style></head><body>
+<pre class="ascii-title" role="heading" aria-level="1">+----------------------------+
+| the   BUYGUY GOGET         |
++----------------------------+</pre><p class="hint">[ RH + SOL ] // RESEARCH // PAPER EXPERIMENT // NO REAL TRADES</p>
 <div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p></div>
 <div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button></div><div id="overview"></div>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
@@ -14,15 +55,25 @@ const page=`<!doctype html><html><head><meta name="viewport" content="width=devi
 <button class="bg-tab" id="tab-wallet" role="tab" type="button" data-tab="wallet" aria-controls="panel-wallet" aria-selected="false" tabindex="-1">Wallet</button>
 <button class="bg-tab" id="tab-runs" role="tab" type="button" data-tab="runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Recent Runs</button>
 <button class="bg-tab" id="tab-outcomes" role="tab" type="button" data-tab="outcomes" aria-controls="panel-outcomes" aria-selected="false" tabindex="-1">Outcomes</button>
+<button class="bg-tab" id="tab-address" role="tab" type="button" data-tab="address" aria-controls="panel-address" aria-selected="false" tabindex="-1">+ Address</button>
 </nav>
 <div class="tab-panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research">
-<section><h2>Token research</h2><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div></section>
+<section><h2>Token research</h2><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div><span id="copyStatus" role="status" aria-live="polite"></span></section>
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
 <section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend">Safety: 🟢 fully screened · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Score is 0–100 based on evidence, <strong>not a guarantee of safety</strong>. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
 </div>
 <div class="tab-panel" id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" hidden><section><h2>Paper wallet</h2><div id="wallet"></div></section></div>
 <div class="tab-panel" id="panel-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><section><h2>Recent runs</h2><div id="runs"></div></section></div>
 <div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
+<div class="tab-panel" id="panel-address" role="tabpanel" aria-labelledby="tab-address" hidden>
+<section id="address-entry-panel"><h2>Watch an address</h2>
+<p class="hint">Pin an exact token contract. Research and prices appear when available; adding an address does not certify it or trade it.</p>
+<form id="watchForm"><label for="watchChain">CHAIN<select id="watchChain"><option value="solana">Solana</option><option value="robinhood">Robinhood</option></select></label>
+<label for="watchAddress">TOKEN CONTRACT<input id="watchAddress" type="text" autocomplete="off" spellcheck="false" maxlength="100" placeholder="Paste token address" required></label>
+<button type="submit" id="watchSubmit">+ WATCH</button></form>
+<p id="watchMsg" role="status" aria-live="polite"></p>
+<h2>PINNED // WATCHLIST</h2><div id="watchList"></div>
+</section></div>
 </div>
 <p class="hint">Research only. Top token accounts can include AMM pools, escrows and custodians, not unique holder wallets. Mint checks do not verify liquidity locks or executable exits. Paper trades remain disabled.</p>
 <script>
@@ -48,7 +99,8 @@ const assetColumns=[
  {key:'risk',name:'Mint review',type:'text'},
  {key:'topBps',name:'Top acct %',type:'number'},
  {key:'flags',name:'Mint/holder flags',type:'text'},
- {key:'provider',name:'Provider',type:'text'}
+ {key:'provider',name:'Provider',type:'text'},
+ {key:'address',name:'Token Address',type:'text'}
 ];
 const columnByKey=Object.fromEntries(assetColumns.map(c=>[c.key,c]));
 const initialColumnKeys=assetColumns.map(c=>c.key);
@@ -74,7 +126,7 @@ let assetSort=(savedSort&&columnByKey[savedSort.key]&&['asc','desc'].includes(sa
  savedSort:{key:'score',direction:'desc'};
 let assetRows=[];
 const tabKey='buyguy.activeTab.v1';
-const dashboardTabs=['research','wallet','runs','outcomes'];
+const dashboardTabs=['research','wallet','runs','outcomes','address'];
 let activeTab=dashboardTabs.includes(storedValue(tabKey))?storedValue(tabKey):'research';
 function activateTab(tab,{focus=false}={}){
  if(!dashboardTabs.includes(tab))return false;
