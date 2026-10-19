@@ -43,7 +43,8 @@ jobs:
                 accepted={symbol:a.symbol,protocol:p.protocol,status:p.status,
                   vaultsVerified:p.vaultsVerified,lpLockVerified:p.lpLockVerified,
                   verifiedVaultCount:p.verifiedVaults?.length||0,
-                  lpSupplyGapBps:p.lpSupplyGapBps??null,flags:p.flags};
+                  lpSupplyGapBps:p.lpSupplyGapBps??null,flags:p.flags,
+                  lpDiagnostics:p.lpDiagnostics||null};
                 break;
               }
             }catch(e){details.push({symbol:a.symbol,errorType:e?.name||'UnknownError'});}
