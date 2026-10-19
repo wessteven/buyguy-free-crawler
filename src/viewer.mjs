@@ -2,6 +2,7 @@ import {getPaperSnapshot} from './paper-ops.mjs';
 import {scheduledResearch} from './scheduled-research.mjs';
 import {issueSession,validSession,readSessionCookie,sessionCookie,clearSessionCookie} from './auth-session.mjs';
 import {addWatchedAddress} from './watchlist.mjs';
+import {assessGreenLight} from './green-gate.mjs';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -573,15 +574,28 @@ if(path==='/api/watchlist'){
  }catch{return json({error:'watchlist_write_failed'},503)}
 }
 try{const list=async(sql)=>(await env.DB.prepare(sql).all()).results||[];
-const [runs,assets,wallet,predictions,routes,pinned]=await Promise.all([
+const [runs,assets,wallet,predictions,routes,pinned,greenEvents]=await Promise.all([
 list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
 list("SELECT a.*, (SELECT e.note FROM research_events e WHERE e.asset_key=a.asset_key AND e.kind='TOKEN_SOCIALS' ORDER BY e.id DESC LIMIT 1) AS socials_json FROM assets a WHERE a.status IN ('ALIVE','STATIC') ORDER BY a.score DESC LIMIT 500"),
 list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
 list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30"),
 list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 15"),
-list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100")]);
+list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100"),
+list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT') ORDER BY id DESC LIMIT 2000")]);
+const recent=new Map();
+for(const event of greenEvents){
+ const key=event.asset_key+'|'+event.kind;
+ if(!recent.has(key))recent.set(key,event);
+}
+const now=Date.now();
+const evaluated=assets.map(asset=>({...asset,green:assessGreenLight(asset,{
+ mintEvent:recent.get(asset.asset_key+'|MINT_AUTHORITY_REVIEW'),
+ routeEvent:recent.get(asset.asset_key+'|ROUNDTRIP_QUOTE'),
+ ownerEvent:recent.get(asset.asset_key+'|BENEFICIAL_OWNER_AUDIT'),
+ poolEvent:recent.get(asset.asset_key+'|POOL_CUSTODY_AUDIT'),now
+})}));
 const paper=await getPaperSnapshot(env);
-return json({runs,assets,wallet:wallet[0]||null,predictions,paper,routes,pinned});
+return json({runs,assets:evaluated,wallet:wallet[0]||null,predictions,paper,routes,pinned});
 }catch(e){return json({error:'D1 query failed',message:String(e).slice(0,180)},503)}
 },async scheduled(controller,env,ctx){
   await scheduledResearch(env);
