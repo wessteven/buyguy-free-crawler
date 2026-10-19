@@ -32,6 +32,9 @@ jobs:
           print('SOURCE COUNTS:',q("SELECT provider,chain,COUNT(*) AS n FROM assets GROUP BY provider,chain ORDER BY n DESC"))
           print('STATE COUNTS:',q("SELECT status,chain,COUNT(*) AS n FROM assets GROUP BY status,chain"))
           print('OBSERVATIONS:',q("SELECT COUNT(*) AS n,MAX(seen_at) AS latest FROM observations"))
+          print('QUOTE PROVIDER COUNTS:',q("SELECT provider,COUNT(*) AS n,MAX(seen_at) AS latest FROM observations GROUP BY provider"))
+          print('FRESH TOKEN QUOTES:',q("SELECT chain,status,COUNT(*) AS n FROM assets WHERE last_seen>=strftime('%Y-%m-%dT%H:%M:%SZ','now','-20 minutes') GROUP BY chain,status"))
+          print('LATEST ACTIVE ASSETS:',q("SELECT symbol,chain,score,liquidity,market_cap,risk_status,pool_created,last_seen FROM assets WHERE last_seen>=strftime('%Y-%m-%dT%H:%M:%SZ','now','-20 minutes') ORDER BY score DESC LIMIT 10"))
           print('TOP UNVERIFIED LEADS:')
           for item in q("SELECT symbol,chain,address,score,liquidity,market_cap,buys_m5,sells_m5,status,risk_status,provider FROM assets WHERE status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 12"):
             print(json.dumps(item,separators=(',',':')))
