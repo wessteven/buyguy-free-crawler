@@ -70,7 +70,11 @@ export function verifyPumpSwapVaults(poolInfo,accounts,targetMint){
  const state=lp?.data?.parsed;
  if(lp?.owner!==SPL_TOKEN||state?.type!=='mint'||
    state.info?.isInitialized!==true||!/^\d+$/.test(state.info.supply||'')){
-   result.flags.push('LP_MINT_UNVERIFIED');return result;
+   result.flags.push('LP_MINT_UNVERIFIED');
+   result.lpDiagnostics={program:lp?.owner||null,parsedType:state?.type||null,
+     initialized:state?.info?.isInitialized===true,
+     supplyAvailable:typeof state?.info?.supply==='string'};
+   return result;
  }
  const supplied=BigInt(poolInfo.lpSupplyRaw),minted=BigInt(state.info.supply);
  result.lpMintSupplyRaw=minted.toString();
