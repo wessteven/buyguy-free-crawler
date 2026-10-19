@@ -513,6 +513,9 @@ function inspectGreen(key){
   '<p class="hint">'+(gate.partial_probes?.uniqueAuthorityCount!==null&&gate.partial_probes?.uniqueAuthorityCount!==undefined?
    'Owner sample: '+escapeSocial(gate.partial_probes.uniqueAuthorityCount)+' account authorities. ':'')+
    (gate.partial_probes?.poolAccountProgram?'Pool program: '+escapeSocial(gate.partial_probes.poolAccountProgram)+'. ':'')+
+   (gate.partial_probes?.poolVaultsVerified?'✓ Verified Raydium CPMM vault identities. ':'')+
+   (gate.partial_probes?.excludedVerifiedVaultAccounts>0?
+     'Excluded verified pool vault token accounts: '+Number(gate.partial_probes.excludedVerifiedVaultAccounts)+'. ':'')+
    escapeSocial(gate.partial_probes?.caveat||'')+'</p>'+
   '<p class="hint">'+escapeSocial(gate.warning)+'</p>'+
   '<p class="hint">Read-only screening. No real or paper order was placed by this check.</p>';
