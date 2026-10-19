@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Query live D1 research status (read-only)
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -48,3 +52,32 @@ jobs:
           print('PAPER QUALIFIED:',q("SELECT COUNT(*) AS n FROM assets WHERE risk_status='PAPER_ELIGIBLE'"))
           print('PAPER FILLS:',q("SELECT COUNT(*) AS n FROM paper_trades"))
           PY
+      - name: Classify current HOT / NOT and quote coverage using same deployed rules
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          node --input-type=module <<'JS'
+          import {tokenTier,countCoverage,selectRefreshTargets} from './src/token-tiers.mjs';
+          const base='https://api.cloudflare.com/client/v4/accounts/'+process.env.CF_ACCOUNT_ID+
+            '/d1/database/'+process.env.CF_DATABASE_ID+'/query';
+          const query="SELECT asset_key,chain,address,symbol,status,pinned,score,liquidity,price,buys_m5,sells_m5,change_h1,last_seen,risk_status FROM assets WHERE status IN ('ALIVE','STATIC','DEAD') ORDER BY asset_key LIMIT 500";
+          const response=await fetch(base,{method:'POST',headers:{
+            authorization:'Bearer '+process.env.CF_D1_API_TOKEN,'content-type':'application/json'},
+            body:JSON.stringify({sql:query,params:[]})});
+          const data=await response.json();
+          if(!data?.success||!data?.result?.[0]?.success)throw Error('D1 query unavailable');
+          const rows=data.result[0].results||[];
+          const now=Date.now(),coverage=countCoverage(rows,now);
+          const hot=rows.filter(x=>tokenTier(x,now).tier==='HOT')
+            .sort((a,b)=>b.score-a.score).slice(0,12)
+            .map(x=>({symbol:x.symbol,score:x.score,ageMins:tokenTier(x,now).ageMinutes,liq:x.liquidity}));
+          const cold=rows.filter(x=>tokenTier(x,now).tier==='NOT');
+          const reasons={};
+          for(const r of cold){const k=tokenTier(r,now).reason;reasons[k]=(reasons[k]||0)+1}
+          console.log('LIVE_HOT_NOT_COVERAGE',JSON.stringify(coverage));
+          console.log('LIVE_HOT_CANDIDATES',JSON.stringify(hot));
+          console.log('LIVE_NOT_REASONS',JSON.stringify(reasons));
+          console.log('10_MINUTE_REFRESH_CAPACITY',{default:20,max:25,quoteConfirmations:0});
+          JS
