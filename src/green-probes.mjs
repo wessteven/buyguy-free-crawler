@@ -150,7 +150,8 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
        .bind(now,asset.asset_key,JSON.stringify(poolProof)),
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'PROGRAM_UPGRADE_PROBE',?)")
        .bind(now,asset.asset_key,JSON.stringify({
-         assetKey:asset.asset_key,program:upgrade.program||null,status:upgrade.status,
+         assetKey:asset.asset_key,verifier:'buyguy-program-authority-v1',
+         program:upgrade.program||null,status:upgrade.status,
          immutable:upgrade.immutable===true,upgradeAuthorityPresent:upgrade.upgradeAuthorityPresent,
          upgradeAuthority:upgrade.upgradeAuthority||null,checkedAt:now,
          note:'Program upgrade authority does not by itself verify pool liquidity locks, admin privileges or program source code.'
