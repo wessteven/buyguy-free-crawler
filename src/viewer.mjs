@@ -93,6 +93,24 @@ tbody tr:hover{background:#174029}
 #assets .flags-full,.asset-view .flags-full{display:inline-block;max-width:210px;white-space:normal;
  overflow-wrap:anywhere}
 
+/* Mobile overflow containment: long supplementary tables must never stretch the page.
+   Only the table viewport can scroll sideways; the TOKEN DATA grid keeps its own
+   independent scrolling and pinned column headings. */
+html{width:100%;max-width:100%;overflow-x:clip}
+body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
+*,*::before,*::after{box-sizing:border-box}
+#board,#overview,.tab-panel,.tab-panel>section,.research-guide{
+ width:100%;max-width:100%;min-width:0
+}
+#routeReviews,#wallet,#runs,#predictions,#watchList{width:100%;max-width:100%;min-width:0}
+.data-scroll{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;
+ overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.data-scroll table{width:max-content;min-width:100%;max-width:none;table-layout:auto}
+.data-scroll th,.data-scroll td{white-space:normal!important;max-width:175px;
+ min-width:56px;overflow-wrap:anywhere;word-break:break-word}
+.data-scroll th{position:sticky;top:0;background:#14321d}
+.research-guide,.research-guide p{overflow-wrap:anywhere;white-space:normal}
+
 </style></head><body>
 <pre class="ascii-title" role="heading" aria-level="1">+----------------------------+
 | the   BUYGUY GOGET         |
@@ -145,7 +163,7 @@ tbody tr:hover{background:#174029}
 <script>
 // Authentication uses signed HttpOnly cookies; password exists only during login.
 const cell=v=>'<td>'+String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td>';
-function table(keys,rows){return '<table><thead><tr>'+keys.map(k=>'<th>'+k+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(cell).join('')+'</tr>').join('')+'</tbody></table>';}
+function table(keys,rows){return '<div class="data-scroll" role="region" aria-label="'+keys.join(' / ')+'" tabindex="0"><table><thead><tr>'+keys.map(k=>'<th>'+k+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(cell).join('')+'</tr>').join('')+'</tbody></table></div>';}
 
 // Only display preferences go to this device's storage. Never store the login token.
 const layoutKey='buyguy.assetColumns.v2',sortKey='buyguy.assetSort.v1',foldKey='buyguy.columnFolds.v1';
