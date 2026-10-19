@@ -12,7 +12,8 @@ async function tableSandbox(storage=new Map()){
   const assets={
     innerHTML:'',scrollLeft:0,
     querySelectorAll(){return []},
-    querySelector(){return null}
+    querySelector(){return null},
+    addEventListener(name,handler){this.listeners=this.listeners||{};this.listeners[name]=handler}
   };
   const ui=new Map([['assets',assets],['assetOrderStatus',{textContent:''}]]);
   const doc={
@@ -226,4 +227,27 @@ test('Legend and column instructions appear below research table and quote check
  assert.ok(guide>quotes&&legend>quotes&&gestures>quotes,'Guide belongs at the end');
  assert.equal(panel.match(/Tap a heading to sort/g)?.length,1,'Instructions must appear exactly once');
  assert.equal(panel.match(/Safety: 🟢/g)?.length,1,'Legend must appear exactly once');
+});
+
+test('BuyGuy GOGET terminal theme, compact tabs and permanent last address column',async()=>{
+ const {html,evalJS,assets,ui}=await setup();
+ assert.match(html,/the\s+BUYGUY GOGET/);
+ assert.match(html,/font-family:ui-monospace/);
+ assert.match(html,/id="tab-address"/);
+ assert.match(html,/id="watchForm"/);
+ assert.equal(evalJS('assetOrder[assetOrder.length-1]'),'address');
+ assert.ok(assets.innerHTML.indexOf('data-col="address"')>assets.innerHTML.indexOf('data-col="provider"'));
+ assert.equal(evalJS("moveAssetColumn('address','symbol',false)"),false);
+ assert.equal(evalJS("moveAssetColumn('symbol','address',false)"),false);
+ evalJS("sortAssets('liquidity')");
+ assert.equal(evalJS('assetOrder[assetOrder.length-1]'),'address');
+ assert.match(assets.innerHTML,/class="ticker"/);
+ });
+test('Watch Address tab remains accessible after saved navigation preference',async()=>{
+ const ui=await tableSandbox();
+ assert.equal(ui.evalJS("activateTab('address')"),true);
+ assert.equal(ui.ui.get('panel-address').hidden,false);
+ assert.equal(ui.ui.get('panel-wallet').hidden,true);
+ const saved=await tableSandbox(ui.storage);
+ assert.equal(saved.evalJS('activeTab'),'address');
 });
