@@ -35,6 +35,24 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 - A quote merely shows that Jupiter produced a *possible route at that instant*. It cannot establish that a later trade succeeds, that LP liquidity is locked, or that a real wallet could sell.
 - Route results are saved in `research_events` under `ROUNDTRIP_QUOTE` and displayed on the mobile dashboard. **No current route test automatically grants PAPER_ELIGIBLE or triggers a paper fill.**
 
+## GREEN LIGHT — 7/7 independent evidence screen
+
+**Green is a narrowly defined completed evidence screen, not a guarantee of safety and not buy permission.** In TOKEN DATA, tap a safety cell to inspect each prerequisite and the current pass count. The existing 0–100 numeric evidence score is distinct from these hard gates: a token with 85/100 can still be amber.
+
+1. Recognized Solana token program, revoked mint/freeze authority and recent verified mint details (Helius).
+2. No unreviewed mint-level transfer restrictions (Token-2022 hooks, freeze controls and other extensions fail closed).
+3. Top token-account distribution inside stringent thresholds; **token accounts are not unique wallet owners**.
+4. Independent beneficial-owner attribution with pool vaults/custody excluded. **Not implemented as a trusted passing verification source yet**.
+5. Fresh exact-pool quote with >=US$50,000 reported USD liquidity.
+6. Independent on-chain pool custody, administrative controls and liquidity-lock duration. **Not implemented as a trusted passing verification source yet**.
+7. Recent indicative US$40 USDC → exact mint → USDC route with capped loss, impact and market-price discrepancy. **A route is not an executed sale**.
+
+The green gate is calculated afresh by the Worker using timestamped D1 evidence, exact asset keys and fail-closed freshness limits. It never sets `risk_status=FULL_REVIEW_PASSED`, `PAPER_ELIGIBLE`, or `PAPER_SIMULATION_ENABLED`, never moves paper money, and never signs a real transaction.
+
+The optional Helius owner-cluster and pool-program probes are active only when configured, rate-bounded and **always record provisional evidence**. They cannot certify LP locks or vault-excluded owner distribution. No 🟢 should appear until both independent proof producers exist and all seven checks are current. Robinhood Chain requires its own chain-specific verified implementation; Solana evidence is never reused for Robinhood contracts.
+
+[BuyGuy live green-audit run history](https://github.com/wessteven/buyguy-free-crawler/actions/workflows/green-audit.yml)
+
 ## Paper-wallet engine
 
 - Starting balance US$1,000 with no deposits or withdrawals from real wallets.
