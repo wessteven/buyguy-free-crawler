@@ -44,6 +44,15 @@ tbody tr:hover{background:#174029}
 #login>label{display:block;margin-bottom:5px}
 #login #pass{min-width:180px}
 .research-guide{font-size:10px}
+#greenDialog{background:#09190e;color:#bbfccc;border:1px solid #467553;font:11px ui-monospace,Consolas,monospace;
+ width:min(92vw,520px);max-height:76vh;overflow:auto;padding:12px}
+#greenDialog::backdrop{background:rgba(0,0,0,.78)}
+#greenDialog .audit-check{border-bottom:1px solid #34543e;padding:6px 0;white-space:normal}
+#greenDialog .audit-detail{font-size:10px;color:#a3c7a8;white-space:normal}
+#greenDialog .audit-title{font-weight:800;color:#d5ffdc}
+#assets .green-button{min-height:0!important;padding:1px 2px!important;border:0!important;background:transparent!important;font-weight:800;line-height:1.15;white-space:nowrap}
+#assets .green-progress{font-size:9px;color:#9cc3a4;display:block}
+
 @media(max-width:400px){body{padding:4px!important}.bg-tab{font-size:9px!important}.stat{padding:2px 4px!important}th,td{padding:3px 4px!important}}
 </style></head><body>
 <pre class="ascii-title" role="heading" aria-level="1">+----------------------------+
@@ -59,9 +68,11 @@ tbody tr:hover{background:#174029}
 <button class="bg-tab" id="tab-address" role="tab" type="button" data-tab="address" aria-controls="panel-address" aria-selected="false" tabindex="-1">+ Address</button>
 </nav>
 <div class="tab-panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research">
-<section><h2>Token research</h2><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div><span id="copyStatus" role="status" aria-live="polite"></span></section>
+<section><h2>Token research</h2><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div><span id="copyStatus" role="status" aria-live="polite"></span>
+<dialog id="greenDialog" aria-labelledby="greenTitle"><h2 id="greenTitle">GREEN LIGHT CHECK</h2>
+<div id="greenDetails"></div><button id="greenClose" type="button">CLOSE</button></dialog></section>
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
-<section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend">Safety: 🟢 fully screened · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Score is 0–100 based on evidence, <strong>not a guarantee of safety</strong>. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
+<section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend">Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Tap a safety score to inspect the seven checks.  Score is 0–100 based on evidence, <strong>not a guarantee of safety</strong>. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
 </div>
 <div class="tab-panel" id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" hidden><section><h2>Paper wallet</h2><div id="wallet"></div></section></div>
 <div class="tab-panel" id="panel-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><section><h2>Recent runs</h2><div id="runs"></div></section></div>
@@ -225,13 +236,13 @@ function safetyAssessment(row,routes=[]){
  const fresh=recentEnough(row.last_seen,20)?15:recentEnough(row.last_seen,120)?7:0;
  let score=mint+holders+liquidity+route+fresh;
  const flags=Array.isArray(audit.mintFlags)?audit.mintFlags:[];
- const risky=status==='MINT_CONTROL_RISK'||status==='HOLDER_CONCENTRATION_RISK'||
+ const risky=row.green?.status==='RISK'||status==='MINT_CONTROL_RISK'||status==='HOLDER_CONCENTRATION_RISK'||
    flags.some(x=>x==='MINT_AUTHORITY_ACTIVE'||x==='FREEZE_AUTHORITY_ACTIVE');
  if(risky)score=Math.min(score,25);
- const full=status==='FULL_REVIEW_PASSED'&&route===15&&score>=85;
+ const full=row.green?.green===true; // independently computed seven-stage server gate, not a status flag
  const icon=risky?'🔴':full?'🟢':'🟡';
  const label=risky?'Identified risk':full?'Verified screen':'Partial evidence';
- const detail='Evidence '+score+'/100: mint '+mint+'/35, token accounts '+
+ const detail='Evidence '+score+'/100 (green gate '+(row.green?.passed??0)+'/7): mint '+mint+'/35, token accounts '+
    holders+'/20, liquidity '+liquidity+'/15, two-way quote '+route+'/15, quote freshness '+
    fresh+'/15. '+(risky?'Critical risk caps the score at 25. ':'')+
    'Not proof of safety, locked liquidity or a successful sale.';
@@ -261,8 +272,8 @@ function directionAssessment(row){
 function indicatorCell(row,key){
  if(key==='safety'){
    const s=row.safetyInfo;
-   return '<td class="safety-cell" title="'+escapeSocial(s.detail)+'">'+s.icon+' '+
-     (s.score===null?'—':s.score+'/100')+'<span class="risk-note">'+escapeSocial(s.label)+'</span></td>';
+   return '<td class="safety-cell"><button type="button" class="green-button" data-green-key="'+escapeSocial(row.asset_key)+'" title="'+escapeSocial(s.detail)+'" aria-label="Inspect green light checklist for '+escapeSocial(row.symbol)+'">'+s.icon+' '+
+     (s.score===null?'—':s.score+'/100')+'<span class="green-progress">'+(row.green?.passed??0)+'/7 CHECKS</span></button></td>';
  }
  if(key==='momentum')return '<td class="signal-cell" title="'+escapeSocial(row.signalInfo.label)+'">'+row.signalInfo.icon+'</td>';
  if(key==='direction'){
@@ -486,10 +497,30 @@ document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter
 document.getElementById('logout').onclick=logout;
 document.getElementById('refresh').onclick=refresh;
 document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
+function inspectGreen(key){
+ const row=assetRows.find(x=>x.asset_key===key);
+ if(!row)return;
+ const gate=row.green;
+ const dialog=document.getElementById('greenDialog'),details=document.getElementById('greenDetails');
+ if(!dialog||!details)return;
+ const title=escapeSocial(row.symbol||row.asset_key);
+ if(!gate){details.textContent='No verified green-light evaluation is available.';dialog.showModal();return;}
+ const icon=gate.status==='RISK'?'🔴':gate.green?'🟢':gate.status==='UNASSESSED'?'⚫':'🟡';
+ details.innerHTML='<p><strong>'+title+'</strong> '+icon+' <strong>'+gate.passed+'/'+gate.total+
+  ' checks</strong> · '+escapeSocial(gate.status)+'</p>'+
+  gate.checks.map(c=>'<div class="audit-check"><div class="audit-title">'+(c.passed?'✓ ':'✕ ')+
+  escapeSocial(c.name)+'</div><div class="audit-detail">'+escapeSocial(c.reason)+'</div></div>').join('')+
+  '<p class="hint">'+escapeSocial(gate.warning)+'</p>'+
+  '<p class="hint">Read-only screening. No real or paper order was placed by this check.</p>';
+ if(!dialog.open)dialog.showModal();
+}
 document.getElementById('assets').addEventListener('click',event=>{
- const button=event.target?.closest?.('button[data-address]');
- if(button)copyAddress(button.dataset.address);
+ const copy=event.target?.closest?.('button[data-address]');
+ if(copy){copyAddress(copy.dataset.address);return;}
+ const inspect=event.target?.closest?.('button[data-green-key]');
+ if(inspect)inspectGreen(inspect.dataset.greenKey);
 });
+document.getElementById('greenClose').onclick=()=>document.getElementById('greenDialog').close();
 function watchlistTable(pins){
  const rows=(Array.isArray(pins)?pins:[]).map(a=>[
  a.chain,a.symbol==='PENDING'||!a.symbol?'AWAITING QUOTE':a.symbol,
