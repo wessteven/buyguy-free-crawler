@@ -31,7 +31,7 @@ async function tableSandbox(storage=new Map()){
     getItem:key=>storage.has(key)?storage.get(key):null,
     setItem:(key,value)=>storage.set(key,String(value))
   };
-  const context=vm.createContext({document:doc,localStorage,Date,Intl,Number,
+  const context=vm.createContext({document:doc,localStorage,Date,Intl,Number,URL,
     JSON,String,Array,Object,Math,console,fetch:()=>{throw Error('Network not needed for table test');}});
   vm.runInContext(match[1],context,{timeout:2000});
   const evalJS=code=>vm.runInContext(code,context,{timeout:2000});
@@ -138,4 +138,76 @@ test('Tabs support tap/click and arrow-key keyboard navigation',async()=>{
  assert.equal(page.evalJS('activeTab'),'research');
  assert.equal(page.evalJS("activateTab('injected')"),false);
  assert.equal(page.evalJS('activeTab'),'research');
+});
+
+test('Socials column renders safe, clickable project-supplied HTTPS links',async()=>{
+ const ui=await tableSandbox();
+ const row={...example[0],socials_json:JSON.stringify([
+   {label:'X',url:'https://x.com/project'},
+   {label:'TG',url:'https://t.me/project'},
+   {label:'Web',url:'https://project.example/'},
+   {label:'BAD',url:'javascript:alert(1)'},
+   {label:'<img src=x onerror=alert(1)>',url:'https://safe.example'}])};
+ ui.evalJS('setAssetData('+JSON.stringify([row])+')');
+ assert.match(ui.assets.innerHTML,/data-col="socials"/);
+ assert.match(ui.assets.innerHTML,/href="https:\/\/x.com\/project"/);
+ assert.match(ui.assets.innerHTML,/href="https:\/\/t.me\/project"/);
+ assert.match(ui.assets.innerHTML,/href="https:\/\/project.example\/"/);
+ assert.match(ui.assets.innerHTML,/rel="noopener noreferrer nofollow"/);
+ assert.doesNotMatch(ui.assets.innerHTML,/href="javascript:/);
+ assert.doesNotMatch(ui.assets.innerHTML,/<img src=x/);
+ assert.match(ui.assets.innerHTML,/&lt;img src=x/);
+});
+test('New socials/safety/signal/direction columns merge into existing saved drag layout',async()=>{
+ const storage=new Map([['buyguy.assetColumns.v1',JSON.stringify(['symbol','chain','score'])]]);
+ const ui=await setup(storage);
+ assert.ok(ui.assets.innerHTML.indexOf('data-col="socials"')>ui.assets.innerHTML.indexOf('data-col="symbol"'));
+ assert.ok(ui.assets.innerHTML.includes('data-col="safety"'));
+ assert.ok(ui.assets.innerHTML.includes('data-col="momentum"'));
+ assert.ok(ui.assets.innerHTML.includes('data-col="direction"'));
+ ui.evalJS("moveAssetColumn('direction','symbol',false)");
+ assert.ok(ui.assets.innerHTML.indexOf('data-col="direction"')<ui.assets.innerHTML.indexOf('data-col="symbol"'));
+});
+test('Unverified token is black unknown, even with high liquidity and chart score',async()=>{
+ const ui=await tableSandbox();
+ const sample={...example[0],score:99,liquidity:200000,risk_status:'UNVERIFIED',
+    last_seen:new Date().toISOString(),change_h1:30};
+ const result=ui.evalJS('safetyAssessment('+JSON.stringify(sample)+')');
+ assert.equal(result.icon,'⚫');
+ assert.equal(result.score,null);
+});
+test('Reviewed but incomplete onchain research is yellow and scored from evidence',async()=>{
+ const ui=await tableSandbox();
+ const sample={...example[0],risk_status:'PARTIAL_ONCHAIN_REVIEW',liquidity:75000,
+  last_seen:new Date().toISOString(),risk_note:JSON.stringify({holderStatus:'TOKEN_ACCOUNT_BALANCES_SCREENED'})};
+ const result=ui.evalJS('safetyAssessment('+JSON.stringify(sample)+')');
+ assert.equal(result.icon,'🟡');
+ assert.equal(result.score,85); // 35 mint + 20 concentration + 15 liquidity + 15 freshness
+ assert.match(result.detail,/two-way quote 0\/15/);
+});
+test('Active mint controls and concentration risk show red, not a passing green',async()=>{
+ const ui=await tableSandbox();
+ const sample={...example[0],risk_status:'MINT_CONTROL_RISK',liquidity:100000,
+  risk_note:JSON.stringify({mintFlags:['MINT_AUTHORITY_ACTIVE']}),last_seen:new Date().toISOString()};
+ const result=ui.evalJS('safetyAssessment('+JSON.stringify(sample)+')');
+ assert.equal(result.icon,'🔴');
+ assert.ok(result.score<=25);
+});
+test('Direction tracks last one-hour change across full five-point 180-degree arc',async()=>{
+ const ui=await tableSandbox(),last_seen=new Date().toISOString();
+ const cases=[[30,'⬆️'],[6,'↗️'],[0,'➡️'],[-6,'↘️'],[-30,'⬇️']];
+ for(const [change,icon] of cases){
+  const d=ui.evalJS('directionAssessment('+JSON.stringify({last_seen,change_h1:change})+')');
+  assert.equal(d.icon,icon);
+  assert.equal(d.value,change);
+ }
+ assert.equal(ui.evalJS("directionAssessment({last_seen:'2020-01-01T00:00:00Z',change_h1:50})").icon,'⚫');
+});
+test('Momentums distinguish acceleration, increasing, declining, quiet, inactive',async()=>{
+ const ui=await tableSandbox(),last_seen=new Date().toISOString();
+ const sample={score:90,status:'ALIVE',liquidity:75000,last_seen,buys_m5:50,sells_m5:10,change_h1:20};
+ const expected=[[sample,'🚀'],[{...sample,score:50,change_h1:7},'📈'],
+   [{...sample,change_h1:-5},'📉'],[{...sample,change_h1:0},'🥱'],
+   [{...sample,status:'DEAD'},'☠️']];
+ for(const [a,icon] of expected)assert.equal(ui.evalJS('signalAssessment('+JSON.stringify(a)+')').icon,icon);
 });
