@@ -260,7 +260,7 @@ test('A status label or big numerical safety score alone cannot trigger green la
    last_seen:new Date().toISOString()};
  const badge=page.evalJS('safetyAssessment('+JSON.stringify(sample)+')');
  assert.equal(badge.icon,'🟡');
- assert.equal(badge.score,65); // no independently verified mint state or route credit
+ assert.equal(badge.score,85); // even a high numerical score cannot self-certify as green
 });
 test('Tap-to-inspect green checklist is a compact button, with unknowns visible',async()=>{
  const page=await tableSandbox();
