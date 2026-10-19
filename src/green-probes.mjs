@@ -107,13 +107,36 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
    try{owner=await probeLargestOwnerAccounts(asset.address,env.HELIUS_RPC_URL,fetcher,
       {verifiedPool:pool?.vaultsVerified?pool:null})}
    catch{failed++}
-   const proof={...owner,assetKey:asset.asset_key,checkedAt:now};
-   const poolProof={...pool,assetKey:asset.asset_key,chain:'solana',checkedAt:now};
+   // Persist compact, complete JSON. Never truncate a JSON string mid-field.
+   const proof={
+     assetKey:asset.asset_key,checkedAt:now,verifier:owner.verifier||null,
+     status:owner.status,uniqueAuthorityCount:owner.uniqueAuthorityCount??null,
+     nonVaultAuthorityCount:owner.nonVaultAuthorityCount??null,
+     largestNonVaultAuthoritySampleBps:owner.largestNonVaultAuthoritySampleBps??null,
+     sampledTokenAccounts:owner.sampledTokenAccounts??0,
+     excludedVaultAccounts:owner.excludedVaultAccounts??0,
+     vaultsExcluded:owner.vaultsExcluded===true,
+     beneficialOwnersVerified:false,flags:owner.flags||[],
+     caveat:'Top token-account sample only; wallet-owner identities and other LP/custodial vaults unverified.'
+   };
+   const poolProof={
+     assetKey:asset.asset_key,chain:'solana',checkedAt:now,
+     verifier:'buyguy-raydium-cpmm-layout-v1',
+     status:pool.status,protocol:pool.protocol||null,
+     program:pool.program||null,observedProgram:pool.observedProgram||null,
+     lpMint:pool.lpMint||null,lpSupplyRaw:pool.lpSupplyRaw||null,
+     pool:asset.pool,token0Mint:pool.token0Mint||null,token1Mint:pool.token1Mint||null,
+     verifiedVaults:pool.vaultsVerified===true?pool.verifiedVaults:[],
+     vaultsVerified:pool.vaultsVerified===true,lpLockVerified:false,
+     swapsEnabled:pool.swapsEnabled===true,
+     flags:pool.flags||[],
+     caveat:'Verifies identity of Raydium CPMM pool/vaults where supported. LP lock, ownership and admin safety NOT verified.'
+   };
    await env.DB.batch([
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'OWNER_CLUSTER_PROBE',?)")
-       .bind(now,asset.asset_key,JSON.stringify(proof).slice(0,1200)),
+       .bind(now,asset.asset_key,JSON.stringify(proof)),
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'POOL_IDENTITY_PROBE',?)")
-       .bind(now,asset.asset_key,JSON.stringify(poolProof).slice(0,1200))
+       .bind(now,asset.asset_key,JSON.stringify(poolProof))
    ]);
    checked++;
  }
