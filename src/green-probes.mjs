@@ -5,6 +5,7 @@ import {inspectPoolProtocol} from './pool-protocol.mjs';
 import {inspectProgramUpgradeAuthority} from './program-authority.mjs';
 import {PUMPSWAP} from './pumpswap.mjs';
 import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
+import {assessPumpMigration} from './pump-migration.mjs';
 const b58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 async function rpcCall(url,method,params,fetcher){
  if(!/^https:\/\//.test(url||''))throw Error('Secure Helius RPC absent');
@@ -118,6 +119,13 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
      catch{failed++;upgrade={program,status:'PROGRAM_UPGRADE_RPC_UNAVAILABLE',
        immutable:false,upgradeAuthorityPresent:null}}
    }
+   let migration={status:'NOT_A_VERIFIED_PUMPSWAP_POOL',canonicalPool:false,
+     lpSupplyZero:false,migrationTxVerified:false,lpLockVerified:false};
+   if(pool?.protocol==='PUMPSWAP'){
+     try{migration=await assessPumpMigration(pool)}
+     catch{failed++;migration={status:'MIGRATION_DERIVATION_UNAVAILABLE',
+       canonicalPool:false,lpSupplyZero:false,migrationTxVerified:false,lpLockVerified:false}}
+   }
    const proof={
      assetKey:asset.asset_key,checkedAt:now,verifier:owner.verifier||null,
      status:owner.status,uniqueAuthorityCount:owner.uniqueAuthorityCount??null,
@@ -136,6 +144,8 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
      program:pool.program||null,observedProgram:pool.observedProgram||null,
      lpMint:pool.lpMint||null,lpSupplyRaw:pool.lpSupplyRaw||null,
      lpSupplyGapBps:pool.lpSupplyGapBps??null,
+     poolCreator:pool.poolCreator||null,poolIndex:pool.poolIndex??null,
+     lpMintSupplyRaw:pool.lpMintSupplyRaw||null,
      pool:asset.pool,token0Mint:pool.token0Mint||null,token1Mint:pool.token1Mint||null,
      verifiedVaults:pool.vaultsVerified===true?pool.verifiedVaults:[],
      vaultsVerified:pool.vaultsVerified===true,lpLockVerified:false,
@@ -148,6 +158,12 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
        .bind(now,asset.asset_key,JSON.stringify(proof)),
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'POOL_IDENTITY_PROBE',?)")
        .bind(now,asset.asset_key,JSON.stringify(poolProof)),
+     env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'PUMP_MIGRATION_PROBE',?)")
+       .bind(now,asset.asset_key,JSON.stringify({
+         assetKey:asset.asset_key,pool:asset.pool,checkedAt:now,
+         ...migration,lpLockVerified:false,migrationTxVerified:false,
+         explanation:'PDA/index and zero minted LP establish a canonical pool burn profile only. The migration transaction, LP lock and owner distribution are NOT independently certified.'
+       })),
      env.DB.prepare("INSERT INTO research_events(at,asset_key,kind,note) VALUES(?,?,'PROGRAM_UPGRADE_PROBE',?)")
        .bind(now,asset.asset_key,JSON.stringify({
          assetKey:asset.asset_key,verifier:'buyguy-program-authority-v1',
