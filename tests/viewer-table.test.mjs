@@ -378,11 +378,11 @@ test('Trade on follows Copy address in all views and opens a chain-specific Moby
  page.evalJS('setAssetData('+JSON.stringify(rows)+')');
  const order=page.evalJS('assetOrder.join(",")').split(',');
  assert.equal(order[order.indexOf('address')+1],'trade_on');
- assert.match(page.assets.innerHTML,/href="https:\/\/www\.mobyscreener\.com\/solana\/So11111111111111111111111111111111111111112"/);
+ assert.match(page.assets.innerHTML,/href="https:\/\/twitter\.mobyscreener\.com\/solana\/So11111111111111111111111111111111111111112"/);
  assert.match(page.assets.innerHTML,/href="https:\/\/www\.mobyscreener\.com\/token\/0x2cc0fac44b8252f6b10208b091aff2c94b4da77d"/);
  assert.match(page.ui.get('hotAssets').innerHTML,/Moby ↗/);
  assert.match(page.ui.get('notAssets').innerHTML,/Moby ↗/);
- assert.match(page.assets.innerHTML,/rel="noopener noreferrer nofollow"/);
+ assert.match(page.assets.innerHTML,/target="_self" rel="nofollow"/);
  assert.equal(page.evalJS("mobyChartUrl('solana','<script>alert(1)</script>')"),null);
  assert.equal(page.evalJS("mobyChartUrl('robinhood','0xNOTANADDRESS')"),null);
  const saved=await tableSandbox(new Map([['buyguy.assetColumns.v2',JSON.stringify(['chain','address','symbol'])]]));
@@ -405,4 +405,18 @@ test('Ten-minute scan timer shows countdown, overdue overtime and unknown runs w
  assert.match(page.html,/id="scanClock"/);
  assert.match(page.html,/\/api\/scan-clock/);
  assert.match(page.html,/setInterval\(pollScanClock,30000\)/);
+});
+
+test('Moby-generated NEETOPIA share-link path is reproduced exactly without borrowed referral params',async()=>{
+ const page=await tableSandbox();
+ const mint='YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump';
+ const expected='https://twitter.mobyscreener.com/solana/'+mint;
+ assert.equal(page.evalJS("mobyChartUrl('solana','"+mint+"')"),expected);
+ const shares=page.evalJS("mobyChartUrl('solana','"+mint+"')");
+ assert.equal(shares.includes('app_url='),false);
+ assert.equal(shares.includes('v='),false);
+ assert.notEqual(shares,'https://www.mobyscreener.com/solana/'+mint);
+ const rh='0x2cc0fac44b8252f6b10208b091aff2c94b4da77d';
+ assert.equal(page.evalJS("mobyChartUrl('robinhood','"+rh+"')"),
+  'https://www.mobyscreener.com/token/'+rh);
 });
