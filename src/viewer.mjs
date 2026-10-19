@@ -517,6 +517,10 @@ function inspectGreen(key){
    (gate.partial_probes?.excludedVerifiedVaultAccounts>0?
      'Excluded verified pool vault token accounts: '+Number(gate.partial_probes.excludedVerifiedVaultAccounts)+'. ':'')+
    (gate.partial_probes?.poolProtocol?'Protocol: '+escapeSocial(gate.partial_probes.poolProtocol)+'. ':'')+
+   (gate.partial_probes?.migrationStatus?
+      'Migration profile: '+escapeSocial(gate.partial_probes.migrationStatus)+'. ':'')+
+   (gate.partial_probes?.canonicalMigrationBurnPattern?
+      'Canonical Pump authority + zero LP mint supply verified. Migration transaction not yet confirmed. ':'')+
    (gate.partial_probes?.programGovernance?
      'Code governance: '+escapeSocial(gate.partial_probes.programGovernance)+
      (gate.partial_probes.programUpgradeAuthorityPresent===true?' (upgrade authority present). ':' . '):'')+
@@ -625,7 +629,7 @@ list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
 list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30"),
 list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 15"),
 list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100"),
-list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','PROGRAM_UPGRADE_PROBE') ORDER BY id DESC LIMIT 2000")]);
+list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','PROGRAM_UPGRADE_PROBE','PUMP_MIGRATION_PROBE') ORDER BY id DESC LIMIT 2000")]);
 const recent=new Map();
 for(const event of greenEvents){
  const key=event.asset_key+'|'+event.kind;
@@ -639,7 +643,8 @@ const evaluated=assets.map(asset=>({...asset,green:assessGreenLight(asset,{
  poolEvent:recent.get(asset.asset_key+'|POOL_CUSTODY_AUDIT'),
  ownerProbeEvent:recent.get(asset.asset_key+'|OWNER_CLUSTER_PROBE'),
  poolProbeEvent:recent.get(asset.asset_key+'|POOL_IDENTITY_PROBE'),
- programUpgradeEvent:recent.get(asset.asset_key+'|PROGRAM_UPGRADE_PROBE'),now
+ programUpgradeEvent:recent.get(asset.asset_key+'|PROGRAM_UPGRADE_PROBE'),
+ migrationEvent:recent.get(asset.asset_key+'|PUMP_MIGRATION_PROBE'),now
 })}));
 const paper=await getPaperSnapshot(env);
 return json({runs,assets:evaluated,wallet:wallet[0]||null,predictions,paper,routes,pinned});
