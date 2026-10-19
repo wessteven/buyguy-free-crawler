@@ -1,4 +1,5 @@
 name: Verify Real PumpSwap Pool
+# Validates the canonical Token-2022 LP mint and both token vaults with real Helius.
 on:
   push:
     paths:
