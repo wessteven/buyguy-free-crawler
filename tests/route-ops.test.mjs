@@ -7,7 +7,7 @@ const usdc='EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 test('Jupiter route stage keeps D1 evidence only, never certifies or trades',async()=>{
   const writes=[],urls=[];
   const DB={prepare(sql){return {bind(...args){return {sql,args,
-    async all(){return {results:[{asset_key:key,address:mint,score:85}]};},
+    async all(){return {results:[{asset_key:key,address:mint,score:85,price:40/0.35,risk_note:'{"decimals":9}'}]};},
     async run(){writes.push({sql,args});}
   }}}}};
   const fetcher=async url=>{
