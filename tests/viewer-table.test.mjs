@@ -366,3 +366,43 @@ test('Mobile page clips outer overflow while each supporting data table scrolls 
  // Sticky mobile research table must still scroll independently.
  assert.match(ui.html,/#assets,\.asset-view\{height:min\(70dvh,750px\)!important/);
 });
+
+test('Trade on follows Copy address in all views and opens a chain-specific Moby token page',async()=>{
+ const page=await tableSandbox();
+ const sol='So11111111111111111111111111111111111111112';
+ const rh='0x2cc0fac44b8252f6b10208b091aff2c94b4da77d';
+ const rows=[
+  {...example[0],asset_key:'solana:'+sol,address:sol,tier:'HOT'},
+  {...example[1],asset_key:'robinhood:'+rh,address:rh,tier:'NOT'}
+ ];
+ page.evalJS('setAssetData('+JSON.stringify(rows)+')');
+ const order=page.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(order[order.indexOf('address')+1],'trade_on');
+ assert.match(page.assets.innerHTML,/href="https:\/\/www\.mobyscreener\.com\/solana\/So11111111111111111111111111111111111111112"/);
+ assert.match(page.assets.innerHTML,/href="https:\/\/www\.mobyscreener\.com\/token\/0x2cc0fac44b8252f6b10208b091aff2c94b4da77d"/);
+ assert.match(page.ui.get('hotAssets').innerHTML,/Moby ↗/);
+ assert.match(page.ui.get('notAssets').innerHTML,/Moby ↗/);
+ assert.match(page.assets.innerHTML,/rel="noopener noreferrer nofollow"/);
+ assert.equal(page.evalJS("mobyChartUrl('solana','<script>alert(1)</script>')"),null);
+ assert.equal(page.evalJS("mobyChartUrl('robinhood','0xNOTANADDRESS')"),null);
+ const saved=await tableSandbox(new Map([['buyguy.assetColumns.v2',JSON.stringify(['chain','address','symbol'])]]));
+ assert.equal(saved.evalJS("assetOrder.indexOf('trade_on')"),saved.evalJS("assetOrder.indexOf('address')")+1);
+});
+test('Ten-minute scan timer shows countdown, overdue overtime and unknown runs without resets from wall clock',async()=>{
+ const page=await tableSandbox();
+ const epoch=Date.parse('2026-10-20T00:00:00.000Z');
+ const evaluate=(iso,at)=>page.evalJS('scanCountdown('+JSON.stringify(iso)+','+at+')');
+ const last='2026-10-20T00:00:00Z';
+ assert.equal(evaluate(last,epoch).text,'NEXT 10:00');
+ assert.equal(evaluate(last,epoch+5*60000).text,'NEXT 05:00');
+ assert.equal(evaluate(last,epoch+600000).text,'NEXT 00:00');
+ const late=evaluate(last,epoch+690000);
+ assert.equal(late.text,'OVERDUE +01:30');
+ assert.equal(late.overdue,true);
+ assert.equal(evaluate(null,epoch).unknown,true);
+ assert.equal(evaluate('bad timestamp',epoch).unknown,true);
+ assert.equal(evaluate('2026-10-20T03:00:00Z',epoch).unknown,true);
+ assert.match(page.html,/id="scanClock"/);
+ assert.match(page.html,/\/api\/scan-clock/);
+ assert.match(page.html,/setInterval\(pollScanClock,30000\)/);
+});
