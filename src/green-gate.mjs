@@ -2,8 +2,9 @@
 // Strictly read-only. Never upgrades risk_status or enables paper / real trades.
 // A high market score or partial mint review cannot override missing evidence.
 import {SPL_TOKEN,TOKEN_2022} from './token-risk.mjs';
-const HARD_RISKS=new Set(['MINT_CONTROL_RISK','HOLDER_CONCENTRATION_RISK','TOKEN_2022_REVIEW_REQUIRED']);
-const MINT_RISKS=new Set(['MINT_AUTHORITY_ACTIVE','FREEZE_AUTHORITY_ACTIVE','TOKEN_2022_EXTENSIONS_UNREVIEWED']);
+const HARD_RISKS=new Set(['MINT_CONTROL_RISK','HOLDER_CONCENTRATION_RISK']);
+const MINT_RISKS=new Set(['MINT_AUTHORITY_ACTIVE','FREEZE_AUTHORITY_ACTIVE']);
+const MINT_INCOMPLETE=new Set(['TOKEN_2022_EXTENSIONS_UNREVIEWED']);
 const ageOK=(t,now,maxMinutes)=>{
   const time=Date.parse(t||'');
   const diff=now-time;
@@ -46,7 +47,7 @@ export function assessGreenLight(asset,{
  const flags=m?.mintFlags||[];
  const noControls=chain==='solana'&&
     [SPL_TOKEN,TOKEN_2022].includes(m?.program)&&
-    Array.isArray(flags)&&!flags.some(f=>MINT_RISKS.has(f))&&
+    Array.isArray(flags)&&!flags.some(f=>MINT_RISKS.has(f)||MINT_INCOMPLETE.has(f))&&
     typeof m?.decimals==='number'&&Number.isInteger(m.decimals)&&
     (risk==='PARTIAL_ONCHAIN_REVIEW'||risk==='MINT_CONTROLS_REVOKED'||risk==='TOKEN_2022_METADATA_ONLY');
  response.checks.push(part('Mint authority',
@@ -73,7 +74,7 @@ export function assessGreenLight(asset,{
    'Independent wallet-owner attribution excluding pool vaults and custodians required (24h)'));
  const liquid=positive(Number(asset.liquidity))&&Number(asset.liquidity)>=50000&&
    positive(Number(asset.price))&&ageOK(asset.last_seen,now,20)&&
-   Boolean(asset.pool)&&asset.status==='ALIVE';
+   Boolean(asset.pool)&&!['TRASH','DEAD'].includes(asset.status);
  response.checks.push(part('Current pool liquidity',liquid,
    'Fresh matching pool quote with >=US$50k reported liquidity (20m)'));
  const custody=Boolean(p?.verifier==='buyguy-pool-custody-v1'&&p.assetKey===key&&
