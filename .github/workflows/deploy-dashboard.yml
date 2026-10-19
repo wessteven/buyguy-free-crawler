@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/deploy-dashboard.yml'
       - 'src/viewer.mjs'
+      - 'src/auth-session.mjs'
       - 'src/light-scan.mjs'
       - 'src/dex-fallback.mjs'
       - 'src/paper-core.mjs'
