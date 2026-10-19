@@ -51,7 +51,7 @@ tbody tr:hover{background:#174029}
 <div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p></div>
 <div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button></div><div id="overview"></div>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
-<button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="true" tabindex="0">Token Research</button>
+<button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="true" tabindex="0">TOKEN DATA</button>
 <button class="bg-tab" id="tab-wallet" role="tab" type="button" data-tab="wallet" aria-controls="panel-wallet" aria-selected="false" tabindex="-1">Wallet</button>
 <button class="bg-tab" id="tab-runs" role="tab" type="button" data-tab="runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Recent Runs</button>
 <button class="bg-tab" id="tab-outcomes" role="tab" type="button" data-tab="outcomes" aria-controls="panel-outcomes" aria-selected="false" tabindex="-1">Outcomes</button>
