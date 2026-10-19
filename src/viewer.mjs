@@ -154,7 +154,7 @@ function validOrder(maybe){
  // Introduce new metadata columns beside Token without overwriting a chosen layout.
  if(order.includes('symbol')){
    let insertAfter=order.indexOf('symbol');
-   for(const key of ['socials','safety','momentum','direction']){
+   for(const key of ['audit','socials','safety','momentum','direction']){
      if(current.includes(key))continue;
      const previous=order.indexOf(key);if(previous>=0)order.splice(previous,1);
      order.splice(++insertAfter,0,key);
