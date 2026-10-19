@@ -4,37 +4,219 @@ const headers={'content-type':'application/json; charset=utf-8','cache-control':
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const page=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>BuyGuy Free Radar</title>
-<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}</style></head><body>
+<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}</style></head><body>
 <h1>BUYGUY // FREE RADAR</h1><p class="hint">Read-only research • Robinhood + Solana • Indicative prices • Paper wallet experimental</p>
 <div id="login"><input type="password" id="pass" placeholder="Dashboard secret" autocomplete="off"><button id="enter">Open</button><p id="msg"></p></div>
-<div id="board"><button id="refresh">Refresh data</button><div id="overview"></div><section><h2>Recent runs</h2><div id="runs"></div></section><section><h2>Token research</h2><div id="assets"></div></section><section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section><section><h2>Paper wallet</h2><div id="wallet"></div></section><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
+<div id="board"><button id="refresh">Refresh data</button><div id="overview"></div><section><h2>Recent runs</h2><div id="runs"></div></section><section><h2>Token research</h2><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Keyboard: Shift + ←/→ moves a selected heading.</p><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div></section><section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section><section><h2>Paper wallet</h2><div id="wallet"></div></section><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
 <p class="hint">Research only. Top token accounts can include AMM pools, escrows and custodians, not unique holder wallets. Mint checks do not verify liquidity locks or executable exits. Paper trades remain disabled.</p>
 <script>
 let token='';
 const cell=v=>'<td>'+String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))+'</td>';
 function table(keys,rows){return '<table><thead><tr>'+keys.map(k=>'<th>'+k+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(cell).join('')+'</tr>').join('')+'</tbody></table>';}
-async function refresh(){try{const r=await fetch('/api/status',{headers:{authorization:'Bearer '+token},cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status);const x=await r.json();document.getElementById('login').style.display='none';document.getElementById('board').style.display='block';
-const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
-document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
-document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
-const riskInfo=a=>{try{return JSON.parse(a.risk_note||'{}')}catch{return {}}};
-document.getElementById('assets').innerHTML=table(['Chain','Token','Score','Status','Liquidity $','5m buys/sells','Mint review','Top acct %','Mint/holder flags','Provider'],(x.assets||[]).map(a=>{
-const audit=riskInfo(a);
-return [a.chain,a.symbol,a.score,a.status,a.liquidity,a.buys_m5+'/'+a.sells_m5,
-a.risk_status,audit.top1Bps===null||audit.top1Bps===undefined?'Unknown':(audit.top1Bps/100).toFixed(1)+'%',
-[...(audit.mintFlags||[]),...(audit.holderFlags||[])].join(', ')||'Not fully reviewed',a.provider];
-}));
-document.getElementById('routeReviews').innerHTML=table(['UTC','Mint','Result','Approx. round-trip loss','Top impact'],(x.routes||[]).map(r=>{
-let report={};try{report=JSON.parse(r.note||'{}')}catch{}
-return [r.at,r.asset_key,report.label||'Unknown',report.estimatedRoundTripLossPct===null||report.estimatedRoundTripLossPct===undefined?'Unknown':report.estimatedRoundTripLossPct+'%',report.maxImpactPct===null||report.maxImpactPct===undefined?'Unknown':report.maxImpactPct+'%'];
-}));
-document.getElementById('wallet').innerHTML=table(['Starting','Cash','Realised P&L','Estimated equity','Stale marks'],[[
-x.paper?.starting_cash,x.paper?.cash,x.paper?.realised,x.paper?.estimated_total===null?'Unknown':x.paper?.estimated_total,x.paper?.unknown_marks]])+
-table(['Token','Cost USD','Est. sale value','Unrealised P&L','Price stale'],(x.paper?.positions||[]).map(p=>[
-p.asset_key,p.cost,p.estimatedValue===null?'Unknown':p.estimatedValue,p.unrealized===null?'Unknown':p.unrealized,p.stale]));
-document.getElementById('predictions').innerHTML=table(['Token','Status','Horizon min','Change %'],(x.predictions||[]).map(p=>[p.asset_key,p.status,p.horizon_min,p.change_pct]));
+
+// Only display preferences go to this device's storage. Never store the login token.
+const layoutKey='buyguy.assetColumns.v1',sortKey='buyguy.assetSort.v1';
+const assetColumns=[
+ {key:'chain',name:'Chain',type:'text'},
+ {key:'symbol',name:'Token',type:'text'},
+ {key:'score',name:'Score',type:'number'},
+ {key:'status',name:'Status',type:'text'},
+ {key:'liquidity',name:'Liquidity $',type:'number'},
+ {key:'market_cap',name:'Cap $',type:'number'},
+ {key:'price',name:'Price $',type:'number'},
+ {key:'buys_m5',name:'5m buys/sells',type:'number'},
+ {key:'risk',name:'Mint review',type:'text'},
+ {key:'topBps',name:'Top acct %',type:'number'},
+ {key:'flags',name:'Mint/holder flags',type:'text'},
+ {key:'provider',name:'Provider',type:'text'}
+];
+const columnByKey=Object.fromEntries(assetColumns.map(c=>[c.key,c]));
+const initialColumnKeys=assetColumns.map(c=>c.key);
+function storedValue(key){try{return JSON.parse(localStorage.getItem(key)||'null')}catch{return null}}
+function saveValue(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
+function validOrder(maybe){
+ const current=Array.isArray(maybe)?maybe.filter((key,index)=>typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
+ return current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
+}
+let assetOrder=validOrder(storedValue(layoutKey));
+const savedSort=storedValue(sortKey);
+let assetSort=(savedSort&&columnByKey[savedSort.key]&&['asc','desc'].includes(savedSort.direction))?
+ savedSort:{key:'score',direction:'desc'};
+let assetRows=[];
+function riskInfo(a){try{return JSON.parse(a.risk_note||'{}')}catch{return {}}}
+function assetRow(a){
+ const audit=riskInfo(a);
+ const flags=[...(Array.isArray(audit.mintFlags)?audit.mintFlags:[]),
+              ...(Array.isArray(audit.holderFlags)?audit.holderFlags:[])];
+ const topBps=typeof audit.top1Bps==='number'&&Number.isFinite(audit.top1Bps)?audit.top1Bps:null;
+ return {...a,buys_m5:Number(a.buys_m5)||0,sells_m5:Number(a.sells_m5)||0,
+   topBps,risk:a.risk_status||'UNVERIFIED',flags:flags.join(', ')||'Not fully reviewed'};
+}
+function formatUsd(raw){
+ if(raw===null||raw===undefined||raw==='')return '—';
+ const n=Number(raw);
+ if(!Number.isFinite(n))return '—';
+ return '$'+(Math.abs(n)>0&&Math.abs(n)<0.0001?n.toPrecision(4):
+   new Intl.NumberFormat('en-US',{maximumFractionDigits:Math.abs(n)<1?6:2}).format(n));
+}
+function columnValue(row,key){
+ if(key==='buys_m5')return row.buys_m5+'/'+row.sells_m5;
+ if(key==='topBps')return row.topBps===null?'Unknown':(row.topBps/100).toFixed(1)+'%';
+ if(['liquidity','market_cap','price'].includes(key))return formatUsd(row[key]);
+ return row[key]??'—';
+}
+function cmpRow(a,b,key){
+ const col=columnByKey[key],av=a[key],bv=b[key];
+ if(col.type==='number'){
+   const num=v=>(v===null||v===undefined||v===''||!Number.isFinite(Number(v)))?null:Number(v);
+   const an=num(av),bn=num(bv);
+   if(an===null&&bn===null)return 0;
+   if(an===null)return 1; // unknown remains last in both directions
+   if(bn===null)return -1;
+   return an-bn;
+ }
+ const absent=v=>v===null||v===undefined||v==='';
+ if(absent(av)&&absent(bv))return 0;
+ if(absent(av))return 1;
+ if(absent(bv))return -1;
+ return String(av).localeCompare(String(bv),undefined,{numeric:true,sensitivity:'base'});
+}
+function orderedAssetRows(){
+ const key=assetSort.key,dir=assetSort.direction==='asc'?1:-1;
+ return assetRows.map((row,index)=>({row,index})).sort((a,b)=>{
+   const av=a.row[key],bv=b.row[key];
+   const missing=v=>v===null||v===undefined||v===''||(columnByKey[key].type==='number'&&!Number.isFinite(Number(v)));
+   if(missing(av)!==missing(bv))return missing(av)?1:-1;
+   return dir*cmpRow(a.row,b.row,key)||a.index-b.index;
+ }).map(x=>x.row);
+}
+function sortAssets(key){
+ if(!columnByKey[key])return;
+ assetSort=assetSort.key===key?{key,direction:assetSort.direction==='asc'?'desc':'asc'}:
+   {key,direction:columnByKey[key].type==='number'?'desc':'asc'};
+ saveValue(sortKey,assetSort);
+ renderAssets();
+}
+function moveAssetColumn(from,to,after=false){
+ if(!columnByKey[from]||!columnByKey[to]||from===to)return false;
+ const order=assetOrder.filter(key=>key!==from);
+ const index=order.indexOf(to);
+ if(index<0)return false;
+ order.splice(index+(after?1:0),0,from);
+ assetOrder=validOrder(order);saveValue(layoutKey,assetOrder);renderAssets();
+ return true;
+}
+function resetAssetColumns(){
+ assetOrder=[...initialColumnKeys];
+ assetSort={key:'score',direction:'desc'};
+ saveValue(layoutKey,assetOrder);saveValue(sortKey,assetSort);
+ renderAssets();
+}
+function setAssetData(records){assetRows=(Array.isArray(records)?records:[]).map(assetRow);renderAssets()}
+let drag=null,suppressSortUntil=0;
+function headerAt(x,y){
+ const hits=document.elementsFromPoint?document.elementsFromPoint(x,y):[document.elementFromPoint(x,y)];
+ for(const node of hits){
+   const th=node&&node.closest?node.closest('th[data-col]'):null;
+   if(th&&document.getElementById('assets').contains(th))return th;
+ }
+ return null;
+}
+function clearDropHighlight(){
+ document.querySelectorAll('#assets th').forEach(th=>th.classList.remove('drop-target','drag-active'));
+}
+function renderAssets(){
+ const wrap=document.getElementById('assets');
+ if(!wrap)return;
+ const left=wrap.scrollLeft;
+ const colHtml=assetOrder.map(key=>{
+   const c=columnByKey[key],active=assetSort.key===key;
+   const indicator=active?(assetSort.direction==='asc'?' ▲':' ▼'):' ↕';
+   const aria=active?(assetSort.direction==='asc'?'ascending':'descending'):'none';
+   return '<th scope="col" tabindex="0" role="button" data-col="'+key+'" aria-sort="'+aria+'" aria-label="Sort by '+c.name+'; drag to move">'+c.name+
+     '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></th>';
+ }).join('');
+ const rows=orderedAssetRows().map(row=>'<tr>'+assetOrder.map(key=>cell(columnValue(row,key))).join('')+'</tr>').join('');
+ wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
+ wrap.scrollLeft=left;
+ wrap.querySelectorAll('th[data-col]').forEach(th=>{
+   th.addEventListener('click',()=>{
+     if(Date.now()<suppressSortUntil)return;
+     sortAssets(th.dataset.col);
+   });
+   th.addEventListener('keydown',e=>{
+     if(e.shiftKey&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){
+       e.preventDefault();
+       const current=assetOrder.indexOf(th.dataset.col);
+       const next=assetOrder[current+(e.key==='ArrowLeft'?-1:1)];
+       if(next){const moved=th.dataset.col;moveAssetColumn(moved,next,e.key==='ArrowRight');
+         const nextTh=wrap.querySelector('th[data-col="'+moved+'"]');if(nextTh)nextTh.focus();}
+     }else if(e.key==='Enter'||e.key===' '){e.preventDefault();sortAssets(th.dataset.col);}
+   });
+   th.addEventListener('pointerdown',e=>{
+     if(e.button!==undefined&&e.button!==0)return;
+     drag={key:th.dataset.col,pointerId:e.pointerId,startX:e.clientX,startY:e.clientY,moving:false,x:e.clientX,y:e.clientY};
+     try{th.setPointerCapture(e.pointerId)}catch{}
+   });
+   th.addEventListener('pointermove',e=>{
+     if(!drag||drag.pointerId!==e.pointerId)return;
+     const dx=e.clientX-drag.startX,dy=e.clientY-drag.startY;
+     if(!drag.moving&&Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.1)drag.moving=true;
+     if(!drag.moving)return;
+     e.preventDefault();
+     drag.x=e.clientX;drag.y=e.clientY;
+     clearDropHighlight();th.classList.add('drag-active');
+     const target=headerAt(e.clientX,e.clientY);
+     if(target)target.classList.add('drop-target');
+     const rect=wrap.getBoundingClientRect();
+     if(e.clientX>rect.right-25)wrap.scrollLeft+=18;
+     if(e.clientX<rect.left+25)wrap.scrollLeft-=18;
+   });
+   function endDrag(e){
+     if(!drag||drag.pointerId!==e.pointerId)return;
+     const state=drag;drag=null;
+     clearDropHighlight();
+     if(!state.moving)return;
+     suppressSortUntil=Date.now()+450;
+     const target=headerAt(e.clientX,e.clientY);
+     if(!target||target.dataset.col===state.key)return;
+     const rect=target.getBoundingClientRect();
+     moveAssetColumn(state.key,target.dataset.col,e.clientX>=rect.left+rect.width/2);
+     const status=document.getElementById('assetOrderStatus');
+     if(status)status.textContent='Columns rearranged and saved on this device.';
+   }
+   th.addEventListener('pointerup',endDrag);
+   th.addEventListener('pointercancel',()=>{drag=null;clearDropHighlight()});
+ });
+ const status=document.getElementById('assetOrderStatus');
+ if(status&&!assetRows.length)status.textContent='No token data returned.';
+ else if(status&&assetRows.length&&!status.textContent)status.textContent='Sorting '+columnByKey[assetSort.key].name+' '+(assetSort.direction==='asc'?'ascending':'descending')+'.';
+}
+async function refresh(){try{
+ const r=await fetch('/api/status',{headers:{authorization:'Bearer '+token},cache:'no-store'});
+ if(!r.ok)throw Error('HTTP '+r.status);
+ const x=await r.json();
+ document.getElementById('login').style.display='none';
+ document.getElementById('board').style.display='block';
+ const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
+ document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
+ document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
+ setAssetData(x.assets);
+ document.getElementById('routeReviews').innerHTML=table(['UTC','Mint','Result','Approx. round-trip loss','Top impact'],(x.routes||[]).map(r=>{
+ let report={};try{report=JSON.parse(r.note||'{}')}catch{}
+ return [r.at,r.asset_key,report.label||'Unknown',report.estimatedRoundTripLossPct===null||report.estimatedRoundTripLossPct===undefined?'Unknown':report.estimatedRoundTripLossPct+'%',report.maxImpactPct===null||report.maxImpactPct===undefined?'Unknown':report.maxImpactPct+'%'];
+ }));
+ document.getElementById('wallet').innerHTML=table(['Starting','Cash','Realised P&L','Estimated equity','Stale marks'],[[
+ x.paper?.starting_cash,x.paper?.cash,x.paper?.realised,x.paper?.estimated_total===null?'Unknown':x.paper?.estimated_total,x.paper?.unknown_marks]])+
+ table(['Token','Cost USD','Est. sale value','Unrealised P&L','Price stale'],(x.paper?.positions||[]).map(p=>[
+ p.asset_key,p.cost,p.estimatedValue===null?'Unknown':p.estimatedValue,p.unrealized===null?'Unknown':p.unrealized,p.stale]));
+ document.getElementById('predictions').innerHTML=table(['Token','Status','Horizon min','Change %'],(x.predictions||[]).map(p=>[p.asset_key,p.status,p.horizon_min,p.change_pct]));
 }catch(e){document.getElementById('msg').textContent='Access or service error: '+e.message}}
-document.getElementById('enter').onclick=()=>{token=document.getElementById('pass').value;document.getElementById('pass').value='';refresh()};document.getElementById('refresh').onclick=refresh;
+document.getElementById('enter').onclick=()=>{token=document.getElementById('pass').value;document.getElementById('pass').value='';refresh()};
+document.getElementById('refresh').onclick=refresh;
+document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
+
+
 </script></body></html>`;
 function auth(given,secret){if(!secret||!given||given.length!==secret.length)return false;let n=0;for(let i=0;i<given.length;i++)n|=given.charCodeAt(i)^secret.charCodeAt(i);return n===0;}
 export default {async fetch(request,env){const path=new URL(request.url).pathname;
@@ -47,7 +229,7 @@ if(!env.DB)return json({error:'database_not_configured'},503);
 try{const list=async(sql)=>(await env.DB.prepare(sql).all()).results||[];
 const [runs,assets,wallet,predictions,routes]=await Promise.all([
 list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
-list("SELECT * FROM assets WHERE status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 80"),
+list("SELECT * FROM assets WHERE status IN ('ALIVE','STATIC') ORDER BY score DESC LIMIT 500"),
 list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
 list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30"),
 list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 15")]);
