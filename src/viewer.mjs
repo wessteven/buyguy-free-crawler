@@ -516,6 +516,9 @@ function inspectGreen(key){
    (gate.partial_probes?.poolVaultsVerified?'✓ Verified Raydium CPMM vault identities. ':'')+
    (gate.partial_probes?.excludedVerifiedVaultAccounts>0?
      'Excluded verified pool vault token accounts: '+Number(gate.partial_probes.excludedVerifiedVaultAccounts)+'. ':'')+
+   (gate.partial_probes?.poolProtocol?'Protocol: '+escapeSocial(gate.partial_probes.poolProtocol)+'. ':'')+
+   (Number.isFinite(gate.partial_probes?.lpSupplyGapBps)?
+     'LP supply difference: '+(gate.partial_probes.lpSupplyGapBps/100).toFixed(1)+'% (not a confirmed lock). ':'')+
    escapeSocial(gate.partial_probes?.caveat||'')+'</p>'+
   '<p class="hint">'+escapeSocial(gate.warning)+'</p>'+
   '<p class="hint">Read-only screening. No real or paper order was placed by this check.</p>';
