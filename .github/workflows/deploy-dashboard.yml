@@ -1,5 +1,5 @@
 name: Deploy BuyGuy Free Dashboard
-# Deployment requires full SQL, holder audit, route-only and interactive tab-navigation tests to pass first.
+# Deployment requires SQL, protocol-specific vault, canonical migration, historical-TX and dashboard regression tests to pass before release.
 on:
   push:
     paths:
