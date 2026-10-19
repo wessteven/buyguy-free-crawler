@@ -293,8 +293,9 @@ function auditCell(row){
 }
 // Moby-generated Android share links use twitter.mobyscreener.com/solana/MINT.
 // Do not copy another user's referral app_url or v cache-busting timestamp.
-// Direct chart opening depends on Android's app-link association and device settings.
-// Robinhood share format is still unverified, so leave its current fallback unchanged.
+// The share host is the user-supplied Moby token-chart route, not the retired
+// public web screener. Direct chart opening still depends on Android app-link
+// association and device settings. Robinhood share format remains unverified.
 function mobyChartUrl(chain,address){
  const token=String(address||'');
  if(chain==='solana'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token))
