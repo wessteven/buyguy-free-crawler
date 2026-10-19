@@ -1,6 +1,7 @@
 // Read-only Solana owner clustering and pool-account probe.
 // Cannot establish LP locks, beneficial human owners or sellability.
 import {SPL_TOKEN,TOKEN_2022} from './token-risk.mjs';
+import {inspectRaydiumCpmmPool} from './raydium-cpmm.mjs';
 const b58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 async function rpcCall(url,method,params,fetcher){
  if(!/^https:\/\//.test(url||''))throw Error('Secure Helius RPC absent');
@@ -11,10 +12,12 @@ async function rpcCall(url,method,params,fetcher){
  if(payload?.error)throw Error('Solana RPC returned JSON error');
  return payload?.result;
 }
-export function ownerClusterSample(mint,largestResult,accountsResult){
+export function ownerClusterSample(mint,largestResult,accountsResult,{verifiedPool=null}={}){
  const result={verifier:'buyguy-owner-sample-v1',mint,status:'UNAVAILABLE',
     uniqueAuthorityCount:null,largestAuthoritySampleBps:null,sampledTokenAccounts:0,
     flags:[],beneficialOwnersVerified:false,vaultsExcluded:false,
+    excludedVaultAccounts:0,nonVaultAuthorityCount:null,
+    largestNonVaultAuthoritySampleBps:null,
     caveat:'Only largest token accounts sampled. AMM vaults, custodians and multisig groups may masquerade as holders.'};
  const largest=largestResult?.value,accounts=accountsResult?.value;
  if(!b58.test(mint)||!Array.isArray(largest)||!Array.isArray(accounts)||
@@ -22,6 +25,10 @@ export function ownerClusterSample(mint,largestResult,accountsResult){
    result.flags.push('MISSING_OR_MISMATCHED_TOKEN_ACCOUNTS');return result;
  }
  const grouped=new Map();let total=0n;
+ const approved=verifiedPool?.status==='POOL_VAULTS_VERIFIED'&&verifiedPool.vaultsVerified===true&&
+   [verifiedPool.token0Mint,verifiedPool.token1Mint].includes(mint)&&
+   Array.isArray(verifiedPool.verifiedVaults)&&verifiedPool.verifiedVaults.length===2?
+   new Set(verifiedPool.verifiedVaults):null;
  for(let i=0;i<largest.length;i++){
    const token=largest[i],state=accounts[i],info=state?.data?.parsed?.info;
    if(!b58.test(token?.address||'')||!b58.test(info?.owner||'')||
@@ -37,25 +44,35 @@ export function ownerClusterSample(mint,largestResult,accountsResult){
    if(typeof fromRpc==='string'&&fromRpc!==token.amount){
      result.flags.push('ACCOUNT_BALANCE_MISMATCH');return result;
    }
-   grouped.set(info.owner,(grouped.get(info.owner)||0n)+amount);
-   total+=amount;
+   if(approved?.has(token.address)){
+     result.excludedVaultAccounts++;
+   }else{
+     grouped.set(info.owner,(grouped.get(info.owner)||0n)+amount);
+     total+=amount;
+   }
  }
- if(total<=0n){result.flags.push('ZERO_SAMPLED_BALANCE');return result}
+ if(total<=0n){result.flags.push('NO_NONVAULT_ACCOUNT_BALANCE');return result}
  const amounts=[...grouped.values()].sort((a,b)=>a>b?-1:a<b?1:0);
  result.uniqueAuthorityCount=amounts.length;
+ result.nonVaultAuthorityCount=amounts.length;
  result.sampledTokenAccounts=largest.length;
  result.largestAuthoritySampleBps=Number((amounts[0]*10000n)/total);
- result.status='OWNER_SAMPLE_OBSERVED';
+ result.largestNonVaultAuthoritySampleBps=result.largestAuthoritySampleBps;
+ result.vaultsExcluded=Boolean(approved)&&result.excludedVaultAccounts>0;
+ result.status=result.vaultsExcluded?'OWNER_SAMPLE_VAULTS_EXCLUDED':'OWNER_SAMPLE_OBSERVED';
+ result.caveat='Sample of largest token accounts, NOT all circulating supply or known ultimate owners; '+
+   (result.vaultsExcluded?result.excludedVaultAccounts+' pool token vault(s) were identified using official Raydium CPMM state and excluded. ':'')+
+   'Multiple accounts may share one controller; no green approval.';
  return result;
 }
-export async function probeLargestOwnerAccounts(mint,rpcEndpoint,fetcher=fetch){
+export async function probeLargestOwnerAccounts(mint,rpcEndpoint,fetcher=fetch,{verifiedPool=null}={}){
  if(!b58.test(mint))throw Error('Invalid Solana mint');
  const largest=await rpcCall(rpcEndpoint,'getTokenLargestAccounts',[mint,{commitment:'confirmed'}],fetcher);
  const addresses=largest?.value?.map(x=>x.address)||[];
  if(!addresses.length||addresses.length>20)throw Error('Largest token accounts unavailable');
  const states=await rpcCall(rpcEndpoint,'getMultipleAccounts',[addresses,
    {encoding:'jsonParsed',commitment:'confirmed'}],fetcher);
- return ownerClusterSample(mint,largest,states);
+ return ownerClusterSample(mint,largest,states,{verifiedPool});
 }
 export async function probePoolProgram(pool,rpcEndpoint,fetcher=fetch){
  if(!b58.test(pool||''))return {status:'NO_SOLANA_POOL_ACCOUNT',pool,
@@ -85,9 +102,10 @@ export async function runGreenProbes(env,{now=new Date().toISOString(),limit=1,f
  for(const asset of list){
    let owner={status:'OWNER_RPC_UNAVAILABLE',beneficialOwnersVerified:false,vaultsExcluded:false};
    let pool={status:'POOL_RPC_UNAVAILABLE',controlsVerified:false,lpLockVerified:false};
-   try{owner=await probeLargestOwnerAccounts(asset.address,env.HELIUS_RPC_URL,fetcher)}
+   try{pool=await inspectRaydiumCpmmPool(asset.pool,asset.address,env.HELIUS_RPC_URL,fetcher)}
    catch{failed++}
-   try{pool=await probePoolProgram(asset.pool,env.HELIUS_RPC_URL,fetcher)}
+   try{owner=await probeLargestOwnerAccounts(asset.address,env.HELIUS_RPC_URL,fetcher,
+      {verifiedPool:pool?.vaultsVerified?pool:null})}
    catch{failed++}
    const proof={...owner,assetKey:asset.asset_key,checkedAt:now};
    const poolProof={...pool,assetKey:asset.asset_key,chain:'solana',checkedAt:now};
