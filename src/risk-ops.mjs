@@ -35,7 +35,7 @@ export async function verifyPendingMints(env,{limit=3,now=new Date().toISOString
         }
       }
       const riskStatus=combineRisk(mint,holders);
-      const note=JSON.stringify({checkedAt:mint.checkedAt,program:mint.tokenProgram||null,
+      const note=JSON.stringify({checkedAt:mint.checkedAt,program:mint.tokenProgram||null,decimals:mint.decimals??null,
         source:'Helius read-only Solana RPC',mintFlags:mint.flags,holderFlags:holders.flags,
         holderStatus:holders.status,top1Bps:holders.top1Bps,top5Bps:holders.top5Bps,
         top20Bps:holders.top20Bps,
