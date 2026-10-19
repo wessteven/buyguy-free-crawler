@@ -291,17 +291,16 @@ function auditCell(row){
  return '<td><button type="button" class="audit-btn" data-audit-key="'+escapeSocial(address)+
   '" aria-label="Run live audit of '+escapeSocial(row.symbol||'token')+'">⚡ AUDIT</button></td>';
 }
-// Verified by the user on Android: the bare twitter.mobyscreener.com/solana/MINT
-// route redirects to the website, while the full Moby share URL, including the
-// user-supplied Moby invitation app_url and v, hands off to the correct token
-// chart in the installed app (NEETOPIA and HIVEMIND). Keep mint-specific paths.
-// This is a chart/navigation link only, not a trade or an audit endorsement.
-// Robinhood share format remains unverified.
-const MOBY_SOLANA_SHARE_QUERY='?app_url=https%3A%2F%2Finvite.mobyscreener.com%2FcLJFHSHGm7b&v=1792416904';
+// Safe fallback until official per-token Moby app deeplinks can be generated.
+// WARNING: Moby's invite.mobyscreener.com short code is TOKEN-SPECIFIC. Reusing
+// an NEETOPIA app_url on other tokens silently opens NEETOPIA in the app.
+// Never append a borrowed referral/app_url/v to an arbitrary mint address.
+// This URL opens Moby's public WEB landing route, not a verified app chart link.
+// Robinhood chart app-deep-link format remains unverified.
 function mobyChartUrl(chain,address){
  const token=String(address||'');
  if(chain==='solana'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token))
-   return 'https://twitter.mobyscreener.com/solana/'+token+MOBY_SOLANA_SHARE_QUERY;
+   return 'https://mobyscreener.com/solana/'+token;
  if(chain==='robinhood'&&/^0x[0-9a-fA-F]{40}$/.test(token))
    return 'https://www.mobyscreener.com/token/'+token.toLowerCase();
  return null;
@@ -311,8 +310,8 @@ function tradeOnCell(row){
  if(!url)return '<td>—</td>';
  return '<td><a class="moby-chart-link" href="'+escapeSocial(url)+
    '" target="_self" rel="nofollow" referrerpolicy="no-referrer" '+
-   'title="Open this contract using the Moby share link. Android app opening depends on link settings; never places a trade." '+
-   'aria-label="Open '+escapeSocial(row.symbol||'token')+' on Moby">Moby ↗</a></td>';
+   'title="Opens Moby website; a verified per-token Moby app chart deep link is not available. Confirm the contract before trading." '+
+   'aria-label="Open Moby website for '+escapeSocial(row.symbol||'token')+'">Moby web ↗</a></td>';
 }
 function addressCell(row){
  const address=String(row.address||'');
