@@ -30,11 +30,19 @@ export function parseQuoteRefresh(pairs,tracked){
     if(change>=4&&change<=70)score+=5;
     if(sells>buys)score-=15;
     if(change>200)score-=20;
-    score=Math.min(100,Math.max(0,score));
     let created=null;
     if(Number.isFinite(p.pairCreatedAt) && p.pairCreatedAt>0){
-      created=new Date(p.pairCreatedAt).toISOString();
+      const dt=new Date(p.pairCreatedAt);
+      if(Number.isFinite(dt.getTime()))created=dt.toISOString();
     }
+    if(!created && old.pool_created && Number.isFinite(Date.parse(old.pool_created))){
+      created=old.pool_created;
+    }
+    if(created){
+      const age=Date.now()-Date.parse(created);
+      if(age>=0 && age<=24*3600000)score+=18;
+    }
+    score=Math.min(100,Math.max(0,score));
     result.set(id,{asset_key:id,chain,address:addr,symbol:p.baseToken.symbol||old.symbol,
       pool:p.pairAddress,matchedPool,price,liquidity:liq,market_cap:cap,
       buys_m5:Math.round(buys),sells_m5:Math.round(sells),tx_m5:Math.round(buys+sells),
@@ -45,7 +53,7 @@ export function parseQuoteRefresh(pairs,tracked){
 }
 export async function refreshKnownQuotes(env,{fetcher=fetch,now=new Date().toISOString(),limit=20}={}){
   if(!env?.DB)throw Error('Missing D1 DB');
-  const tracked=(await env.DB.prepare(`SELECT a.asset_key,a.chain,a.address,a.symbol,a.pool,
+  const tracked=(await env.DB.prepare(`SELECT a.asset_key,a.chain,a.address,a.symbol,a.pool,a.pool_created,
     CASE WHEN EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key
     AND p.status='OPEN') THEN 1 ELSE 0 END AS has_position
     FROM assets a WHERE a.status IN ('ALIVE','STATIC') OR a.pinned=1
