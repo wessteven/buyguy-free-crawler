@@ -18,7 +18,7 @@ function noteOf(event,assetKey,now,maxMinutes){
 const positive=(value)=>typeof value==='number'&&Number.isFinite(value)&&value>0;
 const part=(name,passed,reason)=>({name,passed:Boolean(passed),reason});
 export function assessGreenLight(asset,{
-  mintEvent=null,routeEvent=null,ownerEvent=null,poolEvent=null,ownerProbeEvent=null,poolProbeEvent=null,programUpgradeEvent=null,migrationEvent=null,now=Date.now()
+  mintEvent=null,routeEvent=null,ownerEvent=null,poolEvent=null,ownerProbeEvent=null,poolProbeEvent=null,programUpgradeEvent=null,migrationEvent=null,migrationTxEvent=null,now=Date.now()
 }={}){
  const key=String(asset?.asset_key||''),chain=asset?.chain;
  const response={version:'GREEN_V1',asset_key:key,green:false,status:'UNASSESSED',
@@ -36,6 +36,7 @@ export function assessGreenLight(asset,{
  const poolProbe=noteOf(poolProbeEvent,key,now,6*60);
  const programGov=noteOf(programUpgradeEvent,key,now,24*60);
  const migrationProbe=noteOf(migrationEvent,key,now,6*60);
+ const txProbe=noteOf(migrationTxEvent,key,now,24*60);
  const canonical=Boolean(migrationProbe?.verifier==='buyguy-pump-canonical-v1'&&
    migrationProbe.assetKey===key&&migrationProbe.pool===asset.pool&&
    migrationProbe.assetMint===asset.address&&migrationProbe.canonicalPool===true&&
@@ -57,7 +58,15 @@ export function assessGreenLight(asset,{
    canonicalMigrationBurnPattern:canonical,
    migrationStatus:migrationProbe?.assetKey===key&&migrationProbe.pool===asset.pool?
      migrationProbe.status:null,
-   migrationTxVerified:false,
+   migrationTxVerified:Boolean(canonical&&txProbe?.assetKey===key&&
+     txProbe?.assetMint===asset.address&&txProbe?.pool===asset.pool&&
+     txProbe?.verifier==='buyguy-pump-migration-tx-v1'&&
+     txProbe?.status==='MIGRATION_TRANSACTION_VERIFIED'&&
+     txProbe?.migrationTxVerified===true&&
+     ['migrate','migrate_v2'].includes(txProbe?.kind)&&
+     typeof txProbe?.signature==='string'&&txProbe.signature.length>=64),
+   migrationTxSignature:canonical&&txProbe?.status==='MIGRATION_TRANSACTION_VERIFIED'?
+     txProbe.signature||null:null,
    programGovernance:programGovernance?.status||null,
    programUpgradeAuthorityPresent:programGovernance?.upgradeAuthorityPresent??null,
    poolAccountProgram:['POOL_ACCOUNT_OBSERVED','POOL_VAULTS_VERIFIED','CPMM_LAYOUT_VERIFIED'].includes(poolProbe?.status)?
