@@ -4,7 +4,7 @@ const headers={'content-type':'application/json; charset=utf-8','cache-control':
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const page=`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>BuyGuy Free Radar</title>
-<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}#assets .social-cell{white-space:nowrap;min-width:85px}#assets .social-link{display:inline-block;color:#b9ffd0;background:#234b32;border:1px solid #3d8053;border-radius:6px;padding:5px 7px;margin:1px 3px 1px 0;text-decoration:none;font-weight:650}#assets .social-link:focus-visible{outline:2px solid #b9ffd0}#assets .social-link:hover{text-decoration:underline}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}.bg-tablist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:16px 0 10px;position:sticky;top:0;z-index:5;background:#0a1610;padding:7px 0}.bg-tab{min-width:0;padding:12px 3px;font-size:clamp(10px,2.6vw,13px);font-weight:650;line-height:1.25;white-space:normal;background:#12271b;border:1px solid #416449;border-radius:9px;color:#b3d9bd;touch-action:manipulation}.bg-tab[aria-selected="true"]{background:#265b3e;color:#bfffd5;border-color:#8ddda8;box-shadow:inset 0 -3px #a1f3bb}.bg-tab:focus-visible{outline:2px solid #b7ffd2;outline-offset:2px}.tab-panel[hidden]{display:none!important}.tab-panel{min-height:160px}.tab-panel>section:first-child{margin-top:6px}@media(max-width:410px){body{padding:14px}.bg-tablist{gap:4px}.bg-tab{padding:11px 2px}} </style></head><body>
+<style>body{background:#0a1610;color:#e6f9eb;font:14px system-ui;margin:auto;padding:24px;max-width:1000px}h1{color:#9cfdc6}input,button{padding:12px;background:#173426;border:1px solid #477b5b;border-radius:8px;color:#e8ffee}button{cursor:pointer}.hint{color:#a4baa9}section{margin:20px 0;overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border-bottom:1px solid #31513b;padding:10px;text-align:left;white-space:nowrap}th{color:#8dc5a0}#assets{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}#assets table{min-width:max-content;width:100%}#assets th{position:sticky;top:0;z-index:2;background:#163423;cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;min-width:68px}#assets th:focus-visible{outline:2px solid #9cfdc6}#assets th.drag-active{background:#286548;cursor:grabbing}#assets th.drop-target{box-shadow:inset 3px 0 #9cfdc6}#assets td{font-variant-numeric:tabular-nums}#assets .sort-indicator{display:inline-block;min-width:1em;color:#9cfdc6;margin-left:5px}#assets .social-cell{white-space:nowrap;min-width:85px}#assets .social-link{display:inline-block;color:#b9ffd0;background:#234b32;border:1px solid #3d8053;border-radius:6px;padding:5px 7px;margin:1px 3px 1px 0;text-decoration:none;font-weight:650}#assets .social-link:focus-visible{outline:2px solid #b9ffd0}#assets .social-link:hover{text-decoration:underline}#assets .safety-cell{font-weight:700;font-variant-numeric:tabular-nums}#assets .risk-note{display:block;font-size:10px;font-weight:400;color:#bdcbbc}#assets .signal-cell{font-size:19px;text-align:center}#assets .direction-cell{font-weight:700;text-align:center;font-variant-numeric:tabular-nums}#assets .dir-arrow{display:inline-block;font-size:18px;transition:transform .35s ease}.indicator-legend{font-size:12px;line-height:1.6;margin:6px 0 12px}.asset-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.asset-toolbar button{padding:8px 10px}.asset-toolbar .hint{font-size:12px}#board{display:none}.stat{display:inline-block;border:1px solid #416449;border-radius:10px;padding:15px;margin:4px;background:#112a19}.bg-tablist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:16px 0 10px;position:sticky;top:0;z-index:5;background:#0a1610;padding:7px 0}.bg-tab{min-width:0;padding:12px 3px;font-size:clamp(10px,2.6vw,13px);font-weight:650;line-height:1.25;white-space:normal;background:#12271b;border:1px solid #416449;border-radius:9px;color:#b3d9bd;touch-action:manipulation}.bg-tab[aria-selected="true"]{background:#265b3e;color:#bfffd5;border-color:#8ddda8;box-shadow:inset 0 -3px #a1f3bb}.bg-tab:focus-visible{outline:2px solid #b7ffd2;outline-offset:2px}.tab-panel[hidden]{display:none!important}.tab-panel{min-height:160px}.tab-panel>section:first-child{margin-top:6px}@media(max-width:410px){body{padding:14px}.bg-tablist{gap:4px}.bg-tab{padding:11px 2px}} </style></head><body>
 <h1>BUYGUY // FREE RADAR</h1><p class="hint">Read-only research • Robinhood + Solana • Indicative prices • Paper wallet experimental</p>
 <div id="login"><input type="password" id="pass" placeholder="Dashboard secret" autocomplete="off"><button id="enter">Open</button><p id="msg"></p></div>
 <div id="board"><button id="refresh">Refresh data</button><div id="overview"></div>
@@ -15,7 +15,7 @@ const page=`<!doctype html><html><head><meta name="viewport" content="width=devi
 <button class="bg-tab" id="tab-outcomes" role="tab" type="button" data-tab="outcomes" aria-controls="panel-outcomes" aria-selected="false" tabindex="-1">Outcomes</button>
 </nav>
 <div class="tab-panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research">
-<section><h2>Token research</h2><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div></section>
+<section><h2>Token research</h2><p class="hint indicator-legend">Safety: 🟢 fully screened · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Score is 0–100 based on evidence, <strong>not a guarantee of safety</strong>. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div></section>
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
 </div>
 <div class="tab-panel" id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" hidden><section><h2>Paper wallet</h2><div id="wallet"></div></section></div>
@@ -34,6 +34,9 @@ const assetColumns=[
  {key:'chain',name:'Chain',type:'text'},
  {key:'symbol',name:'Token',type:'text'},
  {key:'socials',name:'Socials',type:'number'},
+ {key:'safety',name:'Safety',type:'number'},
+ {key:'momentum',name:'Signal',type:'number'},
+ {key:'direction',name:'Direction 1h',type:'number'},
  {key:'score',name:'Score',type:'number'},
  {key:'status',name:'Status',type:'text'},
  {key:'liquidity',name:'Liquidity $',type:'number'},
@@ -185,8 +188,9 @@ function indicatorCell(row,key){
  }
  return '';
 }
-function assetRow(a){
+function assetRow(a,routes=[]){
  const audit=riskInfo(a);
+ const safetyInfo=safetyAssessment(a,routes),signalInfo=signalAssessment(a),directionInfo=directionAssessment(a);
  const flags=[...(Array.isArray(audit.mintFlags)?audit.mintFlags:[]),
               ...(Array.isArray(audit.holderFlags)?audit.holderFlags:[])];
  const topBps=typeof audit.top1Bps==='number'&&Number.isFinite(audit.top1Bps)?audit.top1Bps:null;
@@ -196,6 +200,8 @@ function assetRow(a){
     .slice(0,24).map(item=>({label:String(item.label||'Link').slice(0,18),url:safeExternalLink(item.url)}));
  return {...a,buys_m5:Number(a.buys_m5)||0,sells_m5:Number(a.sells_m5)||0,
    socials:socialLinks.length,socialLinks,
+   safety:safetyInfo.score,momentum:signalInfo.rank,direction:directionInfo.value,
+   safetyInfo,signalInfo,directionInfo,
    topBps,risk:a.risk_status||'UNVERIFIED',flags:flags.join(', ')||'Not fully reviewed'};
 }
 function formatUsd(raw){
@@ -258,7 +264,7 @@ function resetAssetColumns(){
  saveValue(layoutKey,assetOrder);saveValue(sortKey,assetSort);
  renderAssets();
 }
-function setAssetData(records){assetRows=(Array.isArray(records)?records:[]).map(assetRow);renderAssets()}
+function setAssetData(records,routes=[]){assetRows=(Array.isArray(records)?records:[]).map(a=>assetRow(a,routes));renderAssets()}
 let drag=null,suppressSortUntil=0;
 function headerAt(x,y){
  const hits=document.elementsFromPoint?document.elementsFromPoint(x,y):[document.elementFromPoint(x,y)];
@@ -282,7 +288,7 @@ function renderAssets(){
    return '<th scope="col" tabindex="0" data-col="'+key+'" aria-sort="'+aria+'" aria-label="Sort by '+c.name+'; drag to move">'+c.name+
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></th>';
  }).join('');
- const rows=orderedAssetRows().map(row=>'<tr>'+assetOrder.map(key=>key==='socials'?socialCell(row):cell(columnValue(row,key))).join('')+'</tr>').join('');
+ const rows=orderedAssetRows().map(row=>'<tr>'+assetOrder.map(key=>key==='socials'?socialCell(row):['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))).join('')+'</tr>').join('');
  wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
  wrap.scrollLeft=left;
  wrap.querySelectorAll('th[data-col]').forEach(th=>{
@@ -347,7 +353,7 @@ async function refresh(){try{
  const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
  document.getElementById('overview').innerHTML='<div class="stat">Cash: $'+Number(x.wallet?.cash??0).toFixed(2)+'</div><div class="stat">Last scan: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)')+'</div><div class="stat">Tracked: '+(x.assets?.length??0)+'</div>';
  document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
- setAssetData(x.assets);
+ setAssetData(x.assets,x.routes);
  document.getElementById('routeReviews').innerHTML=table(['UTC','Mint','Result','Approx. round-trip loss','Top impact'],(x.routes||[]).map(r=>{
  let report={};try{report=JSON.parse(r.note||'{}')}catch{}
  return [r.at,r.asset_key,report.label||'Unknown',report.estimatedRoundTripLossPct===null||report.estimatedRoundTripLossPct===undefined?'Unknown':report.estimatedRoundTripLossPct+'%',report.maxImpactPct===null||report.maxImpactPct===undefined?'Unknown':report.maxImpactPct+'%'];
