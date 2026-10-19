@@ -104,7 +104,7 @@ function initTabs(){
 }
 function riskInfo(a){try{return JSON.parse(a.risk_note||'{}')}catch{return {}}}
 function safeExternalLink(value){
- if(typeof value!=='string'||value.length>1200||!/\x5ehttps:\/\//i.test(value)||/[\u0000-\u001f\u007f]/.test(value))return null;
+ if(typeof value!=='string'||value.length>1200||!value.toLowerCase().startsWith('https://')||Array.from(value).some(ch=>ch.charCodeAt(0)<32||ch.charCodeAt(0)===127))return null;
  try{const u=new URL(value);if(u.protocol!=='https:'||u.username||u.password||!u.hostname||
    u.hostname==='localhost'||u.hostname.endsWith('.local'))return null;return u.href;}catch{return null}
 }
