@@ -291,12 +291,14 @@ function auditCell(row){
  return '<td><button type="button" class="audit-btn" data-audit-key="'+escapeSocial(address)+
   '" aria-label="Run live audit of '+escapeSocial(row.symbol||'token')+'">⚡ AUDIT</button></td>';
 }
-// Existing Moby contract-specific URLs; Android decides whether registered links
-// open in the installed app. A link is never an automated trade.
+// Moby-generated Android share links use twitter.mobyscreener.com/solana/MINT.
+// Do not copy another user's referral app_url or v cache-busting timestamp.
+// Direct chart opening depends on Android's app-link association and device settings.
+// Robinhood share format is still unverified, so leave its current fallback unchanged.
 function mobyChartUrl(chain,address){
  const token=String(address||'');
  if(chain==='solana'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token))
-   return 'https://www.mobyscreener.com/solana/'+token;
+   return 'https://twitter.mobyscreener.com/solana/'+token;
  if(chain==='robinhood'&&/^0x[0-9a-fA-F]{40}$/.test(token))
    return 'https://www.mobyscreener.com/token/'+token.toLowerCase();
  return null;
@@ -305,8 +307,8 @@ function tradeOnCell(row){
  const url=mobyChartUrl(row.chain,row.address);
  if(!url)return '<td>—</td>';
  return '<td><a class="moby-chart-link" href="'+escapeSocial(url)+
-   '" target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer" '+
-   'title="Open this contract in Moby. App opening depends on Android link settings; never places a trade." '+
+   '" target="_self" rel="nofollow" referrerpolicy="no-referrer" '+
+   'title="Open this contract using the Moby share link. Android app opening depends on link settings; never places a trade." '+
    'aria-label="Open '+escapeSocial(row.symbol||'token')+' on Moby">Moby ↗</a></td>';
 }
 function addressCell(row){
