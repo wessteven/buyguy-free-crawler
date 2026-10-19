@@ -37,7 +37,7 @@ test('Only a successful Pump instruction referencing exact pool/mint/curve is mi
    for(const opts of [{wrongProgram:true},{omittedPool:true},{err:{InstructionError:[0,'Custom']}}])
      assert.equal(matchMigrationTx(fakeTx(curve,type.bytes,opts),
        {pool,mint,bondingCurve:curve,discriminators:kinds}),null);
-   assert.equal(matchMigrationTx(tx,{pool:mint,mint,bondingCurve:curve,
+   assert.equal(matchMigrationTx(tx,{pool:'Vote111111111111111111111111111111111111111',mint,bondingCurve:curve,
      discriminators:kinds}),null);
  }
 });
