@@ -73,7 +73,7 @@ test('Missing secret or malformed pool leaves probes as unknown',async()=>{
 });
 
 test('Only protocol-verified Raydium vault addresses are excluded from owner samples',()=>{
- const verified={status:'POOL_VAULTS_VERIFIED',vaultsVerified:true,
+ const verified={protocol:'RAYDIUM_CPMM',status:'POOL_VAULTS_VERIFIED',vaultsVerified:true,
   token0Mint:mint,token1Mint:owner,verifiedVaults:[a1,a2]};
  const hit=ownerClusterSample(mint,largest,accounts,{verifiedPool:verified});
  assert.equal(hit.status,'UNAVAILABLE'); // all sampled accounts were vaults, no non-vault sample remains
@@ -90,4 +90,17 @@ test('Only protocol-verified Raydium vault addresses are excluded from owner sam
  }});
  assert.equal(spoof.vaultsExcluded,false);
  assert.equal(spoof.excludedVaultAccounts,0);
+});
+
+test('Verified PumpSwap vault for matching base mint is excluded; arbitrary token never inherits exclusion',()=>{
+ const pump={protocol:'PUMPSWAP',status:'POOL_VAULTS_VERIFIED',vaultsVerified:true,
+   baseMint:mint,quoteMint:owner,verifiedVaults:[a1,owner]};
+ const screen=ownerClusterSample(mint,largest,accounts,{verifiedPool:pump});
+ assert.equal(screen.vaultsExcluded,true);
+ assert.equal(screen.excludedVaultAccounts,1);
+ assert.equal(screen.beneficialOwnersVerified,false);
+ assert.equal(screen.status,'OWNER_SAMPLE_VAULTS_EXCLUDED');
+ const spoof=ownerClusterSample(mint,largest,accounts,{verifiedPool:{
+   ...pump,baseMint:owner,quoteMint:a2}});
+ assert.equal(spoof.vaultsExcluded,false);
 });
