@@ -39,9 +39,13 @@ export function assessGreenLight(asset,{
      ownerProbe.uniqueAuthorityCount??null:null,
    largestAuthorityShareOfSampleBps:ownerProbe?.verifier==='buyguy-owner-sample-v1'?
      ownerProbe.largestAuthoritySampleBps??null:null,
-   poolAccountProgram:poolProbe?.status==='POOL_ACCOUNT_OBSERVED'?
+   excludedVerifiedVaultAccounts:ownerProbe?.verifier==='buyguy-owner-sample-v1'?
+     ownerProbe.excludedVaultAccounts??0:0,
+   poolVaultsVerified:poolProbe?.verifier==='buyguy-raydium-cpmm-layout-v1'&&
+     poolProbe.vaultsVerified===true&&poolProbe.pool===asset.pool,
+   poolAccountProgram:['POOL_ACCOUNT_OBSERVED','POOL_VAULTS_VERIFIED','CPMM_LAYOUT_VERIFIED'].includes(poolProbe?.status)?
      poolProbe.program||null:null,
-   caveat:'Owner sample may count pool vaults; pool program identity does not verify any LP lock.'
+   caveat:'Verified Raydium vaults are excluded only from sampled accounts. Other LP vaults/custodians and beneficiary identities remain unknown; no LP lock is established.'
  };
  const risk=String(asset.risk_status||'UNVERIFIED');
  const flags=m?.mintFlags||[];
