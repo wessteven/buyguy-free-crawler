@@ -5,11 +5,12 @@ import {cronScan} from './light-scan.mjs';
 import {verifyPendingMints} from './risk-ops.mjs';
 import {retireDormantAssets} from './retirement.mjs';
 import {runPaperGame} from './paper-ops.mjs';
+import {screenTradeRoutes} from './route-ops.mjs';
 export async function scheduledResearch(env,{
- market=cronScan,verify=verifyPendingMints,retire=retireDormantAssets,paper=runPaperGame
+ market=cronScan,verify=verifyPendingMints,retire=retireDormantAssets,paper=runPaperGame,route=screenTradeRoutes
 }={}){
   if(!env?.DB)throw Error('D1 binding missing');
-  const report={market:'SKIPPED',risk:'SKIPPED',retirement:'SKIPPED',paper:'DISABLED'};
+  const report={market:'SKIPPED',risk:'SKIPPED',route:'SKIPPED',retirement:'SKIPPED',paper:'DISABLED'};
   try{
     report.market=await market(env);
   }catch(error){
@@ -25,6 +26,15 @@ export async function scheduledResearch(env,{
     }catch(error){
       report.risk='FAILED';
       console.warn('Mint research interrupted:',error?.name||'UnknownError');
+    }
+  }
+  if(env.HELIUS_RPC_URL){
+    try{
+      const result=await route(env);
+      report.route=result?.checked??0;
+    }catch(error){
+      report.route='FAILED';
+      console.warn('Read-only Jupiter route screening interrupted:',error?.name||'UnknownError');
     }
   }
   try{
