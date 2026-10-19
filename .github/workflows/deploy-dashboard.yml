@@ -1,4 +1,5 @@
 name: Deploy BuyGuy Free Dashboard
+# Deployment requires full SQL, holder audit and route-only tests to pass first.
 on:
   push:
     paths:
