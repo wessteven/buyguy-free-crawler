@@ -4,7 +4,7 @@ import {checkSolanaMint} from './token-risk.mjs';
 import {fetchLargestAccounts,assessLargestAccounts} from './holder-risk.mjs';
 
 export function combineRisk(mint,holders){
-  if(mint.riskStatus!=='MINT_CONTROLS_REVOKED')return mint.riskStatus;
+  if(!['MINT_CONTROLS_REVOKED','TOKEN_2022_METADATA_ONLY'].includes(mint.riskStatus))return mint.riskStatus;
   if(holders.status==='CONCENTRATION_WARNING')return 'HOLDER_CONCENTRATION_RISK';
   if(holders.status==='TOKEN_ACCOUNT_BALANCES_SCREENED')return 'PARTIAL_ONCHAIN_REVIEW';
   return 'HOLDER_DATA_UNAVAILABLE';
@@ -16,7 +16,8 @@ export async function verifyPendingMints(env,{limit=3,now=new Date().toISOString
   const checkDate=new Date(now).getTime();
   const cutoff=new Date(checkDate-60*60000).toISOString();
   const rows=(await env.DB.prepare(`SELECT a.asset_key,a.address,a.chain,a.score
-    FROM assets a WHERE a.chain='solana' AND a.risk_status='UNVERIFIED'
+    FROM assets a WHERE a.chain='solana' AND (a.risk_status='UNVERIFIED' OR
+      (a.risk_status='TOKEN_2022_REVIEW_REQUIRED' AND a.risk_note LIKE '%"flags":%'))
       AND a.status IN ('ALIVE','STATIC')
       AND NOT EXISTS (SELECT 1 FROM research_events e WHERE e.asset_key=a.asset_key
        AND e.kind='MINT_AUTHORITY_REVIEW' AND e.at>?)
@@ -26,7 +27,7 @@ export async function verifyPendingMints(env,{limit=3,now=new Date().toISOString
     try{
       const mint=await checkSolanaMint({mint:a.address,rpcEndpoint:env.HELIUS_RPC_URL,fetcher});
       let holders={status:'NOT_CHECKED',flags:[],top1Bps:null,top5Bps:null,top20Bps:null};
-      if(mint.supplyRaw && (mint.riskStatus==='MINT_CONTROLS_REVOKED'||mint.riskStatus==='TOKEN_2022_REVIEW_REQUIRED')){
+      if(mint.supplyRaw && ['MINT_CONTROLS_REVOKED','TOKEN_2022_METADATA_ONLY'].includes(mint.riskStatus)){
         try{
           const payload=await fetchLargestAccounts({mint:a.address,rpcEndpoint:env.HELIUS_RPC_URL,fetcher});
           holders=assessLargestAccounts(a.address,mint.supplyRaw,payload);
@@ -35,7 +36,7 @@ export async function verifyPendingMints(env,{limit=3,now=new Date().toISOString
         }
       }
       const riskStatus=combineRisk(mint,holders);
-      const note=JSON.stringify({checkedAt:mint.checkedAt,program:mint.tokenProgram||null,decimals:mint.decimals??null,
+      const note=JSON.stringify({checkedAt:mint.checkedAt,program:mint.tokenProgram||null,decimals:mint.decimals??null,extensionTypes:mint.extensionTypes||[],
         source:'Helius read-only Solana RPC',mintFlags:mint.flags,holderFlags:holders.flags,
         holderStatus:holders.status,top1Bps:holders.top1Bps,top5Bps:holders.top5Bps,
         top20Bps:holders.top20Bps,
@@ -44,7 +45,8 @@ export async function verifyPendingMints(env,{limit=3,now=new Date().toISOString
       const safeNote=note.slice(0,1300);
       const statements=[
         env.DB.prepare(`UPDATE assets SET risk_status=?,risk_note=?
-           WHERE asset_key=? AND risk_status='UNVERIFIED'`).bind(riskStatus,safeNote,a.asset_key),
+           WHERE asset_key=? AND (risk_status='UNVERIFIED' OR
+             (risk_status='TOKEN_2022_REVIEW_REQUIRED' AND risk_note LIKE '%"flags":%'))`).bind(riskStatus,safeNote,a.asset_key),
         env.DB.prepare(`INSERT INTO research_events(at,asset_key,kind,note)
            VALUES(?,?,'MINT_AUTHORITY_REVIEW',?)`).bind(now,a.asset_key,safeNote)
       ];
