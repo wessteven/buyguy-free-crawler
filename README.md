@@ -35,6 +35,18 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 - A quote merely shows that Jupiter produced a *possible route at that instant*. It cannot establish that a later trade succeeds, that LP liquidity is locked, or that a real wallet could sell.
 - Route results are saved in `research_events` under `ROUNDTRIP_QUOTE` and displayed on the mobile dashboard. **No current route test automatically grants PAPER_ELIGIBLE or triggers a paper fill.**
 
+## Canonical Pump.fun migration provenance (live verification)
+
+- The official Pump docs specify that canonical PumpSwap migration pools use pool index `0` and a creator PDA derived from the seeds `[b"pool-authority", base_mint]` under the Pump bonding-curve program. An ordinary creator-controlled PumpSwap pool can use a different pool creator/index. The creator PDA must be derived with Solana's actual off-curve PDA algorithm—not guessed from a matching token name.
+- `src/pump-migration.mjs` independently derives that PDA with SHA-256 and ed25519 curve checks. Its address matched `@solana/web3.js` on GitHub Actions. It classifies `CANONICAL_LP_BURN_PATTERN` only when the on-chain Pool index and creator both match AND the verified current LP mint supply equals zero while the pool's recorded LP supply is positive.
+- In a **live 8-pool sample**, five PumpSwap pools matched the canonical migration/burn profile (CATONICE, Doomsday, NVYX, SI276, MINTER) and three did not (LEOWIN, Sisish, JEFF), despite all eight having zero minted LP supply. This demonstrates that burned LP supply *alone* does not establish an official Pump migration.
+- `src/pump-migration-tx.mjs` derives the `bonding-curve` PDA, performs a **bounded read-only** Solana transaction search and checks the exact Pump program `migrate` / `migrate_v2` instruction discriminator and exact pool, mint, and bonding-curve instruction accounts, requiring successful transaction metadata.
+- **Live historical proof:** startupSI had a successfully verified `migrate_v2` transaction at slot **458536089**; other samples remained unverified within the bounded history search. A miss is not negative proof. `PUMP_MIGRATION_TX_PROBE` records the observed signature/slot separately from the canonical PDA/burn evidence.
+- In the Token Data safety popup, canonical pool identity, LP supply burn pattern, and historical transaction proof are separate facts. **None automatically verifies LP locks, ultimate owners, a safe AMM upgrade authority, sellability, or grants 🟢/paper eligibility.**
+- The real PumpSwap AMM program still has an **on-chain upgrade authority** (verified with BPF loader metadata). Even a confirmed migration transaction is not proof that protocol governance is immutable.
+
+Implementation references: [PumpSwap documentation](https://github.com/pump-fun/pump-public-docs/blob/main/docs/PUMP_SWAP_README.md), [canonical creator PDA specification](https://github.com/pump-fun/pump-public-docs/blob/main/docs/PUMP_SWAP_CREATOR_FEE_README.md), [Pump migration](https://github.com/pump-fun/pump-public-docs/blob/main/docs/PUMP_PROGRAM_README.md), [migration history validation workflow](https://github.com/wessteven/buyguy-free-crawler/actions/workflows/live-pump-migration-tx.yml).
+
 ## Green-light pool protocol engineering (19 October 2026)
 
 - A live read-only survey of 35 tracked Solana pools found **19 PumpSwap AMM**, **13 Pump.fun bonding curves**, **2 other protocols**, and **1 Meteora DAMM V2**. Raydium CPMM was not present in that sample. Programs are identified from `getMultipleAccounts` *account owner*, not by symbol.
