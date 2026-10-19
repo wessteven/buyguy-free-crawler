@@ -85,10 +85,12 @@ test('Dragged column preference and sorting survive page reload',async()=>{
   assert.ok(again.assets.innerHTML.indexOf('data-col="symbol"')<again.assets.innerHTML.indexOf('data-col="chain"'));
   assert.match(again.assets.innerHTML,/aria-sort="ascending"/);
   again.evalJS('resetAssetColumns()');
-  assert.ok(again.assets.innerHTML.indexOf('data-col="chain"')<again.assets.innerHTML.indexOf('data-col="symbol"'));
+  assert.ok(again.assets.innerHTML.indexOf('data-col="symbol"')<again.assets.innerHTML.indexOf('data-col="chain"'));
+  assert.ok(again.assets.innerHTML.indexOf('data-col="address"')<again.assets.innerHTML.indexOf('data-col="socials"'));
+  assert.ok(again.assets.innerHTML.indexOf('data-col="socials"')<again.assets.innerHTML.indexOf('data-col="flags"'));
 });
 test('Malicious saved layout and token symbol are sanitized',async()=>{
-  const storage=new Map([['buyguy.assetColumns.v1',JSON.stringify(['symbol','unknown','symbol','chain'])]]);
+  const storage=new Map([['buyguy.assetColumns.v2',JSON.stringify(['symbol','unknown','symbol','chain'])]]);
   const ui=await tableSandbox(storage);
   ui.evalJS("setAssetData("+JSON.stringify([{...example[0],symbol:'<img src=x onerror=alert(1)>'}])+")");
   assert.ok(ui.assets.innerHTML.indexOf('data-col="symbol"')<ui.assets.innerHTML.indexOf('data-col="chain"'));
@@ -161,7 +163,7 @@ test('Socials column renders safe, clickable project-supplied HTTPS links',async
  assert.match(ui.assets.innerHTML,/&lt;img src=x/);
 });
 test('New socials/safety/signal/direction columns merge into existing saved drag layout',async()=>{
- const storage=new Map([['buyguy.assetColumns.v1',JSON.stringify(['symbol','chain','score'])]]);
+ const storage=new Map([['buyguy.assetColumns.v2',JSON.stringify(['symbol','chain','score'])]]);
  const ui=await setup(storage);
  assert.ok(ui.assets.innerHTML.indexOf('data-col="socials"')>ui.assets.innerHTML.indexOf('data-col="symbol"'));
  assert.ok(ui.assets.innerHTML.includes('data-col="safety"'));
@@ -230,20 +232,23 @@ test('Legend and column instructions appear below research table and quote check
  assert.equal(panel.match(/Safety: 🟢/g)?.length,1,'Legend must appear exactly once');
 });
 
-test('BuyGuy GOGET terminal theme, compact tabs and permanent last address column',async()=>{
- const {html,evalJS,assets,ui}=await setup();
+test('Buyer-first default layout puts price and market before safety, then copy address, socials and flags',async()=>{
+ const {html,evalJS,assets}=await setup();
  assert.match(html,/the\s+BUYGUY GOGET/);
  assert.match(html,/font-family:ui-monospace/);
  assert.match(html,/id="tab-address"/);
  assert.match(html,/id="watchForm"/);
- assert.equal(evalJS('assetOrder[assetOrder.length-1]'),'address');
- assert.ok(assets.innerHTML.indexOf('data-col="address"')>assets.innerHTML.indexOf('data-col="provider"'));
- assert.equal(evalJS("moveAssetColumn('address','symbol',false)"),false);
- assert.equal(evalJS("moveAssetColumn('symbol','address',false)"),false);
- evalJS("sortAssets('liquidity')");
- assert.equal(evalJS('assetOrder[assetOrder.length-1]'),'address');
+ const order=evalJS("assetOrder.join(',')").split(',');
+ for(const [a,b] of [['symbol','audit'],['audit','price'],['price','liquidity'],
+   ['liquidity','safety'],['safety','address'],['address','socials'],
+   ['socials','flags']]){
+   assert.ok(order.indexOf(a)<order.indexOf(b),a+' must precede '+b);
+ }
+ assert.equal(order.at(-1),'flags');
+ assert.equal(evalJS("moveAssetColumn('address','symbol',false)"),true);
+ assert.equal(evalJS("moveAssetColumn('socials','flags',true)"),true);
  assert.match(assets.innerHTML,/class="ticker"/);
- });
+});
 test('Watch Address tab remains accessible after saved navigation preference',async()=>{
  const ui=await tableSandbox();
  assert.equal(ui.evalJS("activateTab('address')"),true);
@@ -304,10 +309,44 @@ test('AUDIT action is reachable beside the token in TOKEN DATA, HOT and NOT; add
  page.evalJS('setAssetData('+JSON.stringify([sample])+')');
  const order=page.evalJS('assetOrder.join(",")').split(',');
  assert.equal(order[order.indexOf('symbol')+1],'audit');
- assert.equal(order.at(-1),'address');
+ assert.equal(order.at(-1),'flags');
  assert.match(page.assets.innerHTML,/data-audit-key="solana:So11111111111111111111111111111111111111112"/);
  assert.match(page.ui.get('hotAssets').innerHTML,/class="audit-btn"/);
  assert.match(page.html,/id="auditDialog"/);
- const saved=await tableSandbox(new Map([['buyguy.assetColumns.v1',JSON.stringify(['symbol','chain','score'])]]));
+ const saved=await tableSandbox(new Map([['buyguy.assetColumns.v2',JSON.stringify(['symbol','chain','score'])]]));
  assert.equal(saved.evalJS("assetOrder.indexOf('audit')"),saved.evalJS("assetOrder.indexOf('symbol')")+1);
+});
+
+test('Long social and mint-flag columns are collapsed by default and reveal full details when toggled',async()=>{
+ const page=await tableSandbox();
+ const row={...example[0],
+   risk_note:JSON.stringify({mintFlags:['TOKEN_2022_EXTENSIONS_UNREVIEWED'],
+     holderFlags:['TOP_FIVE_ACCOUNTS_OVER_85_PERCENT']}),
+   socials_json:JSON.stringify([
+     {label:'X',url:'https://x.com/project'},
+     {label:'Web',url:'https://example.com'},
+     {label:'TG',url:'https://t.me/project'}])};
+ page.evalJS('setAssetData('+JSON.stringify([row])+')');
+ assert.match(page.assets.innerHTML,/data-fold-col="socials"/);
+ assert.match(page.assets.innerHTML,/data-fold-col="flags"/);
+ assert.match(page.assets.innerHTML,/class="flags-short"/);
+ assert.match(page.assets.innerHTML,/class="social-link social-extra"/);
+ assert.equal(page.evalJS("toggleColumnFold('flags')"),true);
+ assert.equal(page.evalJS("toggleColumnFold('socials')"),true);
+ assert.match(page.assets.innerHTML,/class="flags-full"/);
+ assert.match(page.assets.innerHTML,/class="social-cell expanded"/);
+ const reload=await tableSandbox(page.storage);
+ assert.equal(reload.evalJS('columnFolded.flags'),false);
+ assert.equal(reload.evalJS('columnFolded.socials'),false);
+});
+test('Socials and long mint-flag headings can move by explicit controls even on touch devices',async()=>{
+ const page=await tableSandbox();
+ const before=page.evalJS("assetOrder.indexOf('flags')");
+ assert.equal(page.evalJS("moveColumnByStep('flags',-1)"),true);
+ assert.equal(page.evalJS("assetOrder.indexOf('flags')"),before-1);
+ assert.equal(page.evalJS("moveColumnToEnd('socials')"),true);
+ assert.equal(page.evalJS("assetOrder.at(-1)"),'socials');
+ assert.match(page.html,/data-fold-col/); // dynamically generated on render
+ assert.match(page.html,/max-height:70dvh/);
+ assert.match(page.html,/position:sticky!important/);
 });
