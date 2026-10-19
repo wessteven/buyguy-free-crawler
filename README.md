@@ -20,8 +20,20 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 - `TRASH`: unresolvable and stale, retained only as a historical record.
 - `UNVERIFIED`: no completed on-chain authority assessment.
 - `MINT_CONTROL_RISK`: active mint/freeze controls or unsupported SPL mint configuration.
-- `MINT_CONTROLS_REVOKED`: only SPL mint and freeze authority checks passed. **Does not establish liquidity safety, transferability, whale concentration or buy/sell executability.**
+- `MINT_CONTROLS_REVOKED`: legacy partial mint-control result; not a paper-trading approval.
+- `TOKEN_2022_REVIEW_REQUIRED`: Token-2022 extension behavior has not been independently verified, even if mint/freeze controls are revoked.
+- `HOLDER_CONCENTRATION_RISK`: largest token accounts exceed conservative concentration thresholds (top account >40% or top five >85%). AMM pool accounts and custodians are not unique owner wallets.
+- `HOLDER_DATA_UNAVAILABLE`: missing or unusable largest-account RPC evidence.
+- `PARTIAL_ONCHAIN_REVIEW`: ordinary SPL mint controls revoked and raw supply/top account screening passed. **Still not certified safe; pool ownership, LP locks, transferability and real swap execution remain unknown.**
 - `PAPER_ELIGIBLE`: explicit separately reviewed status needed before any simulated automatic entry. No current automated rule promotes a token into this state.
+
+## Read-only route research
+
+- The optional Jupiter `GET /swap/v1/quote` checks an indicative US$40 USDC-to-mint quote and then the opposite mint-to-USDC quote on the received token amount.
+- Keyless access is limited; requests are spaced to respect 0.5 requests/second. A provider error creates `QUOTE_PROVIDER_UNAVAILABLE`, not a fabricated safe result.
+- Checks separately require known mint decimals and compare the implied first-leg buy price with the observed DEX quote (rejecting differences above 25%). Checks fail on missing buy/sell routes, price impact above 5%, or a quoted round-trip loss above 12%.
+- A quote merely shows that Jupiter produced a *possible route at that instant*. It cannot establish that a later trade succeeds, that LP liquidity is locked, or that a real wallet could sell.
+- Route results are saved in `research_events` under `ROUNDTRIP_QUOTE` and displayed on the mobile dashboard. **No current route test automatically grants PAPER_ELIGIBLE or triggers a paper fill.**
 
 ## Paper-wallet engine
 
@@ -35,12 +47,9 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 
 ## Optional Helius integration
 
-The ChatGPT Helius connector and GitHub/Cloudflare workers do not automatically share authentication. The Worker has code for **read-only** Solana mint account authority checks using Helius JSON-RPC. To enable without exposing credentials in GitHub source or chat:
+The ChatGPT Helius connector and GitHub/Cloudflare workers do not automatically share authentication. Helius authenticated mainnet reads have been verified. The Worker now performs **read-only** mint authority and top-token-account checks using Helius JSON-RPC; its key is stored only in secrets. To enable without exposing credentials in GitHub source or chat:
 
-1. Obtain your own Helius API key securely from the Helius account.
-2. Save it only as a GitHub Actions repository secret called `HELIUS_API_KEY`.
-3. Re-run the dashboard deployment workflow. It configures the Worker secret `HELIUS_RPC_URL` on the server without printing the key.
-4. Verification remains partial by design and never marks a token as paper eligible.
+The user's `HELIUS_API_KEY` is already configured as a private GitHub Actions secret. Deployment injects `HELIUS_RPC_URL` securely into Cloudflare. Periodic authority and concentration reviews remain partial and never mark a token paper eligible.
 
 **Robinhood contract checks through private Blockscout PRO are not yet integrated into the unattended engine.** The private Blockscout connector inside ChatGPT cannot be silently reused by GitHub. No shared free API allowance is used as a fallback.
 
