@@ -25,16 +25,26 @@ export function assessMintAccount(mint,rpcResponse) {
   if(info.mintAuthority!=null)base.flags.push('MINT_AUTHORITY_ACTIVE');
   if(info.freezeAuthority!=null)base.flags.push('FREEZE_AUTHORITY_ACTIVE');
   if(value.owner===TOKEN_2022){
-    const extensions=value.data.parsed?.info?.extensions || value.data.parsed?.extensions;
-    if(extensions?.length || !Array.isArray(extensions)){
+    const extensions=info.extensions ?? value.data.parsed?.extensions;
+    const allowed=new Set(['metadataPointer','tokenMetadata']);
+    if(!Array.isArray(extensions)){
       base.flags.push('TOKEN_2022_EXTENSIONS_UNREVIEWED');
+    }else{
+      base.extensionTypes=extensions.map(e=>e?.extension||e?.type||null);
+      if(!base.extensionTypes.every(type=>allowed.has(type))){
+        base.flags.push('TOKEN_2022_EXTENSIONS_UNREVIEWED');
+      }else{
+        base.notes.push('Only metadata-related mint extensions observed; metadata may still be mutable. Account-level transfer restrictions, LP locks and sells NOT independently verified.');
+      }
     }
   }
   if(base.flags.includes('MINT_AUTHORITY_ACTIVE')||base.flags.includes('FREEZE_AUTHORITY_ACTIVE')){
     base.riskStatus='MINT_CONTROL_RISK';
   }else if(base.flags.includes('TOKEN_2022_EXTENSIONS_UNREVIEWED')){
     base.riskStatus='TOKEN_2022_REVIEW_REQUIRED';
-    base.notes.push('Token-2022 extension details must be independently checked; not evidence of malicious controls.');
+    base.notes.push('Unknown or transfer-affecting Token-2022 mint extensions: do not promote.');
+  }else if(value.owner===TOKEN_2022){
+    base.riskStatus='TOKEN_2022_METADATA_ONLY';
   }else{
     base.riskStatus='MINT_CONTROLS_REVOKED';
     base.notes.push('Authority checks only: sell restrictions, liquidity ownership, holders and admin roles NOT VERIFIED.');
