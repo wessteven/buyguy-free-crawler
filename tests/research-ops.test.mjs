@@ -45,7 +45,8 @@ test('Supported exact mint gets recorded as limited audit, NOT paper eligible',a
  assert.ok(calls[0].args[1].includes('"top1Bps":2000'));
  assert.equal(calls[0].args[1].includes('"paperEligible":false'),true);
 });
-\ntest('Metadata-only Token-2022 with screened balances stays partial, not safe',()=>{
+
+test('Metadata-only Token-2022 with screened balances stays partial, not safe',()=>{
   assert.equal(combineRisk({riskStatus:'TOKEN_2022_METADATA_ONLY'},
     {status:'TOKEN_ACCOUNT_BALANCES_SCREENED'}),'PARTIAL_ONCHAIN_REVIEW');
   assert.equal(combineRisk({riskStatus:'TOKEN_2022_REVIEW_REQUIRED'},
