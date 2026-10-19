@@ -77,3 +77,32 @@ test('Origin checks and sign-out cookie work, no local storage password',async()
  assert.match(html,/fetch\('\/api\/login'/);
  assert.match(html,/credentials:'same-origin'/);
 });
+
+test('Authenticated user can pin a contract; unauthenticated and foreign-origin submissions are rejected',async()=>{
+ const login=await worker.fetch(request('/api/login',{method:'POST',data:{password:secret,remember:false}}),env);
+ const cookie=login.headers.get('set-cookie').split(';')[0];
+ const input={chain:'robinhood',address:'0x2cc0fac44b8252f6b10208b091aff2c94b4da77d'};
+ const anon=await worker.fetch(request('/api/watchlist',{method:'POST',data:input}),env);
+ assert.equal(anon.status,401);
+ const csrf=await worker.fetch(request('/api/watchlist',{method:'POST',data:input,
+   headers:{cookie,origin:'https://attacker.example'}}),env);
+ assert.equal(csrf.status,403);
+ const bad=await worker.fetch(request('/api/watchlist',{method:'POST',data:{
+   chain:'solana',address:'random invalid'
+ },headers:{cookie,origin:base}}),{...env,DB:{
+  prepare(sql){return {first:async()=>({n:0}),bind(){return {first:async()=>null,run:async()=>({})}}}}
+ }});
+ assert.equal(bad.status,422);
+ const writes=[];
+ const db={prepare(sql){return {
+  first:async()=>({n:0}),
+  bind(...args){return {first:async()=>null,run:async()=>{writes.push({sql,args});return {}}}}
+ }}};
+ const good=await worker.fetch(request('/api/watchlist',{method:'POST',data:input,
+   headers:{cookie,origin:base}}),{...env,DB:db});
+ assert.equal(good.status,201);
+ const result=await good.json();
+ assert.equal(result.asset_key,'robinhood:'+input.address);
+ assert.equal(writes.length,1);
+ assert.equal(writes[0].sql.includes('pinned=1'),true);
+});
