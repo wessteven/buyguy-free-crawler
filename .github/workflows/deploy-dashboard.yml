@@ -25,6 +25,7 @@ on:
       - 'src/quote-route.mjs'
       - 'src/route-ops.mjs'
       - 'src/price-refresh.mjs'
+      - 'src/token-tiers.mjs'
       - 'src/scheduled-research.mjs'
       - 'src/retirement.mjs'
       - 'wrangler.toml'
