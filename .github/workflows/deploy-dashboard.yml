@@ -17,6 +17,7 @@ on:
       - 'src/green-probes.mjs'
       - 'src/pumpswap.mjs'
       - 'src/pump-migration.mjs'
+      - 'src/pump-migration-tx.mjs'
       - 'src/raydium-cpmm.mjs'
       - 'src/pool-protocol.mjs'
       - 'src/program-authority.mjs'
