@@ -41,11 +41,13 @@ export function assessGreenLight(asset,{
      ownerProbe.largestAuthoritySampleBps??null:null,
    excludedVerifiedVaultAccounts:ownerProbe?.verifier==='buyguy-owner-sample-v1'?
      ownerProbe.excludedVaultAccounts??0:0,
-   poolVaultsVerified:poolProbe?.verifier==='buyguy-raydium-cpmm-layout-v1'&&
+   poolVaultsVerified:poolProbe?.verifier==='buyguy-pool-program-v2'&&
      poolProbe.vaultsVerified===true&&poolProbe.pool===asset.pool,
+   poolProtocol:poolProbe?.verifier==='buyguy-pool-program-v2'?(poolProbe.protocol||null):null,
+   lpSupplyGapBps:poolProbe?.verifier==='buyguy-pool-program-v2'?(poolProbe.lpSupplyGapBps??null):null,
    poolAccountProgram:['POOL_ACCOUNT_OBSERVED','POOL_VAULTS_VERIFIED','CPMM_LAYOUT_VERIFIED'].includes(poolProbe?.status)?
      poolProbe.program||null:null,
-   caveat:'Verified Raydium vaults are excluded only from sampled accounts. Other LP vaults/custodians and beneficiary identities remain unknown; no LP lock is established.'
+   caveat:'Known protocol vaults can be excluded from sampled holder accounts only. An LP supply gap is not a verified lock; custody and ultimate owner identities remain unproven.'
  };
  const risk=String(asset.risk_status||'UNVERIFIED');
  const flags=m?.mintFlags||[];
