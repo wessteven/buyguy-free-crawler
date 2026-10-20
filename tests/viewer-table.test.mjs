@@ -100,7 +100,7 @@ test('Malicious saved layout and token symbol are sanitized',async()=>{
 
 test('Navigation order is TOKEN DATA, HOT, NOT, wallet, recent runs, outcomes, address',async()=>{
  const {html,evalJS,ui}=await tableSandbox();
- const names=['tab-research','tab-hot','tab-not','tab-wallet','tab-runs','tab-outcomes','tab-address'];
+ const names=['tab-research','tab-hot','tab-not','tab-archive','tab-wallet','tab-runs','tab-outcomes','tab-address'];
  for(let i=1;i<names.length;i++)assert.ok(html.indexOf('id="'+names[i-1]+'"')<html.indexOf('id="'+names[i]+'"'));
  assert.equal(evalJS('activeTab'),'research');
  assert.equal(ui.get('panel-research').hidden,false);
@@ -108,6 +108,33 @@ test('Navigation order is TOKEN DATA, HOT, NOT, wallet, recent runs, outcomes, a
  assert.equal(ui.get('panel-runs').hidden,true);
  assert.equal(ui.get('panel-outcomes').hidden,true);
  assert.match(html,/id="panel-research"[\s\S]*?id="routeReviews"/);
+});
+test('Archive keeps learning-rich cases visible and hides low-signal history behind a collapsed section',async()=>{
+ const page=await tableSandbox();
+ assert.match(page.html,/id="panel-archive"/);
+ assert.equal(page.evalJS("activateTab('archive')"),true);
+ assert.equal(page.ui.get('panel-archive').hidden,false);
+ const learned={...example[0],asset_key:'solana:ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump',
+   address:'ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump',
+   symbol:'LEARNING',status:'DEAD',peak_score:82,observations:15,score:2,
+   last_action:'ARCHIVED: sustained weak buy interest',prediction_count:2,
+   research_count:0,paper_count:0};
+ const quiet={...example[0],asset_key:'solana:9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump',
+   address:'9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump',
+   symbol:'QUIET',status:'DEAD',peak_score:15,observations:2,
+   last_action:'ARCHIVED: no fresh market observations',prediction_count:0,
+   research_count:0,paper_count:0};
+ page.evalJS('renderArchive('+JSON.stringify([learned,quiet])+',{"dead":2,"trash":7})');
+ assert.match(page.ui.get('archiveAssets').innerHTML,/LEARNING/);
+ assert.match(page.ui.get('archiveAssets').innerHTML,/Prediction outcome/);
+ assert.doesNotMatch(page.ui.get('archiveAssets').innerHTML,/QUIET/);
+ assert.match(page.ui.get('archiveQuietWrap').innerHTML,/<details>/);
+ assert.match(page.ui.get('archiveQuietWrap').innerHTML,/QUIET/);
+ assert.match(page.ui.get('trashSummary').textContent,/TRASH: 7/);
+ assert.equal(page.ui.get('archiveCount').textContent,'(2)');
+ page.evalJS('setAssetData('+JSON.stringify([{...example[0],symbol:'ACTIVE'}])+')');
+ assert.match(page.assets.innerHTML,/ACTIVE/);
+ assert.doesNotMatch(page.assets.innerHTML,/LEARNING/);
 });
 test('Tabs switch without rebuilding token table or changing sort/order and persist across refresh',async()=>{
  const first=await setup();
