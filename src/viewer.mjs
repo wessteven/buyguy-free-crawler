@@ -164,6 +164,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <div class="tab-panel" id="panel-good" role="tabpanel" aria-labelledby="tab-good">
 <section><h2 class="good-title"><strong>WHAT'S GOOD?</strong> TOP RESEARCH CANDIDATES <span id="goodCount"></span></h2>
 <p class="hint good-intro">Only the best five eligible signals, ranked by OUR SCORE. Each verdict describes research priority, not a recommendation to buy. No qualifying candidates? We show none rather than fill the list with noise.</p>
+<p id="goodDataStatus" class="hint" role="status" aria-live="polite">Waiting for market data…</p>
 <div id="goodCards" class="good-list" aria-live="polite" aria-label="Five strongest currently qualified crypto research candidates"></div>
 <p id="goodFootnote" class="hint">Evidence is indicative; prices and buying activity can be spoofed. Never assume an LP lock or executable exit.</p>
 <button type="button" id="goodResearch" aria-label="Open full sortable token research">Full research + all tokens ↗</button>
@@ -960,11 +961,20 @@ async function refresh(){try{
    document.getElementById('login').style.display='block';
    return false;
  }
- if(!r.ok)throw Error('HTTP '+r.status);
+ if(!r.ok){
+   let message='HTTP '+r.status;
+   try{const failure=await r.json();
+     if(failure.error==='D1_READ_QUOTA')
+       message='Cloudflare D1 daily row-read allowance exhausted. Live rankings unavailable until midnight UTC reset.';
+   }catch{}
+   throw Error(message);
+ }
  const x=await r.json();
  document.getElementById('login').style.display='none';
  document.getElementById('board').style.display='block';
  document.getElementById('msg').textContent='';
+ const live=document.getElementById('goodDataStatus');
+ if(live)live.textContent='Dashboard market data refreshed at '+new Date().toLocaleTimeString()+'. Always check quote age.';
  const recent=x.runs?.[0]||{},elapsed=recent.started_at?Math.round((Date.now()-Date.parse(recent.started_at))/60000):null;
  if(recent.started_at)scanClockAnchor=recent.started_at;
  scanClockStatus=recent.state||null;
@@ -997,7 +1007,16 @@ async function refresh(){try{
  table(['Token','Cost USD','Est. sale value','Unrealised P&L','Price stale'],(x.paper?.positions||[]).map(p=>[
  p.asset_key,p.cost,p.estimatedValue===null?'Unknown':p.estimatedValue,p.unrealized===null?'Unknown':p.unrealized,p.stale]));
  document.getElementById('predictions').innerHTML=table(['Token','Status','Horizon min','Change %'],(x.predictions||[]).map(p=>[p.asset_key,p.status,p.horizon_min,p.change_pct]));
-}catch(e){document.getElementById('msg').textContent='Service error: '+e.message;return false}
+}catch(e){
+ document.getElementById('msg').textContent='Service error: '+e.message;
+ const live=document.getElementById('goodDataStatus');
+ if(live)live.textContent='LIVE RANKING UNAVAILABLE: '+e.message;
+ const cards=document.getElementById('goodCards');
+ if(cards)cards.innerHTML='<p class="good-empty">Market data could not be verified. No live shortlist is available. Historical quotes may be stale.</p>';
+ const count=document.getElementById('goodCount');
+ if(count)count.textContent='(unavailable)';
+ return false;
+}
 return true;
 }
 async function login(){
@@ -1299,7 +1318,12 @@ const evaluated=assets.map(asset=>({...asset,...(()=>{const item=tokenTier(asset
 })}));
 const paper=await getPaperSnapshot(env);
 return json({runs,assets:evaluated,archive,archiveStats:archiveCounts[0]||{dead:0,trash:0},coverage:countCoverage(assets,now),wallet:wallet[0]||null,predictions,paper,routes,pinned});
-}catch(e){return json({error:'D1 query failed',message:String(e).slice(0,180)},503)}
+}catch(e){
+ const msg=String(e?.message||e);
+ if(/daily row read limit|exceeded D1.*row read/i.test(msg))
+   return json({error:'D1_READ_QUOTA',message:'Cloudflare D1 daily read allowance exhausted; live rankings will resume when it resets.'},503);
+ return json({error:'D1_QUERY_FAILED',message:'Research database temporarily unavailable.'},503);
+}
 },async scheduled(controller,env,ctx){
   await scheduledResearch(env);
 }
