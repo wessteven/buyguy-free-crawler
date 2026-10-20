@@ -1,0 +1,100 @@
+{
+  "cycle": "09",
+  "captured_at_utc": "2026-10-20T13:16:01Z",
+  "research_only": true,
+  "passes_attempted": 10,
+  "passes_complete": 5,
+  "passes_partial": 5,
+  "pro_auth_verified": true,
+  "pro_auth_checked_at": "2026-10-20T13:07:12.728Z",
+  "shared_allowance_used": false,
+  "prior_records_preserved_locally": 48,
+  "total_records_locally": 52,
+  "findings": [
+    {
+      "token": "FORKIUS",
+      "mint": "7xTMgacureYyKpaQZwP6LHR1tywEaBjAYfj9zidipump",
+      "pool": "8uzUfQhxmTSGCunXB6ndTtZHxexyshEKbgsZjVAXh2tT",
+      "five_min_buys_sells_distinct_payers": [
+        [
+          "12:50",
+          7,
+          13,
+          5
+        ],
+        [
+          "12:55",
+          4,
+          6,
+          3
+        ],
+        [
+          "13:00",
+          14,
+          3,
+          11
+        ],
+        [
+          "13:05",
+          14,
+          7,
+          11
+        ]
+      ],
+      "quote_usdc": 0.000021108528,
+      "gt_pool_price_usd": 0.00002327,
+      "gt_cap_usd": 23273,
+      "gt_liquidity_usd": 12026,
+      "state": "COOLING"
+    },
+    {
+      "token": "Satoshi",
+      "mint": "SAtoZGJkh4Eid9EQZYXWnCNVn5asZrWZLouBMX1SHi1",
+      "pool": "7jTCpYho9RJhCn9ZyrLPjwGWkacGhJVdzL2cZni3UdUh",
+      "five_min_1305_buys": 4,
+      "distinct_buy_fee_payers": 1,
+      "gt_cap_usd": 49740,
+      "gt_liquidity_usd": 18233,
+      "state": "COOLING"
+    },
+    {
+      "token": "SEED",
+      "contract": "0x6adb9cd443f4653572101e2f91b35ea1ed5f6b69",
+      "holders": 117,
+      "gt_liquidity_usd": 55951,
+      "gt_token_side_reported_usd": 41926,
+      "token_side_spot_mark_usd_approx": 14045,
+      "owner_team_community_same_safe": "0xA5b7c4C651f787debDECd6d7bf6346E35406D18d",
+      "vesting_proof": "unverified",
+      "state": "ACTIVE"
+    },
+    {
+      "token": "SUPERCORE",
+      "mint": "3ZAnpeVBHAvZsySNMXp4g9nYaE1jsx6khgh29VYKpump",
+      "pool": "6aXb1e6uTMsz77zhncRYFe7AugzBxxcUnhCodhd3odag",
+      "gt_cap_usd": 108870,
+      "gt_liquidity_usd": 32022,
+      "state": "COOLING"
+    },
+    {
+      "token": "BORLY",
+      "mint": "ECFmFaHyJ8krXErN1QAxqUq97xCFUWYv9Ax5j2Aspump",
+      "sample_100tx_seconds": 38,
+      "distinct_fee_payers": 30,
+      "state": "COOLING"
+    }
+  ],
+  "source_urls": [
+    "https://www.geckoterminal.com/solana/pools/8uzUfQhxmTSGCunXB6ndTtZHxexyshEKbgsZjVAXh2tT",
+    "https://www.geckoterminal.com/solana/pools/7jTCpYho9RJhCn9ZyrLPjwGWkacGhJVdzL2cZni3UdUh",
+    "https://www.geckoterminal.com/robinhood/pools/0x574596ca78e0ec91044f9c72d3a07c952892ee3219e6a2fb0f85d4e424d62237"
+  ],
+  "no_trades": true,
+  "buy_qualified": 0,
+  "missing": [
+    "executable sell quote",
+    "independent LP lock",
+    "complete OHLCV",
+    "full fresh 52-record snapshot on GitHub"
+  ]
+}
