@@ -1,0 +1,14 @@
+{
+  "cycle": 10,
+  "at": "2026-10-20T14:23:11Z",
+  "new_leads": [
+    "WiSP",
+    "XMRS",
+    "FACTOR",
+    "EVYN"
+  ],
+  "key_lesson": "Use economic buy size and onchain pool reserves; do not equate fee payers with genuine buyers.",
+  "pass_count": 10,
+  "complete": 5,
+  "partial": 5
+}
