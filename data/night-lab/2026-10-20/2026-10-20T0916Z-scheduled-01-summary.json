@@ -1,0 +1,96 @@
+{
+  "experiment": "WHATS_GOOD_NIGHT_LAB",
+  "run": "scheduled-01",
+  "assembled_at_utc": "2026-10-20T09:16:17Z",
+  "baseline_utc": "2026-10-20T08:50:00Z to 08:53:30Z",
+  "helius_observation_utc": "2026-10-20T09:13:24Z to 09:14:15Z",
+  "pro_authenticated": true,
+  "pro_shared_allowance_used": false,
+  "pass_count": 12,
+  "qualified_buy_candidates": 0,
+  "quote_comparison": "Helius indicative USDC token prices, not same-pool executable returns",
+  "observations": [
+    {
+      "chain": "solana",
+      "symbol": "DUST",
+      "mint": "5org5Hza3TQ3ps5LHYzQfZkJhokHF73AWc1vZZcmpump",
+      "baseline_usdc": 0.00015900371,
+      "latest_usdc": 0.00015743476,
+      "indicative_change_pct": -0.99,
+      "source": "Helius DAS get_asset",
+      "pool_candle_return": null,
+      "our_score": null
+    },
+    {
+      "chain": "solana",
+      "symbol": "aDOGymous",
+      "mint": "Cv37ZBhXDgza5cgePpjHshEXz9JPsLNcwUAQrBgcpump",
+      "baseline_usdc": 0.00027208804,
+      "latest_usdc": 0.00028186874,
+      "indicative_change_pct": 3.59,
+      "source": "Helius DAS get_asset",
+      "pool_candle_return": null,
+      "our_score": null
+    },
+    {
+      "chain": "solana",
+      "symbol": "SI276",
+      "mint": "HMYd9tosnUXuNHmq7pXmoePRVBLBBjA3JBfydq6upump",
+      "baseline_usdc": 0.00071959617,
+      "latest_usdc": 0.00065060076,
+      "indicative_change_pct": -9.59,
+      "source": "Helius DAS get_asset",
+      "pool_candle_return": null,
+      "our_score": null
+    },
+    {
+      "chain": "solana",
+      "symbol": "CBUCKS",
+      "mint": "DtcicPCKTKeAh7TDEzTym3hXeoHAoMiBdYJhMYxZpump",
+      "baseline_usdc": 0.0009028891,
+      "latest_usdc": 0.0010156138,
+      "indicative_change_pct": 12.48,
+      "source": "Helius DAS get_asset",
+      "pool_candle_return": null,
+      "our_score": null
+    },
+    {
+      "chain": "solana",
+      "symbol": "WORTHLESS",
+      "mint": "48qA8fELmjmJ4YAbpdeNCxuyszx48CmEnVCf8YHjpump",
+      "baseline_usdc": 0.0000063614416,
+      "latest_usdc": 0.0000028822499,
+      "indicative_change_pct": -54.69,
+      "source": "Helius DAS get_asset",
+      "pool_candle_return": null,
+      "our_score": null
+    },
+    {
+      "chain": "solana",
+      "symbol": "purr",
+      "mint": "9oJvYRC2UBLbUShDBnzhNVcJaAffYANPmDHmgf9Lpump",
+      "baseline_usdc": 0.00000237663,
+      "latest_usdc": 0.0000021480614,
+      "indicative_change_pct": -9.62,
+      "source": "Helius DAS get_asset",
+      "pool_candle_return": null,
+      "our_score": null
+    },
+    {
+      "chain": "solana",
+      "symbol": "Capital",
+      "mint": "5EdajXG624C7uVLArueGjFxEAdbJnSs12orQJ8RZpump",
+      "baseline_usdc": 0.000007214562,
+      "latest_usdc": 0.000005564696,
+      "indicative_change_pct": -22.87,
+      "source": "Helius DAS get_asset",
+      "pool_candle_return": null,
+      "our_score": null
+    }
+  ],
+  "notes": [
+    "Do not confuse token metadata quotes with pool executions",
+    "Paid DexScreener boosts are discovery not organic demand",
+    "All security verdicts pending matching pool and independent holder checks"
+  ]
+}
