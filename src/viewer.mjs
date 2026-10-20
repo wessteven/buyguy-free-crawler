@@ -134,6 +134,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="true" tabindex="0">TOKEN DATA</button>
 <button class="bg-tab" id="tab-hot" role="tab" type="button" data-tab="hot" aria-controls="panel-hot" aria-selected="false" tabindex="-1">🔥 HOT</button>
 <button class="bg-tab" id="tab-not" role="tab" type="button" data-tab="not" aria-controls="panel-not" aria-selected="false" tabindex="-1">🥱 NOT</button>
+<button class="bg-tab" id="tab-archive" role="tab" type="button" data-tab="archive" aria-controls="panel-archive" aria-selected="false" tabindex="-1">📚 Archive</button>
 <button class="bg-tab" id="tab-wallet" role="tab" type="button" data-tab="wallet" aria-controls="panel-wallet" aria-selected="false" tabindex="-1">Wallet</button>
 <button class="bg-tab" id="tab-runs" role="tab" type="button" data-tab="runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Recent Runs</button>
 <button class="bg-tab" id="tab-outcomes" role="tab" type="button" data-tab="outcomes" aria-controls="panel-outcomes" aria-selected="false" tabindex="-1">Outcomes</button>
@@ -150,9 +151,15 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <p class="hint">Fresh buyer momentum, not a safety verdict. Shared TOKEN DATA columns and sorting.</p>
 <div class="asset-view" id="hotAssets" aria-label="Live HOT token subset"></div></section></div>
 <div class="tab-panel" id="panel-not" role="tabpanel" aria-labelledby="tab-not" hidden>
-<section><h2>NOT // COOLING + DORMANT <span id="notCount" class="hint"></span></h2>
-<p class="hint">Archived from HOT, not deleted. Kept for rotating refresh and automatic return to HOT.</p>
+<section><h2>NOT // COOLING <span id="notCount" class="hint"></span></h2>
+<p class="hint">Recently observed but not currently accelerating; persistently inactive tokens move into Archive.</p>
 <div class="asset-view" id="notAssets" aria-label="Background monitored NOT token subset"></div></section></div>
+<div class="tab-panel" id="panel-archive" role="tabpanel" aria-labelledby="tab-archive" hidden>
+<section><h2>LEARNING ARCHIVE <span id="archiveCount" class="hint"></span></h2>
+<p class="hint">Historically interesting coins, predictions and audits stay visible. Archived candidates get occasional comeback checks. Pinned tokens and open paper positions stay active.</p>
+<div class="asset-view" id="archiveAssets" aria-label="Archived tokens worth learning from"></div>
+<div id="archiveQuietWrap"></div>
+<p id="trashSummary" class="hint"></p></section></div>
 <div class="tab-panel" id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" hidden><section><h2>Paper wallet</h2><div id="wallet"></div></section></div>
 <div class="tab-panel" id="panel-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><section><h2>Recent runs</h2><div id="runs"></div></section></div>
 <div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
@@ -245,7 +252,7 @@ let assetSort=(savedSort&&columnByKey[savedSort.key]&&['asc','desc'].includes(sa
  savedSort:{key:'score',direction:'desc'};
 let assetRows=[];
 const tabKey='buyguy.activeTab.v1';
-const dashboardTabs=['research','hot','not','wallet','runs','outcomes','address'];
+const dashboardTabs=['research','hot','not','archive','wallet','runs','outcomes','address'];
 let activeTab=dashboardTabs.includes(storedValue(tabKey))?storedValue(tabKey):'research';
 function activateTab(tab,{focus=false}={}){
  if(!dashboardTabs.includes(tab))return false;
@@ -538,6 +545,35 @@ function moveColumnToEnd(key){
  saveValue(layoutKey,assetOrder);renderAssets();return true;
 }
 function setAssetData(records,routes=[]){assetRows=(Array.isArray(records)?records:[]).map(a=>assetRow(a,routes));renderAssets()}
+function archiveLesson(a){
+ if(Number(a.paper_count)>0)return 'Paper trading case study';
+ if(Number(a.prediction_count)>0)return 'Prediction outcome';
+ if(Number(a.research_count)>0)return 'Contract or liquidity research';
+ if(Number(a.peak_score)>=60)return 'Historic momentum';
+ if(Number(a.observations)>=10)return 'Extended market history';
+ return null;
+}
+function archiveTable(items){
+ if(!items.length)return '<p class="hint">No archived tokens in this group.</p>';
+ const head='<thead><tr><th>Token</th><th>Chain</th><th>Peak score</th><th>Quotes</th><th>Lesson</th><th>Last seen</th><th>Archive reason</th><th>Chart</th><th>Address</th></tr></thead>';
+ return '<table>'+head+'<tbody>'+items.map(a=>'<tr>'+tokenCell(a)+cell(a.chain)+
+    cell(a.peak_score??'—')+cell(a.observations??0)+
+    cell(archiveLesson(a)||'Low-signal reference')+cell(a.last_seen||'No verified quote')+
+    cell(a.last_action||'Quiet background')+chartCell(a)+addressCell(a)+'</tr>').join('')+
+  '</tbody></table>';
+}
+function renderArchive(records,totals={}){
+ const entries=Array.isArray(records)?records:[],learning=[],quiet=[];
+ for(const a of entries)(archiveLesson(a)?learning:quiet).push(a);
+ document.getElementById('archiveAssets').innerHTML=archiveTable(learning);
+ document.getElementById('archiveQuietWrap').innerHTML='<details><summary>Quiet storage ('+
+   quiet.length+' shown) — low current learning value</summary>'+
+   '<div class="asset-view" id="archiveQuietAssets">'+archiveTable(quiet)+'</div></details>';
+ document.getElementById('archiveCount').textContent='('+Number(totals.dead??entries.length)+')';
+ document.getElementById('trashSummary').textContent='TRASH: '+
+   Number(totals.trash??0)+' unresolved/no-data entries excluded from scans. No history deleted.';
+}
+
 let drag=null,suppressSortUntil=0;
 function headerAt(x,y){
  const hits=document.elementsFromPoint?document.elementsFromPoint(x,y):[document.elementFromPoint(x,y)];
@@ -706,9 +742,10 @@ async function refresh(){try{
  const items=[
    'Cash: USD '+Number(x.wallet?.cash??0).toFixed(2),
    'Discovery: '+(recent.state??'None')+(elapsed===null?'':' ('+elapsed+'m ago)'),
-   'Tracked: '+Number(coverage.total??x.assets?.length??0),
+   'Active: '+Number(coverage.total??x.assets?.length??0),
    'HOT: '+Number(coverage.hot??0),
-   'NOT: '+Number(coverage.not??0),
+   'Cooling: '+Number(coverage.not??0),
+   'Archived: '+Number(x.archiveStats?.dead??0),
    'Fresh 30m: '+Number(coverage.fresh30??0)+' / '+Number(coverage.total??0)
  ];
  document.getElementById('overview').innerHTML=items.map(s=>'<span class="stat">'+s+'</span>').join('');
@@ -719,6 +756,7 @@ async function refresh(){try{
  document.getElementById('watchList').innerHTML=watchlistTable(x.pinned);
  document.getElementById('runs').innerHTML=table(['UTC','Status','Assets','Errors'],(x.runs||[]).map(v=>[v.started_at,v.state,v.observed,v.provider_errors]));
  setAssetData(x.assets,x.routes);
+ renderArchive(x.archive,x.archiveStats);
  document.getElementById('routeReviews').innerHTML=table(['UTC','Mint','Result','Approx. round-trip loss','Top impact'],(x.routes||[]).map(r=>{
  let report={};try{report=JSON.parse(r.note||'{}')}catch{}
  return [r.at,r.asset_key,report.label||'Unknown',report.estimatedRoundTripLossPct===null||report.estimatedRoundTripLossPct===undefined?'Unknown':report.estimatedRoundTripLossPct+'%',report.maxImpactPct===null||report.maxImpactPct===undefined?'Unknown':report.maxImpactPct+'%'];
@@ -836,7 +874,7 @@ async function runAuditFromTable(key){
  append('FINISHED','Inspect Safety for current 7-check result. No trade sent.','✓');
  auditInProgress=false;
 }
-for(const id of ['assets','hotAssets','notAssets']){
+for(const id of ['assets','hotAssets','notAssets','archiveAssets','archiveQuietWrap']){
  document.getElementById(id)?.addEventListener('click',event=>{
  const copy=event.target?.closest?.('button[data-address]');
  if(copy){copyAddress(copy.dataset.address);return;}
@@ -958,14 +996,16 @@ if(path==='/api/watchlist'){
  }catch{return json({error:'watchlist_write_failed'},503)}
 }
 try{const list=async(sql)=>(await env.DB.prepare(sql).all()).results||[];
-const [runs,assets,wallet,predictions,routes,pinned,greenEvents]=await Promise.all([
+const [runs,assets,wallet,predictions,routes,pinned,greenEvents,archive,archiveCounts]=await Promise.all([
 list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
-list("SELECT a.*, (SELECT e.note FROM research_events e WHERE e.asset_key=a.asset_key AND e.kind='TOKEN_SOCIALS' ORDER BY e.id DESC LIMIT 1) AS socials_json FROM assets a WHERE a.status IN ('ALIVE','STATIC','DEAD') ORDER BY a.score DESC LIMIT 500"),
+list("SELECT a.*, (SELECT e.note FROM research_events e WHERE e.asset_key=a.asset_key AND e.kind='TOKEN_SOCIALS' ORDER BY e.id DESC LIMIT 1) AS socials_json FROM assets a WHERE a.status IN ('ALIVE','STATIC') OR (a.pinned=1 AND a.status='DEAD') OR EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') ORDER BY a.pinned DESC,a.score DESC LIMIT 500"),
 list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
 list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30"),
 list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 15"),
 list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100"),
-list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','PROGRAM_UPGRADE_PROBE','PUMP_MIGRATION_PROBE','PUMP_MIGRATION_TX_PROBE') ORDER BY id DESC LIMIT 2000")]);
+list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','PROGRAM_UPGRADE_PROBE','PUMP_MIGRATION_PROBE','PUMP_MIGRATION_TX_PROBE') ORDER BY id DESC LIMIT 2000"),
+list("SELECT a.asset_key,a.chain,a.address,a.symbol,a.last_seen,a.last_action,a.score,a.observations, (SELECT MAX(o.score) FROM observations o WHERE o.asset_key=a.asset_key) AS peak_score, (SELECT COUNT(*) FROM predictions p WHERE p.asset_key=a.asset_key) AS prediction_count, (SELECT COUNT(*) FROM paper_positions p WHERE p.asset_key=a.asset_key) AS paper_count, (SELECT COUNT(*) FROM research_events e WHERE e.asset_key=a.asset_key AND e.kind!='TOKEN_SOCIALS') AS research_count FROM assets a WHERE a.status='DEAD' AND a.pinned=0 AND NOT EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') ORDER BY COALESCE((SELECT MAX(o.score) FROM observations o WHERE o.asset_key=a.asset_key),0) DESC,a.observations DESC LIMIT 500"),
+list("SELECT SUM(CASE WHEN status='DEAD' THEN 1 ELSE 0 END) AS dead, SUM(CASE WHEN status='TRASH' THEN 1 ELSE 0 END) AS trash FROM assets")]);
 const recent=new Map();
 for(const event of greenEvents){
  const key=event.asset_key+'|'+event.kind;
@@ -984,7 +1024,7 @@ const evaluated=assets.map(asset=>({...asset,...(()=>{const item=tokenTier(asset
  migrationTxEvent:recent.get(asset.asset_key+'|PUMP_MIGRATION_TX_PROBE'),now
 })}));
 const paper=await getPaperSnapshot(env);
-return json({runs,assets:evaluated,coverage:countCoverage(assets,now),wallet:wallet[0]||null,predictions,paper,routes,pinned});
+return json({runs,assets:evaluated,archive,archiveStats:archiveCounts[0]||{dead:0,trash:0},coverage:countCoverage(assets,now),wallet:wallet[0]||null,predictions,paper,routes,pinned});
 }catch(e){return json({error:'D1 query failed',message:String(e).slice(0,180)},503)}
 },async scheduled(controller,env,ctx){
   await scheduledResearch(env);
