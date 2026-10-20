@@ -108,12 +108,14 @@ jobs:
           from urllib.request import Request,urlopen
           from urllib.error import HTTPError
           url='https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}/query'.format(os.environ['CF_ACCOUNT_ID'],os.environ['CF_DATABASE_ID'])
+          # Verify table access with indexed, bounded reads. COUNT(*) over
+          # growing history consumes unnecessary D1 Free daily row allowances.
           queries=[
-            "SELECT COUNT(*) AS n FROM assets",
-            "SELECT COUNT(*) AS n FROM observations",
-            "SELECT COUNT(*) AS n FROM runs WHERE state IN ('SUCCESS','PARTIAL')",
+            "SELECT asset_key FROM assets ORDER BY asset_key LIMIT 1",
+            "SELECT id FROM observations ORDER BY id DESC LIMIT 1",
+            "SELECT id,state FROM runs ORDER BY id DESC LIMIT 1",
             "SELECT starting_cash,cash,realised FROM paper_account WHERE account='buyguy-v3'",
-            "SELECT COUNT(*) AS n FROM paper_trades"
+            "SELECT id FROM paper_trades ORDER BY id DESC LIMIT 1"
           ]
           for sql in queries:
             req=Request(url,json.dumps({'sql':sql,'params':[]}).encode(),{'authorization':'Bearer '+os.environ['CF_D1_API_TOKEN'],'content-type':'application/json','accept':'application/json'})
