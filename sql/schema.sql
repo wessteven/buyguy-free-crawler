@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS score_snapshots (
  chain TEXT NOT NULL,
  address TEXT NOT NULL,
  symbol TEXT,
+ cohort TEXT NOT NULL DEFAULT 'TOP5' CHECK(cohort IN ('TOP5','COMPARATOR')),
  pool TEXT NOT NULL,
  captured_at TEXT NOT NULL,
  version INTEGER NOT NULL DEFAULT 1,
