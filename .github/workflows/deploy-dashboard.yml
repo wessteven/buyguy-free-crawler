@@ -28,7 +28,10 @@ on:
       - 'src/price-refresh.mjs'
       - 'src/token-tiers.mjs'
       - 'src/scheduled-research.mjs'
+      - 'src/score-journal.mjs'
+      - 'src/our-score-core.mjs'
       - 'src/retirement.mjs'
+      - 'sql/schema.sql'
       - 'wrangler.toml'
   workflow_dispatch:
 permissions:
@@ -48,6 +51,8 @@ jobs:
         run: |
           node --check src/viewer.mjs
           node --check src/light-scan.mjs
+          node --check src/score-journal.mjs
+          node --check src/our-score-core.mjs
           node --test tests/*.test.mjs
       - name: Configure D1 binding locally, without committing identifiers
         env:
