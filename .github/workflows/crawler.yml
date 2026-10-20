@@ -1,7 +1,7 @@
 name: BuyGuy Free Crawler
 on:
   schedule:
-    - cron: '8,18,28,38,48,58 * * * *'
+    - cron: '8 * * * *'
   push:
     paths:
       - '.github/workflows/crawler.yml'
@@ -13,9 +13,11 @@ on:
         required: true
         options: [init, scan]
         default: scan
-# GitHub cron best-effort; a workflow config update triggers one manual-equivalent validation scan.
+# Hourly secondary fallback only: Cloudflare Worker remains the primary */10-minute
+# scanner. Avoid running two independent 10-minute readers against D1 Free quotas.
+# GitHub cron best-effort; this workflow remains manually dispatchable.
 # Source and database verified; GeckoTerminal secondary-source scanner is now tested in CI.
-# One push-run validates the newly added fallback without changing the ten-minute schedule.
+# A workflow edit can trigger a validation scan; automatic GitHub backup is hourly.
 permissions:
   contents: read
 concurrency:
