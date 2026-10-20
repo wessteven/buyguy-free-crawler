@@ -1,0 +1,21 @@
+{
+  "cycle": 10,
+  "token": "WiSP",
+  "chain": "solana",
+  "mint": "USEu5qroduzuvrSZfvs3xM1MwyU83joapQF5LMyWiSP",
+  "pool": "3jB5P1dycatrbHUBZ4xuKEciBiXYUsrsGF83fViM2aCc",
+  "asof_utc": "2026-10-20T14:20:32Z",
+  "liquidity_usd_spot_mark": 20262.07,
+  "fdv_proxy_usd": 59656.54,
+  "first_window": {
+    "buys": 44,
+    "sells": 37,
+    "distinct_payers": 36
+  },
+  "second_window": {
+    "buys": 22,
+    "sells": 21,
+    "distinct_payers": 15
+  },
+  "status": "RESEARCH_ONLY"
+}
