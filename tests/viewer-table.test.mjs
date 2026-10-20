@@ -289,9 +289,10 @@ test('WHAT\'S GOOD sorts only qualified fresh candidates, max five, with visible
   liquidity:80000,price:0.001,buys_m5:35,sells_m5:8,quote_age:5,
   score:80,change_h1:12,risk_status:'PARTIAL_ONCHAIN_REVIEW',
   last_seen:now};
+ const baseMint='So11111111111111111111111111111111111111112';
  const valid=Array.from({length:7},(_,i)=>({
-  ...template,asset_key:'solana:So11111111111111111111111111111111111111'+String(i).padStart(3,'0'),
-  address:'So11111111111111111111111111111111111111'+String(i).padStart(3,'0'),
+  ...template,asset_key:'solana:'+baseMint.slice(0,-1)+'ABCDEFG'[i],
+  address:baseMint.slice(0,-1)+'ABCDEFG'[i],
   symbol:'GOOD_'+i,liquidity:85000-i*1000,buys_m5:45-i*4
  }));
  // No hard-risk, dead, quote-stale or missing-cap token may appear even when scores would otherwise be high.
@@ -335,7 +336,8 @@ test('WHAT\'S GOOD tells the truth about unknown safety and escapes token names'
  assert.match(html,/LP lock not independently verified/);
  assert.match(html,/&lt;img src=x/);
  assert.doesNotMatch(html,/<img src=x/);
- assert.doesNotMatch(html,/onerror=/);
+ assert.doesNotMatch(html,/<img[^>]*onerror=/);
+ assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
 });
 test('Archive keeps learning-rich cases visible and hides low-signal history behind a collapsed section',async()=>{
  const page=await tableSandbox();
