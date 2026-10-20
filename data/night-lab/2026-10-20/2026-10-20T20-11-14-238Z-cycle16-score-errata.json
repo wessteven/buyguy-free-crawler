@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-20T20:11:14.238Z",
+  "cycle": 16,
+  "type": "immutable_correction",
+  "supersedes_fields": [
+    "score_provisional"
+  ],
+  "affected": [
+    "cycle16-pika-evidence.json",
+    "cycle16-wisp.json",
+    "cycle16-seed-evidence.json"
+  ],
+  "reason": "Numeric provisional scores were entered without running production OUR SCORE v1 or a fully specified v2 decision-time calculation. They must not be used as measured scores.",
+  "corrected_score": null,
+  "corrected_scoring_status": "PROVISIONAL_METRICS_ONLY",
+  "metrics": [
+    "complete five-minute windows",
+    "economically meaningful distinct fee payers",
+    "net quote flow",
+    "FDV proxy versus market cap",
+    "spot-marked reserves",
+    "unknown LP custody and sell quote"
+  ],
+  "qualification": "NONE",
+  "no_trades": true
+}
