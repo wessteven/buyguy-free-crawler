@@ -69,6 +69,20 @@ tbody tr:hover{background:#174029}
  background:#103728;font-weight:bold;display:inline-block}
 .dex-chart-link:focus-visible{outline:2px solid #a1ffc0}
 .lp-lock-verified{display:inline-block;margin-left:3px;white-space:nowrap;vertical-align:baseline;cursor:help}
+.good-title{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.good-title strong{font-size:19px;letter-spacing:.035em;color:#c0ffd5}
+.good-intro{white-space:normal;max-width:750px}
+.good-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:7px;margin:7px 0}
+.good-item{min-width:0;background:#0d2417;border:1px solid #315c41;border-left:3px solid #589b6c;padding:8px}
+.good-item h3{display:flex;align-items:center;gap:6px;justify-content:space-between;font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
+.good-item .good-grade{font-size:19px;font-weight:900;color:#c2ffcb;font-variant-numeric:tabular-nums}
+.good-verdict{display:inline-block;font-size:10px;padding:2px 5px;border:1px solid #588b65;color:#e6ffe8;white-space:nowrap}
+.good-verdict.caution{border-color:#ba965c;color:#ffdc9e}
+.good-item p{white-space:normal;overflow-wrap:anywhere;margin:4px 0;line-height:1.4}
+.good-meta{font-variant-numeric:tabular-nums;color:#a8d1b4;font-size:10px}
+.good-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.good-actions button,.good-actions a{font-size:10px;padding:4px 6px;background:#183a28;border:1px solid #497a57;color:#dcffe4;text-decoration:none;min-height:24px}
+.good-empty{white-space:normal;color:#e2c998;padding:9px;border:1px dashed #75633e}
 .research-guide{font-size:10px}
 #greenDialog{background:#09190e;color:#bbfccc;border:1px solid #467553;font:11px ui-monospace,Consolas,monospace;
  width:min(92vw,520px);max-height:76vh;overflow:auto;padding:12px}
@@ -137,7 +151,8 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p></div>
 <div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
-<button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="true" tabindex="0">TOKEN DATA</button>
+<button class="bg-tab" id="tab-good" role="tab" type="button" data-tab="good" aria-controls="panel-good" aria-selected="true" tabindex="0">WHAT'S GOOD?</button>
+<button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="false" tabindex="-1">TOKEN DATA</button>
 <button class="bg-tab" id="tab-hot" role="tab" type="button" data-tab="hot" aria-controls="panel-hot" aria-selected="false" tabindex="-1">🔥 HOT</button>
 <button class="bg-tab" id="tab-not" role="tab" type="button" data-tab="not" aria-controls="panel-not" aria-selected="false" tabindex="-1">🥱 NOT</button>
 <button class="bg-tab" id="tab-archive" role="tab" type="button" data-tab="archive" aria-controls="panel-archive" aria-selected="false" tabindex="-1">📚 Archive</button>
@@ -146,7 +161,14 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <button class="bg-tab" id="tab-outcomes" role="tab" type="button" data-tab="outcomes" aria-controls="panel-outcomes" aria-selected="false" tabindex="-1">Outcomes</button>
 <button class="bg-tab" id="tab-address" role="tab" type="button" data-tab="address" aria-controls="panel-address" aria-selected="false" tabindex="-1">+ Address</button>
 </nav>
-<div class="tab-panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research">
+<div class="tab-panel" id="panel-good" role="tabpanel" aria-labelledby="tab-good">
+<section><h2 class="good-title"><strong>WHAT'S GOOD?</strong> TOP RESEARCH CANDIDATES <span id="goodCount"></span></h2>
+<p class="hint good-intro">Only the best five eligible signals, ranked by OUR SCORE. Each verdict describes research priority, not a recommendation to buy. No qualifying candidates? We show none rather than fill the list with noise.</p>
+<div id="goodCards" class="good-list" aria-live="polite" aria-label="Five strongest currently qualified crypto research candidates"></div>
+<p id="goodFootnote" class="hint">Evidence is indicative; prices and buying activity can be spoofed. Never assume an LP lock or executable exit.</p>
+<button type="button" id="goodResearch" aria-label="Open full sortable token research">Full research + all tokens ↗</button>
+</section></div>
+<div class="tab-panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research" hidden>
 <section><h2>Token research</h2><div class="asset-toolbar"><button id="sortOurScore" type="button" title="Sort all visible tokens from highest to lowest OUR SCORE">Rank OUR SCORE ▼</button><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div><span id="copyStatus" role="status" aria-live="polite"></span>
 </section>
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
@@ -268,9 +290,11 @@ const savedSort=storedValue(sortKey);
 let assetSort=(savedSort&&columnByKey[savedSort.key]&&['asc','desc'].includes(savedSort.direction))?
  savedSort:{key:'score',direction:'desc'};
 let assetRows=[];
-const tabKey='buyguy.activeTab.v1';
-const dashboardTabs=['research','hot','not','archive','wallet','runs','outcomes','address'];
-let activeTab=dashboardTabs.includes(storedValue(tabKey))?storedValue(tabKey):'research';
+// New default landing page; keep users' new choice across reloads, but migrate
+// old v1 research-panel preference to the clearer WHAT'S GOOD? home.
+const tabKey='buyguy.activeTab.v2';
+const dashboardTabs=['good','research','hot','not','archive','wallet','runs','outcomes','address'];
+let activeTab=dashboardTabs.includes(storedValue(tabKey))?storedValue(tabKey):'good';
 function activateTab(tab,{focus=false}={}){
  if(!dashboardTabs.includes(tab))return false;
  activeTab=tab;
@@ -655,7 +679,98 @@ function moveColumnToEnd(key){
  assetOrder=assetOrder.filter(item=>item!==key).concat(key);
  saveValue(layoutKey,assetOrder);renderAssets();return true;
 }
-function setAssetData(records,routes=[]){assetRows=(Array.isArray(records)?records:[]).map(a=>assetRow(a,routes));renderAssets()}
+function setAssetData(records,routes=[]){assetRows=(Array.isArray(records)?records:[]).map(a=>assetRow(a,routes));renderAssets();renderGood()}
+// WHAT'S GOOD? deliberately uses only fresh verified-mint market records.
+// Do not promote risks, stale data, archived assets or missing-cap tokens just
+// to make the top five. OUR SCORE itself remains a heuristic, not a buy signal.
+function goodVerdict(row){
+ const age=ourNum(row.quote_age),liq=ourNum(row.liquidity),
+  buys=ourNum(row.buys_m5),sells=ourNum(row.sells_m5),
+  change=ourNum(row.change_h1),safety=ourNum(row.safety);
+ if(row.green?.status==='RISK'||['MINT_CONTROL_RISK','HOLDER_CONCENTRATION_RISK'].includes(row.risk_status))
+  return {label:'AVOID',tone:'caution',reason:'Critical on-chain risk evidence outweighs momentum.'};
+ if(age===null||age>30||liq===null||liq<15000)
+  return {label:'CAUTION',tone:'caution',reason:'Market data or pool depth is not strong enough for a live watch.'};
+ if(change!==null&&change>80)
+  return {label:'CAUTION',tone:'caution',reason:'Large one-hour spike — potential late-entry or reversal risk.'};
+ if(safety===null||safety<35)
+  return {label:'CAUTION',tone:'caution',reason:'Market momentum may be real, but safety evidence is incomplete.'};
+ if(row.our_score>=78&&row.tier==='HOT'&&age<=20&&liq>=50000&&
+    buys!==null&&sells!==null&&buys>=10&&buys>=1.25*Math.max(1,sells))
+  return {label:'BUY WATCH',tone:'',reason:'Strong recent activity and relatively deep liquidity merit a closer look, not an automatic buy.'};
+ if(row.our_score>=68&&row.tier==='HOT')
+  return {label:'RISING',tone:'',reason:'Recent buying conditions are strengthening, pending confirmation.'};
+ if(row.our_score>=55)
+  return {label:'WAIT',tone:'',reason:'Worth monitoring, but conviction or follow-through is insufficient.'};
+ return {label:'CAUTION',tone:'caution',reason:'Low composite ranking; not an immediate priority.'};
+}
+function goodReasons(row){
+ const positive=[],cautions=[];
+ const buys=ourNum(row.buys_m5),sells=ourNum(row.sells_m5),
+  age=ourNum(row.quote_age),liq=ourNum(row.liquidity),
+  move=ourNum(row.change_h1),ratio=ourNum(row.liq_cap_pct);
+ if(buys!==null&&sells!==null&&buys>=8&&buys>=1.25*Math.max(1,sells))
+  positive.push('5m buying trades exceed selling trades');
+ if(liq!==null&&liq>=50000)positive.push('pool liquidity at least $50k');
+ if(ratio!==null&&ratio>=25&&ratio<=200)
+  positive.push('liquidity is '+formatLiqCapPct(ratio)+' of reported cap');
+ if(age!==null&&age<=15)positive.push('recent quote');
+ if(row.tier==='HOT')positive.push('HOT momentum screen');
+ if(!positive.length)positive.push('meets the minimum current-data screen');
+ if(row.safety===null||row.safety<35)cautions.push('safety evidence limited');
+ if(!verifiedPoolLock(row))cautions.push('LP lock not independently verified');
+ if(liq!==null&&liq<50000)cautions.push('pool liquidity below $50k');
+ if(buys===null||sells===null||buys<=sells)cautions.push('buying pressure not yet convincing');
+ if(move!==null&&move>35)cautions.push('1h move may be extended');
+ if(row.topBps!==null&&row.topBps!==undefined&&Number(row.topBps)>2000)
+  cautions.push('large token-account concentration; owners unconfirmed');
+ if(row.green?.status==='RISK')cautions.push('on-chain risk flag');
+ if(!cautions.length)cautions.push('trade execution and beneficial ownership not fully verified');
+ return {why:positive.slice(0,3).join(' · '),risk:cautions.slice(0,3).join(' · ')};
+}
+function goodCandidates(rows=assetRows){
+ return (Array.isArray(rows)?rows:[]).filter(row=>{
+  const liq=ourNum(row.liquidity),age=ourNum(row.quote_age),
+   buy=ourNum(row.buys_m5),sell=ourNum(row.sells_m5),cap=ourNum(row.market_cap);
+  return ['ALIVE','STATIC'].includes(row.status)&&
+   row.our_score!==null&&Number.isFinite(row.our_score)&&
+   row.our_score>=35&&liq!==null&&liq>=15000&&
+   cap!==null&&cap>0&&age!==null&&age>=0&&age<=30&&
+   buy!==null&&sell!==null&&buy+sell>=5&&
+   row.green?.status!=='RISK'&&
+   !['MINT_CONTROL_RISK','HOLDER_CONCENTRATION_RISK'].includes(row.risk_status);
+ }).sort((a,b)=>b.our_score-a.our_score||
+   (ourNum(b.liquidity)||0)-(ourNum(a.liquidity)||0)||
+   String(a.asset_key||'').localeCompare(String(b.asset_key||''))).slice(0,5);
+}
+function renderGood(){
+ const wrap=document.getElementById('goodCards');
+ if(!wrap)return;
+ const picks=goodCandidates();
+ const label=document.getElementById('goodCount');
+ if(label)label.textContent='('+picks.length+'/5)';
+ if(!picks.length){
+  wrap.innerHTML='<p class="good-empty">No currently qualified candidates. BuyGuy has not verified enough fresh, liquid activity to highlight a token. Check HOT or full research for the underlying observations.</p>';
+  return;
+ }
+ wrap.innerHTML=picks.map((row,i)=>{
+  const verdict=goodVerdict(row),proof=goodReasons(row),url=dexChartUrl(row.chain,row.address);
+  const link=url?'<a href="'+escapeSocial(url)+'" target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer">Chart ↗</a>':'';
+  const name=escapeSocial(row.symbol||'Unnamed token'),key=escapeSocial(row.asset_key||'');
+  return '<article class="good-item"><h3><span>#'+(i+1)+' '+name+'</span><span class="good-grade">'+row.our_score.toFixed(1)+'/100</span></h3>'+
+    '<span class="good-verdict '+verdict.tone+'">'+verdict.label+'</span>'+
+    '<p><strong>Why:</strong> '+escapeSocial(proof.why)+'.</p>'+
+    '<p><strong>Watch out:</strong> '+escapeSocial(proof.risk)+'.</p>'+
+    '<p class="good-meta">'+escapeSocial(row.chain)+' · Liq '+formatUsd(row.liquidity)+
+     ' · Liq/Cap '+formatLiqCapPct(row.liq_cap_pct)+' · 5m '+row.buys_m5+'/'+row.sells_m5+
+     ' · Quote '+(row.quote_age===null?'unknown':row.quote_age+'m')+'</p>'+
+    '<p class="hint">'+escapeSocial(verdict.reason)+'</p>'+
+    '<div class="good-actions"><button type="button" data-our-key="'+key+'">Why this score?</button>'+
+    '<button type="button" data-green-key="'+key+'">Safety checks</button>'+
+    '<button type="button" data-audit-key="'+key+'">Run audit</button>'+link+'</div></article>';
+ }).join('');
+}
+
 function archiveLesson(a){
  if(Number(a.paper_count)>0)return 'Paper trading case study';
  if(Number(a.prediction_count)>0)return 'Prediction outcome';
@@ -906,6 +1021,7 @@ document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter
 document.getElementById('logout').onclick=logout;
 document.getElementById('refresh').onclick=refresh;
 document.getElementById('sortOurScore').onclick=()=>{assetSort={key:'our_score',direction:'desc'};saveValue(sortKey,assetSort);renderAssets();};
+document.getElementById('goodResearch').onclick=()=>{activateTab('research',{focus:true});assetSort={key:'our_score',direction:'desc'};saveValue(sortKey,assetSort);renderAssets();};
 document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
 function inspectOurScore(key){
  const row=assetRows.find(r=>r.asset_key===key);
@@ -1009,7 +1125,7 @@ async function runAuditFromTable(key){
  append('FINISHED','Inspect Safety for current 7-check result. No trade sent.','✓');
  auditInProgress=false;
 }
-for(const id of ['assets','hotAssets','notAssets','archiveAssets','archiveQuietWrap']){
+for(const id of ['assets','hotAssets','notAssets','archiveAssets','archiveQuietWrap','goodCards']){
  document.getElementById(id)?.addEventListener('click',event=>{
  const our=event.target?.closest?.('button[data-our-key]');
  if(our){inspectOurScore(our.dataset.ourKey);return;}
