@@ -1,0 +1,3 @@
+BORLY_A: ECFmFaHyJ8krXErN1QAxqUq97xCFUWYv9Ax5j2Aspump
+BORLY_B: k8j9VzL8983gJ66jz273UqU8PdJHNstGBooijX2pump
+These are distinct Solana tokens. Do not merge history by ticker.
