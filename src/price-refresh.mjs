@@ -49,7 +49,11 @@ export function parseQuoteRefresh(pairs,tracked,nowMs=Date.now()){
       pool:p.pairAddress,matchedPool,price,liquidity:liq,market_cap:cap,
       buys_m5:Math.round(buys),sells_m5:Math.round(sells),tx_m5:Math.round(buys+sells),
       change_h1:change,volume_h24:volume,pool_created:created,
-      score,status:(score>=62&&liq>=50000)?'ALIVE':'STATIC',
+      score,status:(old.status==='DEAD'&&
+       !(score>=60&&liq>=50000&&buys>=8&&buys+sells>=12&&
+        buys>=1.2*Math.max(1,sells)&&change>-15&&
+        !['MINT_CONTROL_RISK','HOLDER_CONCENTRATION_RISK'].includes(old.risk_status)))?
+         'DEAD':((score>=62&&liq>=50000)?'ALIVE':'STATIC'),
       socials:collectSocialLinks(p.info)});
   }
   return [...result.values()];
@@ -90,10 +94,12 @@ export async function refreshKnownQuotes(env,{fetcher=fetch,now=new Date().toISO
       stmts.push(env.DB.prepare(`UPDATE assets SET symbol=?,pool=?,provider='DEX Screener',
         updated_at=?,last_seen=?,pool_created=COALESCE(pool_created,?),
         price=?,liquidity=?,market_cap=?,buys_m5=?,sells_m5=?,tx_m5=?,change_h1=?,volume_h24=?,
-        score=?,status=?,observations=observations+1,misses=0
+        score=?,status=?,observations=observations+1,misses=0,
+        last_action=CASE WHEN status='DEAD' AND ?!='DEAD'
+          THEN 'REACTIVATED: fresh verified buyer momentum' ELSE last_action END
         WHERE asset_key=? AND status!='TRASH'`)
         .bind(q.symbol,q.pool,now,now,q.pool_created,q.price,q.liquidity,q.market_cap,
-          q.buys_m5,q.sells_m5,q.tx_m5,q.change_h1,q.volume_h24,q.score,q.status,q.asset_key));
+          q.buys_m5,q.sells_m5,q.tx_m5,q.change_h1,q.volume_h24,q.score,q.status,q.status,q.asset_key));
       stmts.push(env.DB.prepare(`INSERT OR IGNORE INTO observations
         (asset_key,seen_at,pool,provider,price,liquidity,buys_m5,sells_m5,score)
         VALUES(?,?,?,'DEX Screener',?,?,?,?,?)`)
