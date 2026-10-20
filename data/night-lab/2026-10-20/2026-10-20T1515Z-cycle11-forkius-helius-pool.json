@@ -1,0 +1,993 @@
+{
+  "symbol": "FORKIUS",
+  "pool": "8uzUfQhxmTSGCunXB6ndTtZHxexyshEKbgsZjVAXh2tT",
+  "mint": "7xTMgacureYyKpaQZwP6LHR1tywEaBjAYfj9zidipump",
+  "retrieved_utc": "2026-10-20T15:14:35.475Z",
+  "latest_timestamp": 1792509253,
+  "earliest_timestamp": 1792507557,
+  "count": 100,
+  "windows": [
+    {
+      "start_utc": "2026-10-20T15:05:00.000Z",
+      "end_utc": "2026-10-20T15:10:00.000Z",
+      "sample_tx": 12,
+      "buys": 6,
+      "sells": 5,
+      "distinct_buy_fee_payers": 5,
+      "distinct_sell_fee_payers": 4,
+      "sol_buy_notional": 2.299650439,
+      "coverage_complete": true,
+      "price_sol_first": 1.9659691083489678e-7,
+      "price_sol_last": 1.8661123727556183e-7
+    },
+    {
+      "start_utc": "2026-10-20T15:00:00.000Z",
+      "end_utc": "2026-10-20T15:05:00.000Z",
+      "sample_tx": 31,
+      "buys": 7,
+      "sells": 24,
+      "distinct_buy_fee_payers": 6,
+      "distinct_sell_fee_payers": 19,
+      "sol_buy_notional": 4.903824253,
+      "coverage_complete": true,
+      "price_sol_first": 1.883910822415949e-7,
+      "price_sol_last": 1.8959516543371469e-7
+    },
+    {
+      "start_utc": "2026-10-20T14:55:00.000Z",
+      "end_utc": "2026-10-20T15:00:00.000Z",
+      "sample_tx": 25,
+      "buys": 18,
+      "sells": 7,
+      "distinct_buy_fee_payers": 12,
+      "distinct_sell_fee_payers": 7,
+      "sol_buy_notional": 12.158908474,
+      "coverage_complete": true,
+      "price_sol_first": 1.8864050875347053e-7,
+      "price_sol_last": 1.3187134447211717e-7
+    },
+    {
+      "start_utc": "2026-10-20T14:50:00.000Z",
+      "end_utc": "2026-10-20T14:55:00.000Z",
+      "sample_tx": 12,
+      "buys": 4,
+      "sells": 7,
+      "distinct_buy_fee_payers": 4,
+      "distinct_sell_fee_payers": 7,
+      "sol_buy_notional": 0.860468531,
+      "coverage_complete": true,
+      "price_sol_first": 1.3046220075950594e-7,
+      "price_sol_last": 1.340086392690412e-7
+    },
+    {
+      "start_utc": "2026-10-20T14:45:00.000Z",
+      "end_utc": "2026-10-20T14:50:00.000Z",
+      "sample_tx": 4,
+      "buys": 2,
+      "sells": 2,
+      "distinct_buy_fee_payers": 2,
+      "distinct_sell_fee_payers": 2,
+      "sol_buy_notional": 1.070557117,
+      "coverage_complete": false,
+      "price_sol_first": 1.3089097834819624e-7,
+      "price_sol_last": 1.3464338841149814e-7
+    },
+    {
+      "start_utc": "2026-10-20T14:40:00.000Z",
+      "end_utc": "2026-10-20T14:45:00.000Z",
+      "sample_tx": 0,
+      "buys": 0,
+      "sells": 0,
+      "distinct_buy_fee_payers": 0,
+      "distinct_sell_fee_payers": 0,
+      "sol_buy_notional": 0,
+      "coverage_complete": false,
+      "price_sol_first": null,
+      "price_sol_last": null
+    }
+  ],
+  "parsed": [
+    {
+      "t": 1792509253,
+      "signature": "2e1HveUiMJrad3EeQ8SZj6HV5oyiqYtPnsqr1CGQkiwHGA7is8utfh3kfL8rKiuhvce69jfHaybUhbf4QMckaLKD",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 8352529.032829,
+      "sol": 1.479086977,
+      "price_sol": 1.7708253047508814e-7
+    },
+    {
+      "t": 1792509201,
+      "signature": "5mE1SoWnwUAHX5EqusBY6dnShfL4AgRntXqM3DDCZPastXCbZb2rLLPwh4ojYDFYq1EVudwtqNJxsyQrvuysyZEr",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 120132.721821,
+      "sol": 0.021820466,
+      "price_sol": 1.816363241358412e-7
+    },
+    {
+      "t": 1792509196,
+      "signature": "57SFWHCR9roXbFujKptmsHVeUUx9JMb8vWqY25w5Epg7epCwd4EVkHJ34E9DRVis1W4bvdePip41Ruyt8L7GqAnT",
+      "payer": "6dDspyYy6TuARFJieNFGKDP9Py3myb8SFz7fNbxdtDH6",
+      "side": "sell",
+      "token": 228842.208458,
+      "sol": 0.041930946,
+      "price_sol": 1.832308221570746e-7
+    },
+    {
+      "t": 1792509175,
+      "signature": "5krjT6BEwdcCwUv6iFXkaU14UzyrvuctmENKJd1KXmUNFb6LY2aufM3W4oth2rKEGNb19Lzy1pBzBJpnq3yjWWwF",
+      "payer": "gasTzr94Pmp4Gf8vknQnqxeYxdgwFjbgdJa4msYRpnB",
+      "side": "buy",
+      "token": 289817.136019,
+      "sol": 0.053521089,
+      "price_sol": 1.8467192704744425e-7
+    },
+    {
+      "t": 1792509131,
+      "signature": "5icfULsAnyFBG5bFmjMXs6bKoTceQMz9dtHFhH4qpZ9545cxyKk2c3KcJDESSMSb6ZUG7iPrd4ytTzgXdrAdHBzK",
+      "payer": "E8gzuYbXXWoEvndsPwNuz7dCVeBFtAzVRHWFLKr84hxp",
+      "side": "sell",
+      "token": 642.677572,
+      "sol": 0.000117632,
+      "price_sol": 1.8303423851237178e-7
+    },
+    {
+      "t": 1792509131,
+      "signature": "5BYo9paMvgKR6FsHRBPgkAKPpi5j1GLrcHvyvtd9juhupLaxj4LmwnSBvM4HvTAzi7qhqiUcfkDXMMvLw46cLDKw",
+      "payer": "7BNaxx6KdUYrjACNQZ9He26NBFoFxujQMAfNLnArLGH5",
+      "side": "sell",
+      "token": 7018531.652091,
+      "sol": 1.3125980080000001,
+      "price_sol": 1.8701889128176029e-7
+    },
+    {
+      "t": 1792509129,
+      "signature": "5v8JDQvGweGVGQfjZoMW2qAmu3hmc51e2EkQr1QmDdHaWxRvEZ6vfbNGhTc4yuWDapCr3npf5pXZfHhcPbfBk3UC",
+      "payer": "8JGDqunoPPVEAG8TsQGyLZZJREsMPTrnkVpPjwGbRvSR",
+      "side": "sell",
+      "token": 53179.893864,
+      "sol": 0.010085986,
+      "price_sol": 1.8965788133751212e-7
+    },
+    {
+      "t": 1792509123,
+      "signature": "CFkbqy4gprQa9mErv3nWNjgGeL4MCF8Y36NNsuWa5gcq8wrNesM91cCqsUgKBHN21ztR6kodBC47aMZdNnAfbsD",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 122605.216487,
+      "sol": 0.023265728,
+      "price_sol": 1.8976132228816625e-7
+    },
+    {
+      "t": 1792509113,
+      "signature": "2gHeyAo8y6WDLXBtqDBAgYA7QkMuHqNMCpAGBZoabPFQtUKeF1quVXyyz3ZQasN7KSnTK4TEUehrBWRaW944gDjn",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 119830.073908,
+      "sol": 0.02275622,
+      "price_sol": 1.899040804854312e-7
+    },
+    {
+      "t": 1792509107,
+      "signature": "5zrsksho64SrRwAiPbvv9tQQPekKfSrmP7R6QAe4h21h9Ne9KhNbHQjPvrZ9b3fyQYjDtemaf3WW7xWt3gyZ4bv5",
+      "payer": "Hz8u5qcV1zVHVmu6qziLUbinNtfu2kFvmYVTEYLong23",
+      "side": "sell",
+      "token": 5157.966621,
+      "sol": 0.0009798979999999999,
+      "price_sol": 1.8997757682464847e-7
+    },
+    {
+      "t": 1792509102,
+      "signature": "5U9UDxbWq21T1H3foRQnpENWWwnYyzNzxoh4aa4f3yuJPVuqXv76u9Zw6mtyxPWqmroyudDnqV9deLJDoUrwGJxJ",
+      "payer": "Hz8u5qcV1zVHVmu6qziLUbinNtfu2kFvmYVTEYLong23",
+      "side": "buy",
+      "token": 5157.966621,
+      "sol": 0.000995407,
+      "price_sol": 1.9298438185841065e-7
+    },
+    {
+      "t": 1792509100,
+      "signature": "3Dzih7fFiiwg6rCjcLooeJTd3nYK3KZoQLmafEdfiWRVbkidxN3aq3npveCzEf471uajuadYvrbwqoHJfSMLvWSQ",
+      "payer": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "side": "sell",
+      "token": 924678.106378,
+      "sol": 0.177529291,
+      "price_sol": 1.9199036916250685e-7
+    },
+    {
+      "t": 1792509098,
+      "signature": "2YNcXGpNTVzWU3jr52SHyH3jS9GU4Q9PNYjCVvSa9BwFc5M7oq2DGHxCHguNeC2Xkp2ALqWfDu11LMAuRer22yA6",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 4721658.246376,
+      "sol": 0.915618648,
+      "price_sol": 1.9391887345992523e-7
+    },
+    {
+      "t": 1792509070,
+      "signature": "4dnokjDWWmbm2mjyhe4j2h4yWDsuDzd7K6ZGw5X4dAhDco8ba7e5kVukqfL4o1x28d7MA1npTrBHt2xmzn7qyeRe",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "buy",
+      "token": 151043.152037,
+      "sol": 0.030182981,
+      "price_sol": 1.9983018490375707e-7
+    },
+    {
+      "t": 1792509065,
+      "signature": "4r81qcXJwvWxJua5pPBBCWemx4kTKsoj1x6VJEMFvLa8Pcz7QvCEpLHig7ZYUehKHGbYvBrpqEccE9Ng8CwxnWB",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "buy",
+      "token": 88607.919715,
+      "sol": 0.017693143,
+      "price_sol": 1.996790248197737e-7
+    },
+    {
+      "t": 1792509004,
+      "signature": "4zmADjbGYrxp3wVvnRVR5xXAA96RkqYsfMbgfgEst9MqD3ryCdLwQdpQgRQhsdBZMzv789PRBoMYfUca4RiJyw3H",
+      "payer": "EvJnystXaXP4M7Upgv1kSdurPjJQqQAUwcygogCyRkhH",
+      "side": "sell",
+      "token": 7177.830342,
+      "sol": 0.0014105699999999999,
+      "price_sol": 1.9651760111217183e-7
+    },
+    {
+      "t": 1792508973,
+      "signature": "2h6TKyb42x1XxsEZ9AGqNZXT54uvwKQrnH62EnzAiJi6XoVHfXjvh2S3HRNt5e7mBAV2FNzwsEeBuvipcYDnxmS8",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 120132.72182,
+      "sol": 0.023617722,
+      "price_sol": 1.9659691083489678e-7
+    },
+    {
+      "t": 1792508968,
+      "signature": "4hE2omoqBSh2wBcK7K1vVYYdpEmF8xsxcKhAsitDimuwTYqECMZWPZKBfAW7anSMfaieY39nu4uZcg4ir5UeoPzj",
+      "payer": "FHpcNSe6tb2n15bAdq4BkeYWGyZKFD7yLYrH92ng7wCT",
+      "side": "unknown",
+      "token": null,
+      "sol": 0.115390178,
+      "price_sol": null
+    },
+    {
+      "t": 1792508961,
+      "signature": "52v91xP28zS51BQvvwSQBG47bNC6o6hzYzAazf8GAfdptp1oHFQd32rKHmCHPnx1W6dJT4kLoywkXdW5mp4nR9pB",
+      "payer": "VaMPg59pVyKNg3xWHnDUtT9zN6XZbt1LoogRveXBWSB",
+      "side": "buy",
+      "token": 499027.877332,
+      "sol": 0.098785184,
+      "price_sol": 1.979552415551303e-7
+    },
+    {
+      "t": 1792508959,
+      "signature": "3WLjauWQUo4DAkGVXjWeieFF2AR8Z8iEa7uTjJ5pB3n71p4NXhNNQpT8G2nvQGjeBgNRCEsmZ7355f6tXncygVwV",
+      "payer": "VaMPg59pVyKNg3xWHnDUtT9zN6XZbt1LoogRveXBWSB",
+      "side": "buy",
+      "token": 1254478.581001,
+      "sol": 0.246962962,
+      "price_sol": 1.9686502881774044e-7
+    },
+    {
+      "t": 1792508920,
+      "signature": "5eYcobUziQkv1u1VmGqgkmao4nnFqVXoHTp94hAjAizNjBxf7R5SSsiqA9Xtbbty4XwqJCwFXj9yUXpkBCVrCGg7",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "buy",
+      "token": 944638.159058,
+      "sol": 0.186098201,
+      "price_sol": 1.97004746437068e-7
+    },
+    {
+      "t": 1792508904,
+      "signature": "5bo49CAo8p5thCDjRsPUYNaH3btnWj1CRayEo2E3gXYPEP6Mvk6UsAeqt2M1VLnSLrKUKs8CGdYYeZnw2L8RnhFK",
+      "payer": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "side": "buy",
+      "token": 924678.106378,
+      "sol": 0.179728106,
+      "price_sol": 1.94368293961238e-7
+    },
+    {
+      "t": 1792508902,
+      "signature": "4WMxekWqubtiRsFqdPrUEkxHe93aQhC6dNQQJreKnbK1nEFDWVUt53xn7fwEGY89f6NunfhFBPUTXyAqdbJBgsPt",
+      "payer": "F8F58PjGKvATo64tpZymiMg46FSb4kzYnxDz2frcXnV3",
+      "side": "buy",
+      "token": 5126900.004755,
+      "sol": 0.977973332,
+      "price_sol": 1.907533462897595e-7
+    },
+    {
+      "t": 1792508892,
+      "signature": "3EGmNCbw5FAijXegeiuAVCBSVB8V3tDSukktW9zYAdkeV4umG1fv8HGx483AVcVN1UCaAaWYRGjf6MXph8VrfcDc",
+      "payer": "Bq6d8H2E53VSh8AhHzS8HowuMXf7BZihN6nPCmiWx8S1",
+      "side": "sell",
+      "token": 40482.605334,
+      "sol": 0.007540302,
+      "price_sol": 1.862602947065551e-7
+    },
+    {
+      "t": 1792508772,
+      "signature": "55u7opZeeYWxCsKDWpSvxmukaTBTfbfhiw5q2bzJiDdTWtoABCYxG6HMt2xUyiVY9jKuv4LRiGGbwPZBHyXmXK2M",
+      "payer": "CcgumDraQdKzVX9CRVJSnTt3E2R6U3pVGbxdyxtR4tVZ",
+      "side": "buy",
+      "token": 3281540.320338,
+      "sol": 0.610102654,
+      "price_sol": 1.8591959703154253e-7
+    },
+    {
+      "t": 1792508770,
+      "signature": "2FfpKghobqeEUjcqKCqfydAoq5bQy54ye9wmeM8Y4QxvrQYnq65EJyEPVk6eP5UYmZLF6ppQbRgBvf7aFGBhcL2k",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 1356868.739528,
+      "sol": 0.248766499,
+      "price_sol": 1.833386618417754e-7
+    },
+    {
+      "t": 1792508742,
+      "signature": "Bz6cnEpja9dZXXKRydyohuKG9nA17Pr6SrttJxj11PCVCMVfvchx27bYk1TjQMeJTH5bCtTpQWzT484GaHZnQv4",
+      "payer": "3nBDpV7QiVia5Wkxe3Ah21re3zQ4T47AmbCwFbxQ89Cw",
+      "side": "sell",
+      "token": 116926.351861,
+      "sol": 0.021533675999999998,
+      "price_sol": 1.8416443904449235e-7
+    },
+    {
+      "t": 1792508700,
+      "signature": "48BrFwq14pYynudhmMfqDCq4jN7z1jogkQEhRD1QoM7XeMgE9LeTBLNaU6mDt6thmM7SutpsNrRtX5JALSmHkkmB",
+      "payer": "sXvzkVMtx3yd2Q56ST6d5cv2bJAzWu27cYih9eNgqTe",
+      "side": "sell",
+      "token": 1684405.626312,
+      "sol": 0.31432901799999996,
+      "price_sol": 1.8661123727556183e-7
+    },
+    {
+      "t": 1792508697,
+      "signature": "2paZ2aqKXnYn4PJpwoh3okN97zVqcTf3S9AAGhaoJzNP8JJdA5PdDDmjQbdaGHhuzk9T1LUiVQgU7JXhzwhQXQje",
+      "payer": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "side": "sell",
+      "token": 1407154.032164,
+      "sol": 0.265095271,
+      "price_sol": 1.883910822415949e-7
+    },
+    {
+      "t": 1792508696,
+      "signature": "5imAasGA5gmHd7kcWZ4jT6JJ3mWenz5hWLCMAo4mWTbqWCELC1tYefZjtkUHqftNBypvmJhNRgaun99xM4x8Zg5M",
+      "payer": "5bqrAYZj63x1ASLk5XcGbbeQECia6jpgJPk1BY2p9RG9",
+      "side": "sell",
+      "token": 1722555.332712,
+      "sol": 0.325156928,
+      "price_sol": 1.8876428630485342e-7
+    },
+    {
+      "t": 1792508685,
+      "signature": "5tuttJ4LsfpFTan1QGxAcfjhDZBWMcX2b6wZ1LJRmR3MQ2LZPS8E9XmUiZAVNk9V4NKp8P7tZhqHPnmgddkQzx5t",
+      "payer": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "side": "sell",
+      "token": 1231783.217487,
+      "sol": 0.236464753,
+      "price_sol": 1.9196945504941953e-7
+    },
+    {
+      "t": 1792508681,
+      "signature": "5SgYrpHKCHU6CpETKXjH8Ez5QNjJSk6rFFjtELzsZ7i3zyw5W3J8YsRAKAUX1RfKztUKSuWZtPkZdqRyGCzvtBeT",
+      "payer": "DFdmzR43TS7zTEijmTtw9PndJ1m8NGkiBJmFcqygRGWU",
+      "side": "sell",
+      "token": 479105.072638,
+      "sol": 0.091756718,
+      "price_sol": 1.9151689940325286e-7
+    },
+    {
+      "t": 1792508669,
+      "signature": "5FZmVSLfAAWDnqXNjasemghGtydG5iiViynkMUjYQYxdCavkSGDdy1FdANHLQW6bxCdYzkneedtg2wq2akoBbiBF",
+      "payer": "7kHCxFPbzQaZ2aCMz9CbbnAzQry6M8KuK799DgtcyxsX",
+      "side": "sell",
+      "token": 258225.69188,
+      "sol": 0.049950576000000003,
+      "price_sol": 1.9343766933621975e-7
+    },
+    {
+      "t": 1792508636,
+      "signature": "258MMrRL9FcdRUjqML7E9FC854bcxoX8zKN4eLqnBF9dGoKAYc9keC2w2zyW15nPpBDNhX9xAmUQPR6cWso1UZGo",
+      "payer": "6MYqy9XgyAjaq6mD7gXV4SEEApUDbiQe4tfzektUBDBa",
+      "side": "buy",
+      "token": 101025.090527,
+      "sol": 0.019709067,
+      "price_sol": 1.9509081256138592e-7
+    },
+    {
+      "t": 1792508634,
+      "signature": "a8qPuvMhiUuaPHM3BMw3bdm2Buy7uqMW9vUFdiKjM7ARTWvP4buhMtcCwaDUzQk81o1LWkT4Az9j3paTZQh4hcg",
+      "payer": "4otmBRrpJChHcnDc9ShBQspPXsWicKmE2NEsnfEZPTEK",
+      "side": "buy",
+      "token": 7244876.231828,
+      "sol": 1.381725022,
+      "price_sol": 1.9071754682707232e-7
+    },
+    {
+      "t": 1792508633,
+      "signature": "SNpcpsAMMTj7xMKYf6ZpnGcmZADU4HKQcUQ2qCqBNNDqqoQ1tcXYbpmKRpw9at6zvRCpLWVGXtm9DEeEkXdHsvz",
+      "payer": "Bbc7EVyFRc1JCXN83drM2cqaRG5P4PBWou1CnHuEexGN",
+      "side": "sell",
+      "token": 2323238.705766,
+      "sol": 0.429583232,
+      "price_sol": 1.8490705708966794e-7
+    },
+    {
+      "t": 1792508628,
+      "signature": "wvtj7yqhcLqHoUN9vyxbofuadYrdwrvhJkA9uhZfDFzmnCM11eZPUCTjcXddGgfL89x28KbVywt2rcLQxLc9dZf",
+      "payer": "VMAq9V1wMFaJAQcjV7RwnjHGAdkVBmYV4zWShJ86NpF",
+      "side": "sell",
+      "token": 621785.155346,
+      "sol": 0.116909367,
+      "price_sol": 1.8802212628402867e-7
+    },
+    {
+      "t": 1792508625,
+      "signature": "2JGfo1BCxAoTADzjwddVrth412pfTwbWiy4KxrJgAQvB3f22fAuRpmvfSKFpPsGMK9bW5uN9oisLMqnRkYj1N8w6",
+      "payer": "7oaRBFMkCc2ZFehDEKDGtgZBTDYrKyKLwzNiSNCdryA6",
+      "side": "sell",
+      "token": 566598.244541,
+      "sol": 0.106105282,
+      "price_sol": 1.8726722686187575e-7
+    },
+    {
+      "t": 1792508619,
+      "signature": "4EcLQBf2GfeLxJtCzt9X6rqsUSmQvEUn3uDT5e2Yr7myDXqKoYdWYWiPuoeQA8S85HhJuY1f9VxXm8q8vJduHx2P",
+      "payer": "647NbEp6eM7291WgwbaW6LQCsVZt5QGuPufAqn42ea5K",
+      "side": "sell",
+      "token": 2657603.640429,
+      "sol": 0.506546679,
+      "price_sol": 1.90602793920854e-7
+    },
+    {
+      "t": 1792508603,
+      "signature": "2DaqWjMXuoaAM9Poe5HsCTSqRHgkWFaCmvvaiBdR1QNAB3Zonvp9ieiVdBjMZQHSZBjWYH9YDAcJdkQLt4RCbq5W",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 3034431.922951,
+      "sol": 0.584199895,
+      "price_sol": 1.9252364522709831e-7
+    },
+    {
+      "t": 1792508596,
+      "signature": "5WEN1okEkzP3UrQvmaij7cfeTHEUgFCRTQ7WuKtz4KF92wMZJmu21wNSFxN6Dh8x62Xf12WZDxYA9J8sknZLX5X6",
+      "payer": "DMqC8LmVNNHLQhJxvEW5LKGaGL4CgrY36TGRRxgLduSN",
+      "side": "sell",
+      "token": 1465259.376238,
+      "sol": 0.28609985499999996,
+      "price_sol": 1.9525543370659117e-7
+    },
+    {
+      "t": 1792508580,
+      "signature": "63C1QaXRdPL9i8dZPsMKtFEQ49ad3uphQcL8XHNddc8hxPuSX47bTxyuutdm7p19bgVxEgbGjmFbi2suJWmdGVKe",
+      "payer": "EEGkumdxEeeRqnXhPSEUfya9YLoUApgFLpFwkvRXFLHm",
+      "side": "buy",
+      "token": 6629928.226963,
+      "sol": 1.284207407,
+      "price_sol": 1.936985383608387e-7
+    },
+    {
+      "t": 1792508514,
+      "signature": "JBpm2mtfrkPcAVMRAeD8rdMxktLkzNJFBVGy3DvwVQVJ99DKNy7KU8rXvrRZ1k24qpUxyDExUFjrqfkELTQjpT3",
+      "payer": "dRxYNsPPpVbwRE6p9t2bHZ2F5eX1Mmqbvx3eftjXjum",
+      "side": "sell",
+      "token": 68155.234988,
+      "sol": 0.012829822999999999,
+      "price_sol": 1.8824413124331432e-7
+    },
+    {
+      "t": 1792508508,
+      "signature": "4seSmnsywQCEVkTa3uJFdfotsTjWdMH6DRUgYemQHFdDLWZ2ZaxL54cM91E3ax7chnug9Y56K5LVoaaGPSpzZdbN",
+      "payer": "81eQ4UmJaqdQS5b4r4Xak6D9j3U4zF5d8suLTVDg14Sq",
+      "side": "sell",
+      "token": 3242448.883611,
+      "sol": 0.6244532999999999,
+      "price_sol": 1.9258693734735716e-7
+    },
+    {
+      "t": 1792508508,
+      "signature": "4YRUVSGXnaHdoGVSkYp7jLU83tAZSFDj4kZaCfqR775dwPqXEpCFzBbZKKFq1BE4v6socgGjPGFPWWbKGZemadG5",
+      "payer": "8jmHweJ8NwsUC9insrcKu5cDh8eLMZ2rqztvbzBU2LHX",
+      "side": "sell",
+      "token": 779992.649867,
+      "sol": 0.14834979699999998,
+      "price_sol": 1.901938396795095e-7
+    },
+    {
+      "t": 1792508493,
+      "signature": "hmYb9Wdc6vPgJvQAKpbsL2HHSj9TfpXTNcrcTsrRn9txdyEnpQbaPQvqaH52ZFujQ1yYGMgPi3Czmqkp5GCADZW",
+      "payer": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "side": "sell",
+      "token": 1237102.410823,
+      "sol": 0.241601517,
+      "price_sol": 1.9529629470148e-7
+    },
+    {
+      "t": 1792508492,
+      "signature": "4mzhGAxnowxgZoWXV69BtK82qujEgetvX17MLwvjyx2jtGjKv2ueFER792bGaz4jpL5cwsM12CYrdenbULeL5MPK",
+      "payer": "CdeT4gc7dT5JVpVszWioFbugqS2E5SbmbZHDWiRjyvam",
+      "side": "sell",
+      "token": 188764.665042,
+      "sol": 0.036759747,
+      "price_sol": 1.9473849616834264e-7
+    },
+    {
+      "t": 1792508492,
+      "signature": "2xs6jh9fidQjCWryD4VqwLbja9V1YDm1Mg7o15n4Kjz1MrJZqoQDQnM6aNh8U8z6ZWgtSGBPdmPxJN7CwSrY2QSb",
+      "payer": "77H4ozFy3cZT54rsGLebyDB5nHfczakZdSEzF35aqMVX",
+      "side": "sell",
+      "token": 55701.985028,
+      "sol": 0.010838992,
+      "price_sol": 1.945889719109922e-7
+    },
+    {
+      "t": 1792508473,
+      "signature": "4mkLm6dSFvHCHWh4fCsyVJ32V4DdEPhUWxHXZ6D6udCsWNwnBqWDjEuxC85su89yFByoBapuJHNxUELycQVwfjcX",
+      "payer": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "side": "sell",
+      "token": 1091353.954486,
+      "sol": 0.215031888,
+      "price_sol": 1.9703221591502328e-7
+    },
+    {
+      "t": 1792508469,
+      "signature": "3CAohKcRrjsx6FfHsV5qNaZM28UYXvsvPJnCcDStG5mkViH1nYyHL8VjJAjAGiLpGobeAMJAdfLz5DFqtPQgQdM7",
+      "payer": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "side": "sell",
+      "token": 1162909.799122,
+      "sol": 0.230765603,
+      "price_sol": 1.9843809311283526e-7
+    },
+    {
+      "t": 1792508465,
+      "signature": "27fXf4NTWBCTRLJH92YegQcQC9vqHbDih53juVBHk1yXMWuEyjNnNcSpaoBXHA8xnMpvR2FNztn52pbQwspwJMQT",
+      "payer": "28pryh85shDtwFWoU2PyWSdaTveKkDSr2AkRxQGEarBW",
+      "side": "sell",
+      "token": 503936.432205,
+      "sol": 0.100528647,
+      "price_sol": 1.994867617729714e-7
+    },
+    {
+      "t": 1792508454,
+      "signature": "RzGX8B95x9VVGj2W7eSiB445JzfvGbAJzof6uSf8mGsJrGjdnTHHfYrf9cZupj5jcqwJT5E6pnvCKsEuB77hzmg",
+      "payer": "Cv32PDZsAr9tFTnHSxFhYUzhy3qzLE73bkzajHeKGE8J",
+      "side": "sell",
+      "token": 49618.886365,
+      "sol": 0.009839813,
+      "price_sol": 1.983078162540297e-7
+    },
+    {
+      "t": 1792508445,
+      "signature": "iZM3Gu4dezjUGZwvTkc2APLegdNjRSPrhmvYyxpTdxWdX8zCRd1JQPwjrUpvKG3qQKwvSw43gQwcPNNPGTCYFGY",
+      "payer": "7d54PtGUtqVPZoF3qzGHRFUQQstrHyCdm4uwwrhDSHLW",
+      "side": "buy",
+      "token": 5862732.404597,
+      "sol": 1.159645715,
+      "price_sol": 1.9779953014582678e-7
+    },
+    {
+      "t": 1792508441,
+      "signature": "3t4ygoRacvJhWf9jPwAvPRvru6Zy5Qr9pbfGDFiZ4EwXx5Fg8NoVHFvf5RyCyrkF7UGsT8h3EeS3PZMdZCLhjQTy",
+      "payer": "DyYpQmNyMeyorEtuX4u9yqAMJnFEh4zyMyRGvmUde2XE",
+      "side": "buy",
+      "token": 149666.990944,
+      "sol": 0.028829683,
+      "price_sol": 1.9262552696597627e-7
+    },
+    {
+      "t": 1792508424,
+      "signature": "5w9xMcbmzzmei8SzzT2vhXSNGrZnsJmYrC74JZREXrbYLLVKPzXYLAuz3KJ9igrQk8qrv7cBysxu9kgSN51EXM6Q",
+      "payer": "DMqC8LmVNNHLQhJxvEW5LKGaGL4CgrY36TGRRxgLduSN",
+      "side": "sell",
+      "token": 1465259.376238,
+      "sol": 0.281125892,
+      "price_sol": 1.918608381280456e-7
+    },
+    {
+      "t": 1792508414,
+      "signature": "37hFH1vvh5SMfqxTMLbtxY2k41MPMfWLoDbGFj8BAAv8x1RZUr39emYUCuvWyTt7eQwK9MKdgHEDLZSZ8nLM86Qd",
+      "payer": "8RjR332JaQY9AwwJ9jNmbczC6FHxgd6PbV7W5sFtbDYC",
+      "side": "buy",
+      "token": 202270.322252,
+      "sol": 0.039276989,
+      "price_sol": 1.941806813906514e-7
+    },
+    {
+      "t": 1792508410,
+      "signature": "5Scnki7MmDQUdnJT41VX78CzGn7FsFna1sJqMDhRWm5ZHtvZhMuVuPdMEEf42BzSovahN7zLJ9cmMoDs9HLzDtxN",
+      "payer": "DupzWEQ49GowYkDsiDYD7q6o9HVp6Sjd44J2iAGpAk2V",
+      "side": "sell",
+      "token": 1088348.071216,
+      "sol": 0.210217387,
+      "price_sol": 1.9315271700268307e-7
+    },
+    {
+      "t": 1792508406,
+      "signature": "4nSsB1skGkfm3U8KfWq4bPJkU869J25sR8MoWVMJJhP5XUnJaKaBpCZ6jvK2HUDp1KbrGE3z6o4CaHc9KGkQoUup",
+      "payer": "7d54PtGUtqVPZoF3qzGHRFUQQstrHyCdm4uwwrhDSHLW",
+      "side": "buy",
+      "token": 5111284.972339,
+      "sol": 0.99043037,
+      "price_sol": 1.937732635452655e-7
+    },
+    {
+      "t": 1792508401,
+      "signature": "2sB4hsw147hXa5c5GhWHmDcDwAswyeX4TE1wcfj8nAdpk86nCJ3oGvZAsBHUSNZDMZoQ5x3mG3Y9PhL1jPCrieXt",
+      "payer": "CkyH21pzyvGhQZLy1n8aVmVCk5Cam9s2SeYhcAjwPTwr",
+      "side": "sell",
+      "token": 685639.9777,
+      "sol": 0.12999402499999996,
+      "price_sol": 1.8959516543371469e-7
+    },
+    {
+      "t": 1792508377,
+      "signature": "59mXjb8Ako8BpeD5aSJ1xQk2zPBVLR5jJNEpdoYoaLNn45CSty2GB5ed1sF4EA5MFXtTyU3t5YDtEswngaDqdzhS",
+      "payer": "3LzQxNxodrxrhfsZBRYPX8BiTxB3W58jfvXLPDDZXqx8",
+      "side": "sell",
+      "token": 166692.653703,
+      "sol": 0.031444987,
+      "price_sol": 1.8864050875347053e-7
+    },
+    {
+      "t": 1792508370,
+      "signature": "3KsxcM9xqWpnNPnzxtLFutyKHju4tLhnnpaApb2G2zXXg2XsyPNS7byPxQdmxK1qsdarmsWEScxtPbC8KkvEDnmp",
+      "payer": "Aud2Dfp4x2Dxcbmb6vYiLhSGSrfUZMA4nky1XPtVZmNa",
+      "side": "sell",
+      "token": 55629.780896,
+      "sol": 0.010501246,
+      "price_sol": 1.887702203902637e-7
+    },
+    {
+      "t": 1792508370,
+      "signature": "gDSgtyJTci3uGBLxEacYfq6ACmVYcuhfxxNpoUNnX96kpvLYgjTKQRL2YFPA2YuD6D1ZqS419dXq7QXRYpRsk7r",
+      "payer": "4oqLr7WAC6VeLWnhDkw8QA4HFbxsT8iAgNbCXmNJzexZ",
+      "side": "sell",
+      "token": 2214655.570911,
+      "sol": 0.421017347,
+      "price_sol": 1.9010511274528084e-7
+    },
+    {
+      "t": 1792508370,
+      "signature": "4wPTPmwvf6FbsJpai1JtbVNKRAkuuKJLMStJsL7cdpi4vXZZkuJCwCF9xyZQkLaC17ppgpiUQznDMrraEMrxLmdh",
+      "payer": "3byvsa7YHf9iqN37iguJN4jWZMtpvBL1SL9XCJvGuVwT",
+      "side": "sell",
+      "token": 185552.94111,
+      "sol": 0.035538472,
+      "price_sol": 1.91527397988976e-7
+    },
+    {
+      "t": 1792508367,
+      "signature": "4fX8dFrP9Ssx9gkmdXRykTdaEZ28mRXYX6QxmhEDeWfUWiz7U8Z3ejScFSkVkm51qkwsjYhd5dZpMJ8Xcb65gq4T",
+      "payer": "C7bLVXj4Yof2PxtDJxAo5j8JRMcqLr9Rse7eRD7E9kSM",
+      "side": "sell",
+      "token": 1225028.074206,
+      "sol": 0.237478932,
+      "price_sol": 1.9385590991775565e-7
+    },
+    {
+      "t": 1792508366,
+      "signature": "4qyo5yPUk7Q5D3CHus9Lb5fLtbjzVchk4Eq79iQfdaMZZayZs28h233pJiBfR3toLezpWpBcj92Vw6deS1eCUFGb",
+      "payer": "HUZRg285MM2M9zojpwTVNJM3ugeHev7jgLDjEmCNZ2Jm",
+      "side": "sell",
+      "token": 2589275.686331,
+      "sol": 0.504098449,
+      "price_sol": 1.9468705154154782e-7
+    },
+    {
+      "t": 1792508366,
+      "signature": "4f2ZJePEye1H2widfhWHz9g4fGFSRCsQKdaZYkpYYmxZVtVSss29PRB3opoMod88QJFJFnS6Doj228GD6AibC18v",
+      "payer": "5aLY85pyxiuX3fd4RgM3Yc1e3MAL6b7UgaZz6MS3JUfG",
+      "side": "buy",
+      "token": 6130676.712788,
+      "sol": 1.190055723,
+      "price_sol": 1.9411490423523046e-7
+    },
+    {
+      "t": 1792508365,
+      "signature": "4TPji7tvvbekbGY7tTfXy4ahNgNkEEAMfbYyFf9vbw4TEKPyYVmPPPbWhP4qWeRbY6VD6t7Qr6bsgqeuqcYyDsa5",
+      "payer": "8jmHweJ8NwsUC9insrcKu5cDh8eLMZ2rqztvbzBU2LHX",
+      "side": "buy",
+      "token": 779992.649867,
+      "sol": 0.148177777,
+      "price_sol": 1.89973299139763e-7
+    },
+    {
+      "t": 1792508365,
+      "signature": "3NXL2XpztYxaj8Z6uTMbph445Y9sqix3uehsx3fX2KLcDMjZkaw7E3PV5V8ktxnpZFi9xdvag1c5j5kFeSxksAK9",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "buy",
+      "token": 16674401.942861,
+      "sol": 3.028307164,
+      "price_sol": 1.816141397081137e-7
+    },
+    {
+      "t": 1792508365,
+      "signature": "5Hj4rGPmwH32idcYM5usBAt26rVTzQuBMp6XUxoYvrh1aDDzMF6HXHBRCBJYX6Jhpg3nPqsRdBTnqFpJdUpeHrUF",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "buy",
+      "token": 5381799.682923,
+      "sol": 0.915095088,
+      "price_sol": 1.7003514473117424e-7
+    },
+    {
+      "t": 1792508344,
+      "signature": "3ySyHcnBx6aX8Lpyds6P9eYr3x3UsdAPQTUUncdgpZWwiDRDLdDpaxr2PikX2Ysg73dukuLiefhxpgdU7BKA7PCs",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "buy",
+      "token": 11975103.058422,
+      "sol": 1.937437821,
+      "price_sol": 1.6178882232144255e-7
+    },
+    {
+      "t": 1792508331,
+      "signature": "4NpC3WGnvCDdBjGh5SzQyEY96QhdH21APk3T9HY4UMGsWKgrSxDX5o7HSePGAtUXAkSgLSezzcKJix1txW73Yk3G",
+      "payer": "Ha7WbMHRvtHwTePQnDoqCg3DQ5TCStuyJ9CVi94sr3Mz",
+      "side": "buy",
+      "token": 638548.141177,
+      "sol": 0.0989192,
+      "price_sol": 1.5491267395699843e-7
+    },
+    {
+      "t": 1792508312,
+      "signature": "425Ge9XKHKD66LdkSEi21pVT1Pwkt5p4b4TGjoD962rNbCR4qvH8kusnTnxdxwAU4RhSCFBnXGihtUh7hjPJEnds",
+      "payer": "6MYqy9XgyAjaq6mD7gXV4SEEApUDbiQe4tfzektUBDBa",
+      "side": "buy",
+      "token": 316495.37307,
+      "sol": 0.049272667,
+      "price_sol": 1.5568210846830376e-7
+    },
+    {
+      "t": 1792508302,
+      "signature": "4Xg1zaPQhBmkyGcbiopMfkTrg5oZgdD4rm4rh3Y2B5crE2hczPViDidJ9zqcXwZDTkXpnxNyKEEyP9fATjLUN18V",
+      "payer": "BdPcVq7m5R45MB2agPEy66Sz8xx9twzQV9A74y2Bdnv3",
+      "side": "sell",
+      "token": 2824688.949569,
+      "sol": 0.435951892,
+      "price_sol": 1.5433624720573886e-7
+    },
+    {
+      "t": 1792508274,
+      "signature": "3kHcguRS8BdgrCiAF6ynjaqu3ZyuAdTc7CbZfhd9d8XGgaDQqjwFYsXVQQkwkCTZeMbSPN7SbuAuxEFtr1BFW33Y",
+      "payer": "8RjR332JaQY9AwwJ9jNmbczC6FHxgd6PbV7W5sFtbDYC",
+      "side": "buy",
+      "token": 407454.586317,
+      "sol": 0.063825107,
+      "price_sol": 1.5664348652181822e-7
+    },
+    {
+      "t": 1792508272,
+      "signature": "5AbobehGpdckwLjtEzGPeXB3sz6BLhZtaLMz4MJJSLB2SRnfKL15Vufg1aHKBoywLnCshS2b7MoWnbhm9rNBcEy6",
+      "payer": "VaMPg59pVyKNg3xWHnDUtT9zN6XZbt1LoogRveXBWSB",
+      "side": "buy",
+      "token": 3185004.169521,
+      "sol": 0.493925925,
+      "price_sol": 1.5507858034430224e-7
+    },
+    {
+      "t": 1792508269,
+      "signature": "3Eq4VRUtovnho2n8gw43mFEFqpApzpWNJszEtRWE4Mvo9qQNQ7EsNiEbcSjiFn8dyzjfXzgVawX2NoahmjBKQMHR",
+      "payer": "E8gzuYbXXWoEvndsPwNuz7dCVeBFtAzVRHWFLKr84hxp",
+      "side": "buy",
+      "token": 642.677572,
+      "sol": 0.000098784,
+      "price_sol": 1.537069353339749e-7
+    },
+    {
+      "t": 1792508268,
+      "signature": "5SBEFCbxgpppEWXQguEDa9VK8mvgLPgRHNqxTptsLQGYTt88xodXeFMvoJPKWznUEENtju9eUy1kLZ63W8CYjyiz",
+      "payer": "7BNaxx6KdUYrjACNQZ9He26NBFoFxujQMAfNLnArLGH5",
+      "side": "buy",
+      "token": 7018531.652091,
+      "sol": 1.03948091,
+      "price_sol": 1.4810518232689197e-7
+    },
+    {
+      "t": 1792508268,
+      "signature": "2PfEUQpeVHamqE4rX4Rr1kcGzpjzs694uir9RwKicjfrt5pZgDHnwstVTsN32D71TgZ8UrM8mMjJmWHCWgyFwdBY",
+      "payer": "81eQ4UmJaqdQS5b4r4Xak6D9j3U4zF5d8suLTVDg14Sq",
+      "side": "buy",
+      "token": 3242448.883611,
+      "sol": 0.493925925,
+      "price_sol": 1.5233113696766508e-7
+    },
+    {
+      "t": 1792508264,
+      "signature": "kW8ynAptPdEiYo6KQc882s651SfqrtJiNH7KHs3hcAaDcT3gNhsanrzukPgLzcKhomAa5wrVN33Ea461oEWqRy7",
+      "payer": "VaMPg59pVyKNg3xWHnDUtT9zN6XZbt1LoogRveXBWSB",
+      "side": "buy",
+      "token": 3431001.294745,
+      "sol": 0.493925925,
+      "price_sol": 1.439597023051283e-7
+    },
+    {
+      "t": 1792508261,
+      "signature": "XbeH3WbLwVsJ7nXvJkp5q9xi71nGWLJSUJDNpJRbB6cwNgXushhVvHxaH3k8rhesJEWQ8iuAeNbHX9mm9AqVVPW",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "buy",
+      "token": 6473041.887366,
+      "sol": 0.914497151,
+      "price_sol": 1.4127780522862116e-7
+    },
+    {
+      "t": 1792508248,
+      "signature": "3k3CfFfFK6ihHJZTPWNzymdCpGUbQHVS8SP9qgiKeNL7eaWkPcg7tjK8qzVTVyEhymTmzH6nyHUX4GCzNQwqoy5F",
+      "payer": "VaMPg59pVyKNg3xWHnDUtT9zN6XZbt1LoogRveXBWSB",
+      "side": "buy",
+      "token": 3618096.95603,
+      "sol": 0.493925925,
+      "price_sol": 1.3651539220827462e-7
+    },
+    {
+      "t": 1792508239,
+      "signature": "3VBewg7CJDQz3hyRZ79XXTFDYvigT2uXzLMxShJLTR7ckXHcouakQEgnDQnpFrR1FbYryVboSMa48MJAXfH8t7nU",
+      "payer": "EbeJeS9AkjuJKvhv8AzNjxiwaEd7LpSRoXqUPTL9EdM1",
+      "side": "buy",
+      "token": 3361541.478379,
+      "sol": 0.454067369,
+      "price_sol": 1.3507712813318016e-7
+    },
+    {
+      "t": 1792508173,
+      "signature": "4YCb6m18Mm2F6ZSiMJexdLhvq1mUWi42CqHg1xJpzXsazpVzB77113LCMcwFnDAaQFJw1dpxXrVcUCi94mS87Fsy",
+      "payer": "8RjR332JaQY9AwwJ9jNmbczC6FHxgd6PbV7W5sFtbDYC",
+      "side": "buy",
+      "token": 369812.215435,
+      "sol": 0.049096236,
+      "price_sol": 1.3275990881547662e-7
+    },
+    {
+      "t": 1792508129,
+      "signature": "5jqGN3nj8sCV4BC2FaihLwWAGadryJH2ecpNtyGweyDtZgvWBWQcGcgH4AzCUvE3VuhGc6M7wNFQHSh1WsH3hZ1g",
+      "payer": "HBk29UnFMZKXQ7dj6SDJioDWQczqjWp7xA657dsLEoPP",
+      "side": "buy",
+      "token": 2236071.66652,
+      "sol": 0.294873777,
+      "price_sol": 1.3187134447211717e-7
+    },
+    {
+      "t": 1792508031,
+      "signature": "3oerFz1hJPw29FktaiKuvnc9jaToAoKwvPCkW2sNkuecWQgGvchnFCcCv59dqe1z5z4bwr2W9jpaPvE7qxJj3Qsc",
+      "payer": "FHpcNSe6tb2n15bAdq4BkeYWGyZKFD7yLYrH92ng7wCT",
+      "side": "unknown",
+      "token": null,
+      "sol": 0.050993865,
+      "price_sol": null
+    },
+    {
+      "t": 1792507974,
+      "signature": "5iq8oHGasgkMCujzhQUKs9Pz3zhZx9FPTgQxKshFVvhmogp7ZwZj1oatzYWwj82qvCymx7ixSKATang7RdgTWJU5",
+      "payer": "5xoQ3xNqvyaB995HK8ktiGFRbCj6wk9Y9iZAGL4tQWCT",
+      "side": "sell",
+      "token": 1204170.404036,
+      "sol": 0.157098721,
+      "price_sol": 1.3046220075950594e-7
+    },
+    {
+      "t": 1792507969,
+      "signature": "5jfaGqD3yhj4QgfWcxC462NDLaovKYoSsmBakHGoQiitYT8Qh1FW21kWZJ85bSnyRjSNrgYu5822UJDFjsybeVpC",
+      "payer": "CWtkvffF554FdLS9eqhGZ9dzTEFQ3DqpY7hT8TfCHAVT",
+      "side": "sell",
+      "token": 4483690.371049,
+      "sol": 0.593621357,
+      "price_sol": 1.3239570707937108e-7
+    },
+    {
+      "t": 1792507944,
+      "signature": "56md1TL89s45ERkynfjwQawKnqXXkvuF11YakjRyQ94r33u2saxv24YNcikR54qnuZpY7cSxJo5yNNX4B5UGazv9",
+      "payer": "HbnEC9YnYG1Xdf7d45yvZpKsp6nubvY5kfx3nmVXQ1Yq",
+      "side": "sell",
+      "token": 1136433.657863,
+      "sol": 0.152669054,
+      "price_sol": 1.3434048960419355e-7
+    },
+    {
+      "t": 1792507919,
+      "signature": "5JNYqiP1V2chduBHuJi8csY5K4u2sRKdTNeaeTFUDY7N6RiJ7nPGrWKeQzabjys1DCCFHbwkxX2E81sRD3EgbKvb",
+      "payer": "AJVLS8KLDnq51LCGV9GdYwoVvYYFqY4safqFeWxm4qrB",
+      "side": "sell",
+      "token": 22935.377003,
+      "sol": 0.003114316,
+      "price_sol": 1.3578656237447678e-7
+    },
+    {
+      "t": 1792507918,
+      "signature": "5sGP5wwnFTZBm12KX2UzkLqH88u5orTTtpq514moyTuSoZjk11P9sKS3JTkTpLRKHibxZVQXv9jRaYFUMLjc7Jiz",
+      "payer": "LRj5QXgjAyBKDPjRSFuH9FFTyxo2WVhVuj2zWU2U2mw",
+      "side": "sell",
+      "token": 2266.99434,
+      "sol": 0.00030784700000000004,
+      "price_sol": 1.357952221442247e-7
+    },
+    {
+      "t": 1792507918,
+      "signature": "JSSPtY2sgpVebVjiaB3kMuXnRVRRMcixeJzWLCcWzS4y44QYiJqe3fkRihugfwGRn729zupKvBvMETZC4eX4HPS",
+      "payer": "AVPoto2cHrxxLcsk2ekuGfdBQYrYr9ckxFzPkLs1WJn7",
+      "side": "sell",
+      "token": 2267.366221,
+      "sol": 0.000307901,
+      "price_sol": 1.3579676593409036e-7
+    },
+    {
+      "t": 1792507918,
+      "signature": "34Eytvk6dhanzSfF2tVFPHd8Yagou1pjBZbe9iWfxty8mj3VpyMHdYKtuWGrDvyCAByXSMciM4kvv2Gf4sVsq5Qh",
+      "payer": "5V7TCLLecD4MgWUqrqyZP9G8p2RhKTp3Q7A5YM2imDx4",
+      "side": "sell",
+      "token": 440281.246982,
+      "sol": 0.059858163000000006,
+      "price_sol": 1.359543778216999e-7
+    },
+    {
+      "t": 1792507870,
+      "signature": "4nHAyXqbdVfycef72KGVizaxtSv14k76zFHSnqRtYY8gejiReb8n1FFpPuqTFYwY4bCx41tQyrFXDNDFaqcBxiWL",
+      "payer": "v46Mst1cfhbFFsUFeYyw3vWHhqni7QnXGwBhw8ndrMB",
+      "side": "buy",
+      "token": 361267.032355,
+      "sol": 0.049521519,
+      "price_sol": 1.3707732664445715e-7
+    },
+    {
+      "t": 1792507822,
+      "signature": "4EyPnjpAUSN2yvxAQsoU1XUKh1qWqgQCD8HMg6XPNwKYYwSquaZVS2oYzNkZK6LPRCWzF2kMHZbhyFgfnN88Ha6v",
+      "payer": "2tgUbS9UMoQD6GkDZBiqKYCURnGrSb6ocYwRABrSJUvY",
+      "side": "buy",
+      "token": 1091353.954486,
+      "sol": 0.147902018,
+      "price_sol": 1.3552158526759369e-7
+    },
+    {
+      "t": 1792507819,
+      "signature": "s47ZarcgU1eLAyK2fZBC2hKtqGXitHqqfEAiHnKFH6JZMswwj94iA7id3Mt8nvKmDKYjcqcRkx2f9zs22R9Bjdk",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "buy",
+      "token": 1236479.78601,
+      "sol": 0.167829809,
+      "price_sol": 1.3573194717688873e-7
+    },
+    {
+      "t": 1792507815,
+      "signature": "sYJ2eMe7gUSPenKxK5UBDnPVcB3vPh9j7pkjWCENcY6svyq6UuCf1G4ebWJDfYzJvZg1foRJoDZ337bzxZQzG6q",
+      "payer": "3sHN2377n4qWrsj1L7QccmrgmuvNgDhcpMrh5rbDXkcs",
+      "side": "buy",
+      "token": 3695397.45871,
+      "sol": 0.495215185,
+      "price_sol": 1.340086392690412e-7
+    },
+    {
+      "t": 1792507732,
+      "signature": "2Y6LQVBmCPdq9GSeLQWTgehtx8vKnCeg91bPtY1ZedvocRL2Cxc8nWqD13G2kBYLrS4gtX9xm4bqkVzoZqsFudtc",
+      "payer": "FkKyUt1rZoRvCZaTBXnMgv38TxmZ95KuhWCLjk8aRTZu",
+      "side": "buy",
+      "token": 2479346.965661,
+      "sol": 0.32452415,
+      "price_sol": 1.3089097834819624e-7
+    },
+    {
+      "t": 1792507715,
+      "signature": "5gPsNNBGb3zhdwVhnvp2JmVZNwM4iKsTGkfNuuZDhkzTxethL3bZPyUqjp9vnBzLA8tbotfwhgzBFx9yrF88pWSg",
+      "payer": "23pSVi2tJjJnFACtmM5BvZrwUZTFv1YCdpzmvfvw26RE",
+      "side": "buy",
+      "token": 5776607.366557,
+      "sol": 0.746032967,
+      "price_sol": 1.291472519526031e-7
+    },
+    {
+      "t": 1792507606,
+      "signature": "oubXwUeRmtCwNcxuHi4uYuUCAhNVSfyKVoonMEsty5efHxh1QGFZudp5311jqout13uqBhS5jc6G6X6JWS2TXdc",
+      "payer": "AgmLJBMDCqWynYnQiPCuj9ewsNNsBJXyzoUhD9LJzN51",
+      "side": "sell",
+      "token": 10125887.2899,
+      "sol": 1.30183384,
+      "price_sol": 1.2856491512585824e-7
+    },
+    {
+      "t": 1792507557,
+      "signature": "4dMy6AUDEfCxuganetaBMEw9FpNEG9M7nEpuLyUvRk7NpsZRa2J3pKvo8QjmQVgwMNiFUHzuXjC69jGEFLWcyrrz",
+      "payer": "5ns3FftrUCKDcUqe3ko1KpnSudH2yRiDCied7ShkjL7y",
+      "side": "sell",
+      "token": 7787405.882831,
+      "sol": 1.0485227149999998,
+      "price_sol": 1.3464338841149814e-7
+    }
+  ],
+  "source": "Helius connected solana_get_transactions",
+  "method": "direction by token transfer to/from exact pool; fee payers not necessarily unique humans; SOL price from pool transfers if available; coverage_complete requires sample spanning entire absolute 5m window"
+}
