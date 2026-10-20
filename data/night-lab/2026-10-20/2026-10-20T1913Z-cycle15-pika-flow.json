@@ -1,0 +1,267 @@
+{
+  "symbol": "PIKA",
+  "chain": "solana",
+  "mint": "7XBdVqzZFYwpBz7VshzWZWd7ms1sG9f9UQ8YiHqapump",
+  "pool": "46gTBAw39NQops2miKGoMVhSmDj6yf9Z5Fk9xtpCqfu3",
+  "provider": "Helius Solana Reader",
+  "retrieved_at_utc": "2026-10-20T19:13:25.953Z",
+  "pages": 3,
+  "raw_transactions": 300,
+  "deduplicated_transactions": 300,
+  "oldest_tx_utc": "2026-10-20T18:52:16.000Z",
+  "newest_tx_utc": "2026-10-20T19:13:15.000Z",
+  "sol_usd_reference": 105.66,
+  "sol_usd_reference_source": "GeckoTerminal people/SOL pool spot-marked SOL reserve near 19:07 UTC; approximate fixed reference",
+  "flow_windows": [
+    {
+      "utc": "18:10",
+      "coverage": "PARTIAL",
+      "buys": 0,
+      "sells": 0,
+      "unique_buy_fee_payers": 0,
+      "unique_buyers_usd5": 0,
+      "buy_notional_usd": 0,
+      "sell_notional_usd": 0,
+      "net_usd": 0,
+      "priced_swaps": 0,
+      "filtered_open": null,
+      "filtered_close": null
+    },
+    {
+      "utc": "18:15",
+      "coverage": "PARTIAL",
+      "buys": 0,
+      "sells": 0,
+      "unique_buy_fee_payers": 0,
+      "unique_buyers_usd5": 0,
+      "buy_notional_usd": 0,
+      "sell_notional_usd": 0,
+      "net_usd": 0,
+      "priced_swaps": 0,
+      "filtered_open": null,
+      "filtered_close": null
+    },
+    {
+      "utc": "18:20",
+      "coverage": "PARTIAL",
+      "buys": 0,
+      "sells": 0,
+      "unique_buy_fee_payers": 0,
+      "unique_buyers_usd5": 0,
+      "buy_notional_usd": 0,
+      "sell_notional_usd": 0,
+      "net_usd": 0,
+      "priced_swaps": 0,
+      "filtered_open": null,
+      "filtered_close": null
+    },
+    {
+      "utc": "18:25",
+      "coverage": "PARTIAL",
+      "buys": 0,
+      "sells": 0,
+      "unique_buy_fee_payers": 0,
+      "unique_buyers_usd5": 0,
+      "buy_notional_usd": 0,
+      "sell_notional_usd": 0,
+      "net_usd": 0,
+      "priced_swaps": 0,
+      "filtered_open": null,
+      "filtered_close": null
+    },
+    {
+      "utc": "18:30",
+      "coverage": "PARTIAL",
+      "buys": 0,
+      "sells": 0,
+      "unique_buy_fee_payers": 0,
+      "unique_buyers_usd5": 0,
+      "buy_notional_usd": 0,
+      "sell_notional_usd": 0,
+      "net_usd": 0,
+      "priced_swaps": 0,
+      "filtered_open": null,
+      "filtered_close": null
+    },
+    {
+      "utc": "18:35",
+      "coverage": "PARTIAL",
+      "buys": 0,
+      "sells": 0,
+      "unique_buy_fee_payers": 0,
+      "unique_buyers_usd5": 0,
+      "buy_notional_usd": 0,
+      "sell_notional_usd": 0,
+      "net_usd": 0,
+      "priced_swaps": 0,
+      "filtered_open": null,
+      "filtered_close": null
+    },
+    {
+      "utc": "18:40",
+      "coverage": "PARTIAL",
+      "buys": 0,
+      "sells": 0,
+      "unique_buy_fee_payers": 0,
+      "unique_buyers_usd5": 0,
+      "buy_notional_usd": 0,
+      "sell_notional_usd": 0,
+      "net_usd": 0,
+      "priced_swaps": 0,
+      "filtered_open": null,
+      "filtered_close": null
+    },
+    {
+      "utc": "18:45",
+      "coverage": "PARTIAL",
+      "buys": 0,
+      "sells": 0,
+      "unique_buy_fee_payers": 0,
+      "unique_buyers_usd5": 0,
+      "buy_notional_usd": 0,
+      "sell_notional_usd": 0,
+      "net_usd": 0,
+      "priced_swaps": 0,
+      "filtered_open": null,
+      "filtered_close": null
+    },
+    {
+      "utc": "18:50",
+      "coverage": "PARTIAL",
+      "buys": 24,
+      "sells": 11,
+      "unique_buy_fee_payers": 24,
+      "unique_buyers_usd5": 20,
+      "buy_notional_usd": 727.72,
+      "sell_notional_usd": 765.19,
+      "net_usd": -37.47,
+      "priced_swaps": 30,
+      "filtered_open": 0.00008794430237134809,
+      "filtered_close": 0.00008825915689018275
+    },
+    {
+      "utc": "18:55",
+      "coverage": "COMPLETE",
+      "buys": 43,
+      "sells": 30,
+      "unique_buy_fee_payers": 43,
+      "unique_buyers_usd5": 36,
+      "buy_notional_usd": 1269.95,
+      "sell_notional_usd": 1746.37,
+      "net_usd": -476.42,
+      "priced_swaps": 56,
+      "filtered_open": 0.00008755134551335399,
+      "filtered_close": 0.00008045964706517923
+    },
+    {
+      "utc": "19:00",
+      "coverage": "COMPLETE",
+      "buys": 44,
+      "sells": 24,
+      "unique_buy_fee_payers": 43,
+      "unique_buyers_usd5": 35,
+      "buy_notional_usd": 1153.08,
+      "sell_notional_usd": 1133.04,
+      "net_usd": 20.04,
+      "priced_swaps": 49,
+      "filtered_open": 0.00008140077741324391,
+      "filtered_close": 0.00008142384279444646
+    },
+    {
+      "utc": "19:05",
+      "coverage": "COMPLETE",
+      "buys": 40,
+      "sells": 15,
+      "unique_buy_fee_payers": 40,
+      "unique_buyers_usd5": 34,
+      "buy_notional_usd": 1375.62,
+      "sell_notional_usd": 1325.57,
+      "net_usd": 50.05,
+      "priced_swaps": 48,
+      "filtered_open": 0.0000814100124049956,
+      "filtered_close": 0.00008156640169842612
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "fee payer != unique beneficial owner",
+    "SOL transfer notional can include aggregator fees",
+    "fixed SOL reference not historical tick",
+    "no verified sell quote",
+    "only COMPLETE windows support flow claims"
+  ],
+  "sample_signatures": [
+    {
+      "signature": "4NwtxtCf2cAUrvupxdaPxSR4HU7KJYAiZVpx4sZgwKVLwGatt1QbvGFmyWhJjQqzMazTZgizoPZSA8uLMxxw4AHg",
+      "t": 1792523547,
+      "side": "BUY",
+      "notional": 10.6391
+    },
+    {
+      "signature": "5JAbokTK3AVktvh4j6V77GzH8m8KZWGsxTqMUTWssmgVhpyJsx8HQw19ry5EsRRC3br14bSFgALhAYREeYcdcmP2",
+      "t": 1792523547,
+      "side": "BUY",
+      "notional": 23.6801
+    },
+    {
+      "signature": "5e9xWdpGqut5JbhhkytFviH46X4562aVVyRMCHjjwQsgjT1fAkKoLAv4raAMC9G7XoFxiHwkdUQ1MENTACABW9St",
+      "t": 1792523547,
+      "side": "SELL",
+      "notional": 33.8398
+    },
+    {
+      "signature": "4LQDPiqSBnMsKway1FCxPCuNSbKWGTLgTfbDE3D9YVz1P1UofQhxosBFfz9MVTbnysNn7zC8A7k4fPHPCBHerRHC",
+      "t": 1792523552,
+      "side": "BUY",
+      "notional": 1.5366
+    },
+    {
+      "signature": "3xVwrmcYYVpM1x5KetTqA2MezzeHawdjfZrDhTRqvFLVgzkpZXWkte6MMz9EXMrWktRAqpem4JCKogayC21U54GZ",
+      "t": 1792523555,
+      "side": "BUY",
+      "notional": 81.7029
+    },
+    {
+      "signature": "2tkTRnF5yK6HGBDFRk9wAfBC4ymmv64j1PoY1TXRrPVEokPXMTMFowyn5JD2bD7yvC1zj9DjzGfRWv9rnv1GXrWj",
+      "t": 1792523561,
+      "side": "SELL",
+      "notional": 143.2829
+    },
+    {
+      "signature": "4vpMe1GQNghy3LAAnFUceFa7CkmoFZhMnZZuk6oL96yCvAFdZXFRHMwRde41W3bBKBe7tJehF6YpYs9CvQtUepDb",
+      "t": 1792523567,
+      "side": "SELL",
+      "notional": 66.553
+    },
+    {
+      "signature": "45KwVMEBkrkuJc8NNHhS5VWRN1cekuhAamHw1k4uzerp7WY6TUU2gQWMacxcDEYGMjceHP9tMT8cattic9puTqw",
+      "t": 1792523582,
+      "side": "SELL",
+      "notional": 78.2636
+    },
+    {
+      "signature": "4eoJzZrZ31mkTAnNaEtFMyRSMt4EgoCxiEfgJXb7nVRvDoJFsxK4Uxyd5p9jwmazkRJwsbi2qqm7JoXwRYBpWS5d",
+      "t": 1792523585,
+      "side": "SELL",
+      "notional": 12.6415
+    },
+    {
+      "signature": "3HYk9S5xgfiwBCCuLCHVweXSuzpEEHy2nfVwC9a23NFR41erMqxCu4Kg4nZbStDo9zoaC8NAX2oRUAxJZsgJo3ot",
+      "t": 1792523592,
+      "side": "BUY",
+      "notional": 20.601
+    },
+    {
+      "signature": "u5Mpc4SjaX1w9Xq97yMbk8x8rcsQ6nZtDukfPyb62MXC7VpwdbCKuYECnGon9TbigdCjqkwTYApsPGPUmb1VqKL",
+      "t": 1792523594,
+      "side": "BUY",
+      "notional": 140.0217
+    },
+    {
+      "signature": "62FY8jWf6MDH5bmMPzYTzra3jKh3eCSq35BUbMax814u23KVMzF29dnNZ81oZSo2UDjZiZaGk2mHrRHV2nLTnAx6",
+      "t": 1792523595,
+      "side": "BUY",
+      "notional": 35.4828
+    }
+  ]
+}
