@@ -191,7 +191,11 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <p id="trashSummary" class="hint"></p></section></div>
 <div class="tab-panel" id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" hidden><section><h2>Paper wallet</h2><div id="wallet"></div></section></div>
 <div class="tab-panel" id="panel-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><section><h2>Recent runs</h2><div id="runs"></div></section></div>
-<div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden><section><h2>Prediction outcomes</h2><div id="predictions"></div></section></div>
+<div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden>
+<section><h2>OUR SCORE LEARNING JOURNAL</h2>
+<p class="hint">Score frozen at discovery; indicative same-pool price observations after 15m, 1h, 6h and 24h. NOT executable trade P&amp;L. Missing data and pool changes aren't counted as wins or losses.</p>
+<div id="scoreJournal"></div></section>
+<section><h2>Original Market Score prediction outcomes</h2><div id="predictions"></div></section></div>
 <div class="tab-panel" id="panel-address" role="tabpanel" aria-labelledby="tab-address" hidden>
 <section id="address-entry-panel"><h2>Watch an address</h2>
 <p class="hint">Pin an exact token contract. Research and prices appear when available; adding an address does not certify it or trade it.</p>
@@ -954,6 +958,34 @@ if(typeof setInterval==='function'){
  setInterval(showScanCountdown,1000);
  setInterval(pollScanClock,30000);
 }
+function scoreJournalTable(rows,state){
+ if(state!=='READY')return '<p class="hint">OUR SCORE journal: '+escapeSocial(state==='SCHEMA_PENDING'?'awaiting D1 schema activation':state==='UNAVAILABLE'?'temporarily unavailable':state)+'. No historical performance claims yet.</p>';
+ if(!Array.isArray(rows)||!rows.length)
+   return '<p class="hint">No immutable OUR SCORE snapshots yet. The first set can appear after a successful hourly research cycle.</p>';
+ const minutes=[15,60,360,1440],snapshots=new Map();
+ for(const r of rows){
+  if(!snapshots.has(r.id))snapshots.set(r.id,{...r,results:new Map()});
+  snapshots.get(r.id).results.set(r.horizon_min,r);
+ }
+ const counts={observed:0,positive:0,missed:0};
+ const data=[...snapshots.values()].map(s=>{
+  const results=minutes.map(h=>{
+   const r=s.results.get(h);
+   if(!r)return '—';
+   if(r.status==='EVALUATED'&&r.return_pct!==null&&Number.isFinite(Number(r.return_pct))){
+    counts.observed++;if(Number(r.return_pct)>0)counts.positive++;
+    const value=Number(r.return_pct);return (value>=0?'+':'')+value.toFixed(1)+'%';
+   }
+   if(r.status==='MISSED_DATA')counts.missed++;
+   return r.status==='POOL_CHANGED'?'Pool changed':r.status==='MISSED_DATA'?'Missing':'Pending';
+  });
+  return [s.captured_at,s.symbol||s.asset_key,s.our_score+'/100',...results];
+ });
+ return '<p class="hint">'+counts.observed+' measured horizon observations; '+counts.positive+
+  ' positive, '+(counts.observed-counts.positive)+' flat/negative; '+counts.missed+
+  ' missed. Early samples are not proof of predictive accuracy.</p>'+
+  table(['Snapshot UTC','Token','OUR SCORE','15m','1h','6h','24h'],data);
+}
 async function refresh(){try{
  const r=await fetch('/api/status',{credentials:'same-origin',cache:'no-store'});
  if(r.status===401){
@@ -1007,6 +1039,7 @@ async function refresh(){try{
  table(['Token','Cost USD','Est. sale value','Unrealised P&L','Price stale'],(x.paper?.positions||[]).map(p=>[
  p.asset_key,p.cost,p.estimatedValue===null?'Unknown':p.estimatedValue,p.unrealized===null?'Unknown':p.unrealized,p.stale]));
  document.getElementById('predictions').innerHTML=table(['Token','Status','Horizon min','Change %'],(x.predictions||[]).map(p=>[p.asset_key,p.status,p.horizon_min,p.change_pct]));
+ document.getElementById('scoreJournal').innerHTML=scoreJournalTable(x.scoreJournal,x.scoreJournalStatus||'UNAVAILABLE');
 }catch(e){
  document.getElementById('msg').textContent='Service error: '+e.message;
  const live=document.getElementById('goodDataStatus');
@@ -1317,7 +1350,15 @@ const evaluated=assets.map(asset=>({...asset,...(()=>{const item=tokenTier(asset
  migrationTxEvent:recent.get(asset.asset_key+'|PUMP_MIGRATION_TX_PROBE'),now
 })}));
 const paper=await getPaperSnapshot(env);
-return json({runs,assets:evaluated,archive,archiveStats:archiveCounts[0]||{dead:0,trash:0},coverage:countCoverage(assets,now),wallet:wallet[0]||null,predictions,paper,routes,pinned});
+let scoreJournal=[],scoreJournalStatus='READY';
+try{
+ scoreJournal=(await env.DB.prepare(`SELECT s.id,s.asset_key,s.symbol,s.captured_at,s.our_score,
+   h.horizon_min,h.status,h.return_pct
+   FROM score_snapshots s JOIN score_outcomes h ON h.snapshot_id=s.id
+   WHERE s.id IN (SELECT id FROM score_snapshots ORDER BY captured_at DESC LIMIT 20)
+   ORDER BY s.captured_at DESC,s.id DESC,h.horizon_min`).all()).results||[];
+}catch(e){scoreJournalStatus=/no such table/i.test(String(e))?'SCHEMA_PENDING':'UNAVAILABLE';}
+return json({runs,assets:evaluated,archive,archiveStats:archiveCounts[0]||{dead:0,trash:0},coverage:countCoverage(assets,now),wallet:wallet[0]||null,predictions,paper,routes,pinned,scoreJournal,scoreJournalStatus});
 }catch(e){
  const msg=String(e?.message||e);
  if(/daily row read limit|exceeded D1.*row read/i.test(msg))
