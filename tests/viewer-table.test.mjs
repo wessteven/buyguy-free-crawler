@@ -407,19 +407,31 @@ test('Ten-minute scan timer shows countdown, overdue overtime and unknown runs w
  assert.match(page.html,/setInterval\(pollScanClock,30000\)/);
 });
 
-test('Moby Solana fallback never borrows token-specific NEETOPIA invite deep links',async()=>{
+test('Moby app links preserve only exact user-supplied per-mint share codes',async()=>{
  const page=await tableSandbox();
- const mint='YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump';
- const hivemind='6NLUC3veg7NGuQBNewE1UM7G6ir2mymJM4PvwdkGpump';
- const n=page.evalJS("mobyChartUrl('solana','"+mint+"')");
- const h=page.evalJS("mobyChartUrl('solana','"+hivemind+"')");
- assert.equal(n,'https://mobyscreener.com/solana/'+mint);
- assert.equal(h,'https://mobyscreener.com/solana/'+hivemind);
- assert.notEqual(n,h);
- assert.equal(n.includes('app_url='),false);
- assert.equal(h.includes('invite.mobyscreener.com'),false);
+ const known=[
+  ['YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump','cLJFHSHGm7b','1792416904'],
+  ['ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump','szgvvaurn7b','1792456149'],
+  ['9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump','61ywAgtrn7b','1792456136']
+ ];
+ for(const [mint,code,version] of known){
+   const expected='https://twitter.mobyscreener.com/solana/'+mint+
+     '?app_url=https%3A%2F%2Finvite.mobyscreener.com%2F'+code+'&v='+version;
+   assert.equal(page.evalJS("mobyChartUrl('solana','"+mint+"')"),expected);
+ }
+ const unknown='6NLUC3veg7NGuQBNewE1UM7G6ir2mymJM4PvwdkGpump';
+ assert.equal(page.evalJS("mobyChartUrl('solana','"+unknown+"')"),
+   'https://mobyscreener.com/solana/'+unknown);
  assert.equal(page.evalJS("mobyChartUrl('solana','invalid-address!')"),null);
  const rh='0x2cc0fac44b8252f6b10208b091aff2c94b4da77d';
  assert.equal(page.evalJS("mobyChartUrl('robinhood','"+rh+"')"),
   'https://www.mobyscreener.com/token/'+rh);
+ const rows=known.map(([address])=>({...example[0],asset_key:'solana:'+address,address,tier:'HOT'}));
+ rows.push({...example[0],asset_key:'solana:'+unknown,address:unknown,tier:'HOT'});
+ page.evalJS('setAssetData('+JSON.stringify(rows)+')');
+ const html=page.assets.innerHTML;
+ assert.equal((html.match(/Moby app ↗/g)||[]).length,3);
+ assert.equal((html.match(/Moby web ↗/g)||[]).length,1);
+ assert.match(html,/invite\.mobyscreener\.com%2Fszgvvaurn7b&amp;v=1792456149/);
+ assert.doesNotMatch(html,/invite\.mobyscreener\.com%2FcLJFHSHGm7b[^<]*6NLUC3/);
 });
