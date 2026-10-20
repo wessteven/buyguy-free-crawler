@@ -12,6 +12,19 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 - No real-money trading or transaction signing under any circumstance.
 - The existing original BuyGuy website, real portfolios, and old Night Game simulation ledger are independent of this experimental database.
 
+## D1 Free row-read budget and recovery (20 October 2026)
+
+The automated Cloudflare D1 deployment check exposed a hard provider limitation: **the account exceeded its free-tier daily rows-read allowance**. The dashboard Worker can be published independently, but live D1-backed rankings are **unavailable** until Cloudflare resets the allowance at **midnight UTC**. Do not claim this as an operational successful end-to-end deployment while reads are blocked.
+
+Improvements to prevent a repeat:
+- Active token social links and historical archive summaries use **grouped passes and joins** instead of scanning research-event history separately for every asset.
+- Added `research_event_asset_kind_id` and `research_event_kind_id` indexes. The crawler's idempotent schema initializer automatically applies them on its next successful run; **schema changes are not yet confirmed active in production until D1 accepts queries again**.
+- Deployment checks read a single indexed row from each required table rather than issuing growing full-table `COUNT(*)` queries. A real provider quota error remains a failed check, with safe diagnostic output.
+- **Cloudflare Cron remains every 10 minutes**. Duplicate GitHub Actions scanning is reduced to **hourly fallback**; manual `workflow_dispatch` remains available.
+- The WHAT'S GOOD? UI explicitly shows **LIVE RANKING UNAVAILABLE** on data errors, rather than inventing a top five, and never treats a read-quota outage as an absence of interesting tokens.
+
+Verify live Cloudflare D1 status, the schema/index migration, and real charted shortlist once the daily quota resets. Automated tests run without live D1 and cannot prove quota recovery.
+
 ## WHAT'S GOOD? research front page (20 October 2026)
 
 The logged-in dashboard now opens to **WHAT'S GOOD?**, a five-candidate shortlist calculated locally from the same authenticated /api/status data as TOKEN DATA. It does not run another external crawler, change ledger data, place a trade, or expose private dashboard data publicly.
