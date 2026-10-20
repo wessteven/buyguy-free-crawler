@@ -256,14 +256,86 @@ test('Malicious saved layout and token symbol are sanitized',async()=>{
 
 test('Navigation order is TOKEN DATA, HOT, NOT, wallet, recent runs, outcomes, address',async()=>{
  const {html,evalJS,ui}=await tableSandbox();
- const names=['tab-research','tab-hot','tab-not','tab-archive','tab-wallet','tab-runs','tab-outcomes','tab-address'];
+ const names=['tab-good','tab-research','tab-hot','tab-not','tab-archive','tab-wallet','tab-runs','tab-outcomes','tab-address'];
  for(let i=1;i<names.length;i++)assert.ok(html.indexOf('id="'+names[i-1]+'"')<html.indexOf('id="'+names[i]+'"'));
- assert.equal(evalJS('activeTab'),'research');
- assert.equal(ui.get('panel-research').hidden,false);
+ assert.equal(evalJS('activeTab'),'good');
+ assert.equal(ui.get('panel-good').hidden,false);
+ assert.equal(ui.get('panel-research').hidden,true);
  assert.equal(ui.get('panel-wallet').hidden,true);
  assert.equal(ui.get('panel-runs').hidden,true);
  assert.equal(ui.get('panel-outcomes').hidden,true);
  assert.match(html,/id="panel-research"[\s\S]*?id="routeReviews"/);
+});
+test('WHAT\'S GOOD opens first and never fabricates candidates from stale or missing data',async()=>{
+ const page=await tableSandbox();
+ assert.equal(page.evalJS('activeTab'),'good');
+ assert.match(page.html,/id="tab-good"/);
+ assert.match(page.html,/id="panel-good"/);
+ assert.match(page.html,/id="goodCards"/);
+ assert.match(page.html,/WHAT'S GOOD\?/);
+ page.evalJS('setAssetData('+JSON.stringify([
+  {...example[0],asset_key:'solana:So11111111111111111111111111111111111111112',
+   address:'So11111111111111111111111111111111111111112',
+   symbol:'NO_FRESHNESS',price:0.001,quote_age:null,score:85,buys_m5:20,sells_m5:10}
+ ])+')');
+ assert.match(page.ui.get('goodCards').innerHTML,/No currently qualified candidates/);
+ assert.equal(page.ui.get('goodCount').textContent,'(0/5)');
+ assert.doesNotMatch(page.ui.get('goodCards').innerHTML,/good-item/);
+});
+test('WHAT\'S GOOD sorts only qualified fresh candidates, max five, with visible caveats and links',async()=>{
+ const page=await tableSandbox();
+ const now=new Date(Date.now()-5*60000).toISOString();
+ const template={...example[0],status:'ALIVE',tier:'HOT',market_cap:100000,
+  liquidity:80000,price:0.001,buys_m5:35,sells_m5:8,quote_age:5,
+  score:80,change_h1:12,risk_status:'PARTIAL_ONCHAIN_REVIEW',
+  last_seen:now};
+ const valid=Array.from({length:7},(_,i)=>({
+  ...template,asset_key:'solana:So11111111111111111111111111111111111111'+String(i).padStart(3,'0'),
+  address:'So11111111111111111111111111111111111111'+String(i).padStart(3,'0'),
+  symbol:'GOOD_'+i,liquidity:85000-i*1000,buys_m5:45-i*4
+ }));
+ // No hard-risk, dead, quote-stale or missing-cap token may appear even when scores would otherwise be high.
+ const excluded=[
+  {...template,symbol:'RISKY',risk_status:'MINT_CONTROL_RISK',asset_key:'risk'},
+  {...template,symbol:'OLD',quote_age:150,asset_key:'old'},
+  {...template,symbol:'DEAD',status:'DEAD',asset_key:'dead'},
+  {...template,symbol:'NO_CAP',market_cap:0,asset_key:'nocap'}
+ ];
+ page.evalJS('setAssetData('+JSON.stringify([...excluded,...valid])+')');
+ const selected=page.evalJS('goodCandidates().map(a=>a.symbol).join(",")').split(',');
+ assert.equal(selected.length,5);
+ assert.ok(selected.every(x=>x.startsWith('GOOD_')));
+ const html=page.ui.get('goodCards').innerHTML;
+ assert.equal((html.match(/class="good-item"/g)||[]).length,5);
+ assert.match(html,/good-verdict/);
+ assert.match(html,/Why:/);
+ assert.match(html,/Watch out:/);
+ assert.match(html,/Chart ↗/);
+ assert.match(html,/data-green-key/);
+ assert.match(html,/data-our-key/);
+ assert.doesNotMatch(html,/RISKY|NO_CAP|OLD|DEAD/);
+ assert.equal(page.ui.get('goodCount').textContent,'(5/5)');
+ page.ui.get('goodResearch').onclick();
+ assert.equal(page.evalJS('activeTab'),'research');
+ assert.equal(page.evalJS('assetSort.key'),'our_score');
+});
+test('WHAT\'S GOOD tells the truth about unknown safety and escapes token names',async()=>{
+ const page=await tableSandbox();
+ const token={...example[0],chain:'solana',
+  asset_key:'solana:So11111111111111111111111111111111111111112',
+  address:'So11111111111111111111111111111111111111112',
+  symbol:'<img src=x onerror=alert(1)>',
+  status:'ALIVE',tier:'HOT',market_cap:100000,liquidity:73000,price:0.00012,
+  buys_m5:40,sells_m5:6,quote_age:4,score:85,change_h1:6,
+  risk_status:'UNVERIFIED',last_seen:new Date(Date.now()-4*60000).toISOString()};
+ page.evalJS('setAssetData('+JSON.stringify([token])+')');
+ const html=page.ui.get('goodCards').innerHTML;
+ assert.match(html,/CAUTION/);
+ assert.match(html,/safety evidence limited/);
+ assert.match(html,/LP lock not independently verified/);
+ assert.match(html,/&lt;img src=x/);
+ assert.doesNotMatch(html,/<img src=x/);
+ assert.doesNotMatch(html,/onerror=/);
 });
 test('Archive keeps learning-rich cases visible and hides low-signal history behind a collapsed section',async()=>{
  const page=await tableSandbox();
@@ -322,9 +394,9 @@ test('Tabs support tap/click and arrow-key keyboard navigation',async()=>{
  assert.equal(page.ui.get('tab-runs').attributes['aria-selected'],'true');
  assert.equal(page.ui.get('tab-wallet').attributes['aria-selected'],'false');
  page.ui.get('tab-runs').listeners.keydown({key:'Home',preventDefault(){}});
- assert.equal(page.evalJS('activeTab'),'research');
+ assert.equal(page.evalJS('activeTab'),'good');
  assert.equal(page.evalJS("activateTab('injected')"),false);
- assert.equal(page.evalJS('activeTab'),'research');
+ assert.equal(page.evalJS('activeTab'),'good');
 });
 
 test('Socials column renders safe, clickable project-supplied HTTPS links',async()=>{
