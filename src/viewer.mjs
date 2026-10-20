@@ -968,22 +968,30 @@ function scoreJournalTable(rows,state){
   snapshots.get(r.id).results.set(r.horizon_min,r);
  }
  const counts={observed:0,positive:0,missed:0};
+ const oneHour={TOP5:[],COMPARATOR:[]};
  const data=[...snapshots.values()].map(s=>{
   const results=minutes.map(h=>{
    const r=s.results.get(h);
    if(!r)return '—';
    if(r.status==='EVALUATED'&&r.return_pct!==null&&Number.isFinite(Number(r.return_pct))){
     counts.observed++;if(Number(r.return_pct)>0)counts.positive++;
-    const value=Number(r.return_pct);return (value>=0?'+':'')+value.toFixed(1)+'%';
+    const value=Number(r.return_pct);
+    if(h===60)oneHour[s.cohort==='COMPARATOR'?'COMPARATOR':'TOP5'].push(value);
+    return (value>=0?'+':'')+value.toFixed(1)+'%';
    }
    if(r.status==='MISSED_DATA')counts.missed++;
    return r.status==='POOL_CHANGED'?'Pool changed':r.status==='MISSED_DATA'?'Missing':'Pending';
   });
   return [s.captured_at,s.cohort==='COMPARATOR'?'Comparison':'Top 5',s.symbol||s.asset_key,s.our_score+'/100',...results];
  });
+ const mean=list=>list.length?(list.reduce((sum,v)=>sum+v,0)/list.length):null;
+ const leader=mean(oneHour.TOP5),control=mean(oneHour.COMPARATOR);
+ const comparison=leader===null||control===null?'Comparison not yet measurable on both groups.':
+  '1h indicative mean: Top 5 '+leader.toFixed(1)+'% (n='+oneHour.TOP5.length+
+  '), lower-ranked controls '+control.toFixed(1)+'% (n='+oneHour.COMPARATOR.length+').';
  return '<p class="hint">'+counts.observed+' measured horizon observations; '+counts.positive+
   ' positive, '+(counts.observed-counts.positive)+' flat/negative; '+counts.missed+
-  ' missed. Early samples are not proof of predictive accuracy.</p>'+
+  ' missed. '+comparison+' Small, incomplete samples are not proof of prediction or executable P&amp;L.</p>'+
   table(['Snapshot UTC','Group','Token','OUR SCORE','15m','1h','6h','24h'],data);
 }
 async function refresh(){try{
