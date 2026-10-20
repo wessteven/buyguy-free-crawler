@@ -234,13 +234,13 @@ function validOrder(maybe){
    order.splice(order.indexOf('liq_cap_pct'),1);
    order.splice(order.indexOf('market_cap')+1,0,'liq_cap_pct');
  }
- if(!current.includes('audit')&&order.includes('symbol')){
-   order.splice(order.indexOf('audit'),1);
-   order.splice(order.indexOf('symbol')+1,0,'audit');
- }
  if(!current.includes('our_score')&&order.includes('symbol')){
    order.splice(order.indexOf('our_score'),1);
    order.splice(order.indexOf('symbol')+1,0,'our_score');
+ }
+ if(!current.includes('audit')&&order.includes('symbol')){
+   order.splice(order.indexOf('audit'),1);
+   order.splice(order.indexOf('symbol')+1,0,'audit');
  }
  if(!current.includes('trade_on')&&order.includes('address')){
    order.splice(order.indexOf('trade_on'),1);
