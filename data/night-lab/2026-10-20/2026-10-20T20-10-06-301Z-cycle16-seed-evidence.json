@@ -1,0 +1,31 @@
+{
+  "cycle": 16,
+  "recorded_at_utc": "2026-10-20T20:10:06.301Z",
+  "record": {
+    "symbol": "SEED",
+    "chain": "robinhood",
+    "address": "0x6AdB9Cd443F4653572101E2F91b35ea1ed5f6b69",
+    "pool": "0x574596ca78e0ec91044f9c72d3a07c952892ee3219e6a2fb0f85d4e424d62237",
+    "price_usd": 0.00007415,
+    "market_cap_usd": 74157.53,
+    "fdv_proxy_usd": null,
+    "liquidity_reported_usd": 55591.8,
+    "liquidity_market_cap_pct": 74.96,
+    "source": "Blockscout PRO and GeckoTerminal asynchronous",
+    "retrieved_at": "2026-10-20T20:07:03Z",
+    "buys_24h_reported": 564,
+    "sells_24h_reported": 249,
+    "volume_24h_reported_usd": 17161.84,
+    "distinct_buyers": null,
+    "score_provisional": 39,
+    "state": "ACTIVE",
+    "confidence": "LOW_FOR_LIQUIDITY",
+    "missing": [
+      "lp_position_accounting",
+      "independent_vesting_proof",
+      "sell_quote",
+      "distinct_buyers"
+    ],
+    "source_url": "https://www.geckoterminal.com/robinhood/pools/0x574596ca78e0ec91044f9c72d3a07c952892ee3219e6a2fb0f85d4e424d62237"
+  }
+}
