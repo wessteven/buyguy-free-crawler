@@ -144,7 +144,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <section><h2>Token research</h2><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div><span id="copyStatus" role="status" aria-live="polite"></span>
 </section>
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
-<section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend">Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Tap a safety score to inspect the seven checks.  Score is 0–100 based on evidence, <strong>not a guarantee of safety</strong>. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
+<section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend"><strong>Market Score (0–100)</strong> ranks observed trading opportunity from liquidity, market-cap fit, buyer flow, volume, price change and pool age — not safety or a forecast. <strong>Safety Evidence (0–100 or —)</strong> reflects mint/holder review, pool liquidity, indicative round-trip quote and quote freshness. Tap it to inspect the independent <strong>seven-check safety screen</strong>. <strong>Liq/Cap %</strong> = USD pool liquidity ÷ reported USD market cap × 100; missing cap means —. A high ratio does not verify LP locks or a sell route. Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
 </div>
 <div class="tab-panel" id="panel-hot" role="tabpanel" aria-labelledby="tab-hot" hidden>
 <section><h2>HOT // FRESH MOMENTUM <span id="hotCount" class="hint"></span></h2>
@@ -195,15 +195,16 @@ const assetColumns=[
  {key:'price',name:'Price $',type:'number'},
  {key:'liquidity',name:'Liquidity $',type:'number'},
  {key:'market_cap',name:'Cap $',type:'number'},
+ {key:'liq_cap_pct',name:'Liq/Cap %',type:'number'},
  {key:'buys_m5',name:'5m buys/sells',type:'number'},
  {key:'momentum',name:'Signal',type:'number'},
  {key:'direction',name:'Direction 1h',type:'number'},
- {key:'score',name:'Score',type:'number'},
+ {key:'score',name:'Market Score',type:'number'},
  {key:'quote_age',name:'Quote age',type:'number'},
  {key:'tier',name:'Lane',type:'text'},
  {key:'status',name:'Status',type:'text'},
  {key:'provider',name:'Provider',type:'text'},
- {key:'safety',name:'Safety',type:'number'},
+ {key:'safety',name:'Safety Evidence',type:'number'},
  {key:'topBps',name:'Top acct %',type:'number'},
  {key:'address',name:'Copy address',type:'text'},
  {key:'trade_on',name:'Trade on',type:'text'},
@@ -221,6 +222,10 @@ function validOrder(maybe){
    typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
  const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
  // Inject newly introduced columns into saved layouts without resetting other positions.
+ if(!current.includes('liq_cap_pct')&&order.includes('market_cap')){
+   order.splice(order.indexOf('liq_cap_pct'),1);
+   order.splice(order.indexOf('market_cap')+1,0,'liq_cap_pct');
+ }
  if(!current.includes('audit')&&order.includes('symbol')){
    order.splice(order.indexOf('audit'),1);
    order.splice(order.indexOf('symbol')+1,0,'audit');
@@ -454,6 +459,19 @@ function indicatorCell(row,key){
  }
  return '';
 }
+// Market depth indicator: pool liquidity divided by the reported market cap.
+// Never treat missing/zero cap as valid or fabricate a 0% quote.
+function liquidityCapPercentage(liquidity,marketCap){
+ if(liquidity===null||liquidity===undefined||liquidity===''||marketCap===null||marketCap===undefined||marketCap==='')return null;
+ const liq=Number(liquidity),cap=Number(marketCap);
+ if(!Number.isFinite(liq)||liq<0||!Number.isFinite(cap)||cap<=0)return null;
+ const pct=liq/cap*100;
+ return Number.isFinite(pct)?pct:null;
+}
+function formatLiqCapPct(pct){
+ if(pct===null||pct===undefined||!Number.isFinite(pct))return '—';
+ return (pct!==0&&pct<0.1?pct.toFixed(3):pct<10?pct.toFixed(2):pct.toFixed(1))+'%';
+}
 function assetRow(a,routes=[]){
  const audit=riskInfo(a);
  const safetyInfo=safetyAssessment(a,routes),signalInfo=signalAssessment(a),directionInfo=directionAssessment(a);
@@ -464,7 +482,8 @@ function assetRow(a,routes=[]){
  try{const raw=JSON.parse(a.socials_json||'[]');if(Array.isArray(raw))supplied=raw;}catch{}
  const socialLinks=supplied.filter(item=>item&&typeof item==='object'&&safeExternalLink(item.url))
     .slice(0,24).map(item=>({label:String(item.label||'Link').slice(0,18),url:safeExternalLink(item.url)}));
- return {...a,buys_m5:Number(a.buys_m5)||0,sells_m5:Number(a.sells_m5)||0,
+ return {...a,liq_cap_pct:liquidityCapPercentage(a.liquidity,a.market_cap),
+   buys_m5:Number(a.buys_m5)||0,sells_m5:Number(a.sells_m5)||0,
    tier:a.tier||'NOT',tier_reason:a.tier_reason||'QUOTE_UNVERIFIED',quote_age:a.quote_age??null,
    socials:socialLinks.length,socialLinks,
    safety:safetyInfo.score,momentum:signalInfo.rank,direction:directionInfo.value,
@@ -479,6 +498,7 @@ function formatUsd(raw){
    new Intl.NumberFormat('en-US',{maximumFractionDigits:Math.abs(n)<1?6:2}).format(n));
 }
 function columnValue(row,key){
+ if(key==='liq_cap_pct')return formatLiqCapPct(row.liq_cap_pct);
  if(key==='buys_m5')return row.buys_m5+'/'+row.sells_m5;
  if(key==='topBps')return row.topBps===null?'Unknown':(row.topBps/100).toFixed(1)+'%';
  if(key==='quote_age')return row.quote_age===null?'—':row.quote_age+'m';
@@ -555,7 +575,7 @@ function archiveLesson(a){
 }
 function archiveTable(items){
  if(!items.length)return '<p class="hint">No archived tokens in this group.</p>';
- const head='<thead><tr><th>Token</th><th>Chain</th><th>Peak score</th><th>Quotes</th><th>Lesson</th><th>Last seen</th><th>Archive reason</th><th>Chart</th><th>Address</th></tr></thead>';
+ const head='<thead><tr><th>Token</th><th>Chain</th><th>Peak market score</th><th>Quotes</th><th>Lesson</th><th>Last seen</th><th>Archive reason</th><th>Chart</th><th>Address</th></tr></thead>';
  return '<table>'+head+'<tbody>'+items.map(a=>'<tr>'+tokenCell(a)+cell(a.chain)+
     cell(a.peak_score??'—')+cell(a.observations??0)+
     cell(archiveLesson(a)||'Low-signal reference')+cell(a.last_seen||'No verified quote')+
