@@ -8,7 +8,10 @@ test('Retirement only archives after thresholds, protects held or pinned tokens'
    batch:async items=>{statements.push(...items);return items.map(()=>({meta:{changes:1}}))}};
  const r=await retireDormantAssets(DB,Date.parse('2026-10-19T01:00:00Z'));
  assert.equal(r.deleted,0);
- assert.equal(statements.length,3);
+ assert.equal(statements.length,5);
+ assert.equal(statements[1].params.length,2);
+ assert.ok(statements.every(s=>(s.sql.match(/\\?/g)||[]).length===s.params.length));
+ assert.ok(statements.every(s=>s.sql.includes("p.status='PENDING'")));
  assert.ok(statements.every(s=>s.sql.includes('p.status=\'OPEN\'')&&s.sql.includes('pinned=0')));
  assert.ok(statements.some(s=>s.sql.includes("status='DEAD'")));
  assert.ok(statements.some(s=>s.sql.includes("status='TRASH'")));
