@@ -320,6 +320,24 @@ test('WHAT\'S GOOD sorts only qualified fresh candidates, max five, with visible
  assert.equal(page.evalJS('activeTab'),'research');
  assert.equal(page.evalJS('assetSort.key'),'our_score');
 });
+test('WHAT\'S GOOD never promotes a mismatched or invalid chain contract',async()=>{
+ const page=await tableSandbox();
+ const base={...example[0],chain:'solana',
+  status:'ALIVE',tier:'HOT',market_cap:90000,liquidity:80000,price:0.001,
+  buys_m5:25,sells_m5:5,quote_age:6,score:88,change_h1:8,
+  risk_status:'PARTIAL_ONCHAIN_REVIEW',last_seen:new Date(Date.now()-6*60000).toISOString()};
+ const addr='So11111111111111111111111111111111111111112';
+ const mismatched={...base,address:addr,asset_key:'solana:other-mint',symbol:'WRONG'};
+ const invalid={...base,address:'not-a-contract',asset_key:'solana:not-a-contract',symbol:'NOT_VALID'};
+ const correct={...base,address:addr,asset_key:'solana:'+addr,symbol:'REAL'};
+ page.evalJS('setAssetData('+JSON.stringify([mismatched,invalid,correct])+')');
+ const names=page.evalJS('goodCandidates().map(x=>x.symbol).join(",")');
+ assert.equal(names,'REAL');
+ const html=page.ui.get('goodCards').innerHTML;
+ assert.match(html,/REAL/);
+ assert.doesNotMatch(html,/WRONG|NOT_VALID/);
+ assert.match(html,/href="https:\/\/dexscreener.com\/solana\//);
+});
 test('WHAT\'S GOOD tells the truth about unknown safety and escapes token names',async()=>{
  const page=await tableSandbox();
  const token={...example[0],chain:'solana',
