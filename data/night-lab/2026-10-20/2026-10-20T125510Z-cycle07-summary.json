@@ -1,0 +1,102 @@
+{
+  "cycle": "07",
+  "captured_at_utc": "2026-10-20T12:55:10Z",
+  "research_only": true,
+  "pro_auth_verified": true,
+  "passes": {
+    "complete": 3,
+    "partial": 5,
+    "unavailable": 2
+  },
+  "prior_records_retained": 48,
+  "new_qualified": 0,
+  "helius_pool_samples": [
+    {
+      "symbol": "FORKIUS",
+      "mint": "7xTMgacureYyKpaQZwP6LHR1tywEaBjAYfj9zidipump",
+      "pool": "8uzUfQhxmTSGCunXB6ndTtZHxexyshEKbgsZjVAXh2tT",
+      "five_min_windows_latest_first": [
+        [
+          8,
+          13,
+          6,
+          12
+        ],
+        [
+          2,
+          3,
+          2,
+          2
+        ],
+        [
+          4,
+          8,
+          4,
+          8
+        ],
+        [
+          16,
+          12,
+          10,
+          11
+        ]
+      ],
+      "columns": [
+        "buys",
+        "sells",
+        "distinct_buy_fee_payers",
+        "distinct_sell_fee_payers"
+      ]
+    },
+    {
+      "symbol": "Satoshi",
+      "mint": "SAtoZGJkh4Eid9EQZYXWnCNVn5asZrWZLouBMX1SHi1",
+      "pool": "7jTCpYho9RJhCn9ZyrLPjwGWkacGhJVdzL2cZni3UdUh",
+      "five_min_windows_latest_first": [
+        [
+          2,
+          0,
+          2,
+          0
+        ],
+        [
+          2,
+          1,
+          2,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          1,
+          1
+        ]
+      ],
+      "columns": [
+        "buys",
+        "sells",
+        "distinct_buy_fee_payers",
+        "distinct_sell_fee_payers"
+      ]
+    }
+  ],
+  "discovery_controls": [
+    "Robinhood KOLSHI/WETH",
+    "Robinhood SI276/WETH",
+    "Robinhood NIHAO/WETH name-collision pools"
+  ],
+  "missing": [
+    "full raw USD OHLCV",
+    "LP proof",
+    "sell-route quotes",
+    "verified distinct unique buyer growth"
+  ],
+  "full_local_dataset": "whats_good_cycle07_2026-10-20T125510Z.json",
+  "notes": "The GitHub record is a compact immutable summary; full 48-record dataset saved locally and not uploaded."
+}
