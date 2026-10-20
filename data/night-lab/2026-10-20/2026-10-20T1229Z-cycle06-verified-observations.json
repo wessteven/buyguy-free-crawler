@@ -1,0 +1,72 @@
+{
+  "cycle": "06",
+  "retrieved_at_utc": "2026-10-20T12:28:13.348Z",
+  "research_only": true,
+  "passes": {
+    "attempted": 10,
+    "complete": 4,
+    "partial": 5,
+    "unavailable": 1
+  },
+  "pro_auth_verified_at": "2026-10-20T12:27:07.329Z",
+  "prior_repo_path": "data/night-lab/2026-10-20/2026-10-20T1225Z-cycle05-research-summary.json",
+  "observations": [
+    {
+      "name": "FORKIUS",
+      "pool": "8uzUfQhxmTSGCunXB6ndTtZHxexyshEKbgsZjVAXh2tT",
+      "mint": "7xTMgacureYyKpaQZwP6LHR1tywEaBjAYfj9zidipump",
+      "count": 100,
+      "earliest": 1792497871,
+      "latest": 1792499274,
+      "buys": 44,
+      "sells": 52,
+      "unknown": 4,
+      "distinct_buy_fee_payers": 32,
+      "distinct_sell_fee_payers": 42,
+      "method": "pool token-transfer direction; sampled latest 100 transactions; not full 5m flow"
+    },
+    {
+      "name": "Satoshi",
+      "pool": "7jTCpYho9RJhCn9ZyrLPjwGWkacGhJVdzL2cZni3UdUh",
+      "mint": "SAtoZGJkh4Eid9EQZYXWnCNVn5asZrWZLouBMX1SHi1",
+      "count": 100,
+      "earliest": 1792479339,
+      "latest": 1792499275,
+      "buys": 50,
+      "sells": 30,
+      "unknown": 20,
+      "distinct_buy_fee_payers": 30,
+      "distinct_sell_fee_payers": 22,
+      "method": "pool token-transfer direction; sampled latest 100 transactions; not full 5m flow"
+    }
+  ],
+  "helius_indicative_quotes_usdc": {
+    "FORKIUS": 0.000023944562,
+    "Satoshi": 0.000074024836,
+    "EVOLVE": 0.000039584174,
+    "BORLY": 0.0009601867,
+    "AOP": 0.0001549785,
+    "STONKI": 0.000002027777
+  },
+  "robinseed": {
+    "contract": "0x6AdB9Cd443F4653572101E2F91b35ea1ed5f6b69",
+    "holders": 116,
+    "blockscout_market_cap_usd": 68037.20798943222,
+    "blockscout_price_usd": 0.00006803,
+    "volume_24h_usd": 15992.583826505193,
+    "lp_reserve_reconciliation": "unresolved"
+  },
+  "controls": [
+    "EVOLVE",
+    "BORLY",
+    "AOP",
+    "STONKI"
+  ],
+  "unavailable": [
+    "matched-pool OHLCV",
+    "sell route",
+    "LP lock evidence",
+    "complete unique buyer counts"
+  ],
+  "notes": "Latest Helius price_info quotes repeated despite newer indexed slots. Never interpret as no movement. No trades."
+}
