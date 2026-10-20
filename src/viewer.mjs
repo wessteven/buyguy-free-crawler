@@ -1257,13 +1257,28 @@ if(path==='/api/watchlist'){
 try{const list=async(sql)=>(await env.DB.prepare(sql).all()).results||[];
 const [runs,assets,wallet,predictions,routes,pinned,greenEvents,archive,archiveCounts]=await Promise.all([
 list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
-list("SELECT a.*, (SELECT e.note FROM research_events e WHERE e.asset_key=a.asset_key AND e.kind='TOKEN_SOCIALS' ORDER BY e.id DESC LIMIT 1) AS socials_json FROM assets a WHERE a.status IN ('ALIVE','STATIC') OR (a.pinned=1 AND a.status='DEAD') OR EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') ORDER BY a.pinned DESC,a.score DESC LIMIT 500"),
+// Aggregate the latest token socials once rather than rescanning the entire
+// research_events history for every asset in the active dashboard.
+list("SELECT a.*,e.note AS socials_json FROM assets a "+
+ "LEFT JOIN (SELECT asset_key,MAX(id) AS last_id FROM research_events WHERE kind='TOKEN_SOCIALS' GROUP BY asset_key) soc ON soc.asset_key=a.asset_key "+
+ "LEFT JOIN research_events e ON e.id=soc.last_id "+
+ "WHERE a.status IN ('ALIVE','STATIC') OR (a.pinned=1 AND a.status='DEAD') OR EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') "+
+ "ORDER BY a.pinned DESC,a.score DESC LIMIT 500"),
 list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
 list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30"),
 list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 15"),
 list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100"),
 list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','PROGRAM_UPGRADE_PROBE','PUMP_MIGRATION_PROBE','PUMP_MIGRATION_TX_PROBE') ORDER BY id DESC LIMIT 2000"),
-list("SELECT a.asset_key,a.chain,a.address,a.symbol,a.last_seen,a.last_action,a.score,a.observations, (SELECT MAX(o.score) FROM observations o WHERE o.asset_key=a.asset_key) AS peak_score, (SELECT COUNT(*) FROM predictions p WHERE p.asset_key=a.asset_key) AS prediction_count, (SELECT COUNT(*) FROM paper_positions p WHERE p.asset_key=a.asset_key) AS paper_count, (SELECT COUNT(*) FROM research_events e WHERE e.asset_key=a.asset_key AND e.kind!='TOKEN_SOCIALS') AS research_count FROM assets a WHERE a.status='DEAD' AND a.pinned=0 AND NOT EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') ORDER BY COALESCE((SELECT MAX(o.score) FROM observations o WHERE o.asset_key=a.asset_key),0) DESC,a.observations DESC LIMIT 500"),
+// One grouped pass per history table, not one table scan per archived asset.
+list("SELECT a.asset_key,a.chain,a.address,a.symbol,a.last_seen,a.last_action,a.score,a.observations,"+
+ "o.peak_score,COALESCE(p.prediction_count,0) AS prediction_count,COALESCE(t.paper_count,0) AS paper_count,COALESCE(e.research_count,0) AS research_count "+
+ "FROM assets a "+
+ "LEFT JOIN (SELECT asset_key,MAX(score) AS peak_score FROM observations GROUP BY asset_key) o ON o.asset_key=a.asset_key "+
+ "LEFT JOIN (SELECT asset_key,COUNT(*) AS prediction_count FROM predictions GROUP BY asset_key) p ON p.asset_key=a.asset_key "+
+ "LEFT JOIN (SELECT asset_key,COUNT(*) AS paper_count FROM paper_positions GROUP BY asset_key) t ON t.asset_key=a.asset_key "+
+ "LEFT JOIN (SELECT asset_key,COUNT(*) AS research_count FROM research_events WHERE kind!='TOKEN_SOCIALS' GROUP BY asset_key) e ON e.asset_key=a.asset_key "+
+ "WHERE a.status='DEAD' AND a.pinned=0 AND NOT EXISTS (SELECT 1 FROM paper_positions p2 WHERE p2.asset_key=a.asset_key AND p2.status='OPEN') "+
+ "ORDER BY COALESCE(o.peak_score,0) DESC,a.observations DESC LIMIT 500"),
 list("SELECT SUM(CASE WHEN status='DEAD' THEN 1 ELSE 0 END) AS dead, SUM(CASE WHEN status='TRASH' THEN 1 ELSE 0 END) AS trash FROM assets")]);
 const recent=new Map();
 for(const event of greenEvents){
