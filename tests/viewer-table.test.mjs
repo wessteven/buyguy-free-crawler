@@ -102,6 +102,38 @@ test('Liquidity-to-market-cap ratio is numeric, sortable, formatted, and absent 
  assert.match(page.ui.get('hotAssets').innerHTML,/Liq\/Cap %/);
  assert.match(page.ui.get('notAssets').innerHTML,/Liq\/Cap %/);
 });
+test('Liq/Cap shows lock icon only when current matched-pool LP custody gate passes',async()=>{
+ const page=await tableSandbox();
+ const base={...example[0],chain:'solana',market_cap:100000,liquidity:75000,
+   asset_key:'solana:So11111111111111111111111111111111111111112',
+   address:'So11111111111111111111111111111111111111112',tier:'HOT'};
+ const verified={...base,symbol:'LOCKED',green:{status:'PARTIAL',
+   checks:[{name:'Pool custody / LP lock',passed:true}]}};
+ const without={...base,symbol:'UNVERIFIED',green:{status:'PARTIAL',
+   checks:[{name:'Pool custody / LP lock',passed:false}]}};
+ const absent={...base,symbol:'NO_AUDIT',green:{checks:[]}};
+ const misleading={...base,symbol:'OTHER_CHECK',green:{green:true,passed:6,
+   checks:[{name:'Current pool liquidity',passed:true}]}};
+ for(const [row,icon] of [[verified,true],[without,false],[absent,false],[misleading,false]]){
+   page.evalJS('setAssetData('+JSON.stringify([row])+')');
+   assert.equal(page.evalJS('verifiedPoolLock(assetRows[0])'),icon);
+   const cells=page.assets.innerHTML;
+   assert.match(cells,/75\.0%/);
+   assert.equal(cells.includes('lp-lock-verified'),icon);
+   assert.equal(cells.includes('🔒'),icon);
+   assert.equal(page.ui.get('hotAssets').innerHTML.includes('lp-lock-verified'),icon);
+ }
+ const unknownCap={...verified,market_cap:0,symbol:'LOCKED_NO_RATIO'};
+ page.evalJS('setAssetData('+JSON.stringify([unknownCap])+')');
+ assert.doesNotMatch(page.assets.innerHTML,/lp-lock-verified/);
+ assert.equal(page.evalJS('formatLiqCapPct(assetRows[0].liq_cap_pct)'),'—');
+ // Numerical sorting is still based on raw percentage, not the icon HTML.
+ const lower={...base,symbol:'LOWER',liquidity:10000,green:{checks:[]}};
+ page.evalJS('setAssetData('+JSON.stringify([lower,verified])+')');
+ page.evalJS("sortAssets('liq_cap_pct')");
+ const html=page.assets.innerHTML;
+ assert.ok(html.indexOf('LOCKED')<html.indexOf('LOWER'));
+});
 test('Market Score and Safety Evidence are distinct columns with unchanged stable keys',async()=>{
  const page=await tableSandbox();
  assert.match(page.html,/Market Score/);
