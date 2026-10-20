@@ -230,10 +230,6 @@ function validOrder(maybe){
    typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
  const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
  // Inject newly introduced columns into saved layouts without resetting other positions.
- if(!current.includes('our_score')&&order.includes('symbol')){
-   order.splice(order.indexOf('our_score'),1);
-   order.splice(order.indexOf('symbol')+1,0,'our_score');
- }
  if(!current.includes('liq_cap_pct')&&order.includes('market_cap')){
    order.splice(order.indexOf('liq_cap_pct'),1);
    order.splice(order.indexOf('market_cap')+1,0,'liq_cap_pct');
@@ -241,6 +237,10 @@ function validOrder(maybe){
  if(!current.includes('audit')&&order.includes('symbol')){
    order.splice(order.indexOf('audit'),1);
    order.splice(order.indexOf('symbol')+1,0,'audit');
+ }
+ if(!current.includes('our_score')&&order.includes('symbol')){
+   order.splice(order.indexOf('our_score'),1);
+   order.splice(order.indexOf('symbol')+1,0,'our_score');
  }
  if(!current.includes('trade_on')&&order.includes('address')){
    order.splice(order.indexOf('trade_on'),1);
