@@ -680,7 +680,7 @@ function moveColumnToEnd(key){
  saveValue(layoutKey,assetOrder);renderAssets();return true;
 }
 function setAssetData(records,routes=[]){assetRows=(Array.isArray(records)?records:[]).map(a=>assetRow(a,routes));renderAssets();renderGood()}
-// WHAT'S GOOD? deliberately uses only fresh verified-mint market records.
+// WHAT'S GOOD? deliberately uses only fresh, chain-address-validated market records.
 // Do not promote risks, stale data, archived assets or missing-cap tokens just
 // to make the top five. OUR SCORE itself remains a heuristic, not a buy signal.
 function goodVerdict(row){
@@ -730,6 +730,11 @@ function goodReasons(row){
 }
 function goodCandidates(rows=assetRows){
  return (Array.isArray(rows)?rows:[]).filter(row=>{
+  // A name or ticker is not a trading identity. Require chain + exact contract
+  // before surfacing actionable chart/audit shortcuts.
+  if(!dexChartUrl(row.chain,row.address) ||
+     row.asset_key!==(row.chain+':'+(row.chain==='robinhood'?String(row.address).toLowerCase():String(row.address))))
+    return false;
   const liq=ourNum(row.liquidity),age=ourNum(row.quote_age),
    buy=ourNum(row.buys_m5),sell=ourNum(row.sells_m5),cap=ourNum(row.market_cap);
   return ['ALIVE','STATIC'].includes(row.status)&&
@@ -763,7 +768,7 @@ function renderGood(){
     '<p><strong>Watch out:</strong> '+escapeSocial(proof.risk)+'.</p>'+
     '<p class="good-meta">'+escapeSocial(row.chain)+' · Liq '+formatUsd(row.liquidity)+
      ' · Liq/Cap '+formatLiqCapPct(row.liq_cap_pct)+' · 5m '+row.buys_m5+'/'+row.sells_m5+
-     ' · Quote '+(row.quote_age===null?'unknown':row.quote_age+'m')+'</p>'+
+     ' · Quote '+(ourNum(row.quote_age)===null?'unknown':ourNum(row.quote_age)+'m')+'</p>'+
     '<p class="hint">'+escapeSocial(verdict.reason)+'</p>'+
     '<div class="good-actions"><button type="button" data-our-key="'+key+'">Why this score?</button>'+
     '<button type="button" data-green-key="'+key+'">Safety checks</button>'+
