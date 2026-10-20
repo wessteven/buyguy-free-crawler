@@ -148,7 +148,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <pre class="ascii-title" role="heading" aria-level="1">+----------------------------+
 | the   BUYGUY GOGET         |
 +----------------------------+</pre><p class="hint">[ RH + SOL ] // RESEARCH // PAPER EXPERIMENT // NO REAL TRADES</p>
-<div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p></div>
+<div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p><p id="d1ResetClock" role="timer" aria-live="off" style="display:none;font-weight:bold;color:#8ae6a6"></p></div>
 <div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
 <button class="bg-tab" id="tab-good" role="tab" type="button" data-tab="good" aria-controls="panel-good" aria-selected="true" tabindex="0">WHAT'S GOOD?</button>
@@ -994,6 +994,22 @@ function scoreJournalTable(rows,state){
   ' missed. '+comparison+' Small, incomplete samples are not proof of prediction or executable P&amp;L.</p>'+
   table(['Snapshot UTC','Group','Token','OUR SCORE','15m','1h','6h','24h'],data);
 }
+// D1 Free daily allowance normally resets at 00:00 UTC. This is an estimate,
+// not proof that a particular database is healthy or its quota has recovered.
+let d1QuotaBlocked=false;
+function updateD1ResetCountdown(){
+ const node=document.getElementById('d1ResetClock');
+ if(!node)return;
+ node.style.display=d1QuotaBlocked?'block':'none';
+ if(!d1QuotaBlocked)return;
+ const now=Date.now(),next=Math.floor(now/86400000)*86400000+86400000;
+ const seconds=Math.max(0,Math.ceil((next-now)/1000));
+ const hh=String(Math.floor(seconds/3600)).padStart(2,'0');
+ const mm=String(Math.floor(seconds%3600/60)).padStart(2,'0');
+ const ss=String(seconds%60).padStart(2,'0');
+ node.textContent='D1 estimated UTC quota reset in '+hh+':'+mm+':'+ss+' (00:00 UTC). Refresh after reset to verify recovery.';
+}
+if(typeof setInterval==='function')setInterval(updateD1ResetCountdown,1000);
 async function refresh(){try{
  const r=await fetch('/api/status',{credentials:'same-origin',cache:'no-store'});
  if(r.status===401){
@@ -1004,12 +1020,15 @@ async function refresh(){try{
  if(!r.ok){
    let message='HTTP '+r.status;
    try{const failure=await r.json();
-     if(failure.error==='D1_READ_QUOTA')
+     if(failure.error==='D1_READ_QUOTA'){
+       d1QuotaBlocked=true;updateD1ResetCountdown();
        message='Cloudflare D1 daily row-read allowance exhausted. Live rankings unavailable until midnight UTC reset.';
+     }
    }catch{}
    throw Error(message);
  }
  const x=await r.json();
+ d1QuotaBlocked=false;updateD1ResetCountdown();
  document.getElementById('login').style.display='none';
  document.getElementById('board').style.display='block';
  document.getElementById('msg').textContent='';
