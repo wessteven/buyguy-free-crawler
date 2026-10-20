@@ -67,6 +67,58 @@ test('Score defaults high-first; tap toggles ascending then descending',async()=
   ui.evalJS("sortAssets('score')");
   assert.ok(ui.assets.innerHTML.indexOf('A_CAT')<ui.assets.innerHTML.indexOf('B_DOG'));
 });
+test('Liquidity-to-market-cap ratio is numeric, sortable, formatted, and absent for invalid caps',async()=>{
+ const page=await tableSandbox();
+ const mint='So11111111111111111111111111111111111111112';
+ const rows=[
+  {...example[0],asset_key:'solana:'+mint,address:mint,symbol:'THIN',liquidity:10000,market_cap:100000},
+  {...example[0],asset_key:'solana:ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump',
+   address:'ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump',symbol:'DEEP',liquidity:75000,market_cap:100000},
+  {...example[0],asset_key:'solana:9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump',
+   address:'9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump',symbol:'NO_CAP',liquidity:90000,market_cap:0}
+ ];
+ page.evalJS('setAssetData('+JSON.stringify(rows)+')');
+ const order=page.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(order[order.indexOf('market_cap')+1],'liq_cap_pct');
+ assert.match(page.assets.innerHTML,/Liq\/Cap %/);
+ assert.match(page.assets.innerHTML,/10\.0%/);
+ assert.match(page.assets.innerHTML,/75\.0%/);
+ assert.equal(page.evalJS('liquidityCapPercentage(40000,80000)'),50);
+ assert.equal(page.evalJS('liquidityCapPercentage(0,80000)'),0);
+ assert.equal(page.evalJS('liquidityCapPercentage(null,80000)'),null);
+ assert.equal(page.evalJS('liquidityCapPercentage(20000,0)'),null);
+ assert.equal(page.evalJS('liquidityCapPercentage(20000,null)'),null);
+ assert.equal(page.evalJS('liquidityCapPercentage(-1,80000)'),null);
+ assert.equal(page.evalJS('formatLiqCapPct(null)'),'—');
+ assert.equal(page.evalJS('formatLiqCapPct(0.0625)'),'0.063%');
+ page.evalJS("sortAssets('liq_cap_pct')");
+ const desc=page.assets.innerHTML;
+ assert.ok(desc.indexOf('DEEP')<desc.indexOf('THIN'));
+ assert.ok(desc.indexOf('THIN')<desc.indexOf('NO_CAP'));
+ page.evalJS("sortAssets('liq_cap_pct')");
+ const asc=page.assets.innerHTML;
+ assert.ok(asc.indexOf('THIN')<asc.indexOf('DEEP'));
+ assert.ok(asc.indexOf('DEEP')<asc.indexOf('NO_CAP'));
+ assert.match(page.ui.get('hotAssets').innerHTML,/Liq\/Cap %/);
+ assert.match(page.ui.get('notAssets').innerHTML,/Liq\/Cap %/);
+});
+test('Market Score and Safety Evidence are distinct columns with unchanged stable keys',async()=>{
+ const page=await tableSandbox();
+ assert.match(page.html,/Market Score/);
+ assert.match(page.html,/Safety Evidence/);
+ assert.match(page.html,/seven-check safety screen/);
+ const order=page.evalJS('assetOrder.join(",")').split(',');
+ assert.ok(order.includes('score'));
+ assert.ok(order.includes('safety'));
+ assert.equal(page.evalJS("columnByKey.score.name"),'Market Score');
+ assert.equal(page.evalJS("columnByKey.safety.name"),'Safety Evidence');
+ const oldLayout=await tableSandbox(new Map([['buyguy.assetColumns.v2',
+   JSON.stringify(['symbol','market_cap','buys_m5','score','safety'])]]));
+ const saved=oldLayout.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(saved[saved.indexOf('market_cap')+1],'liq_cap_pct');
+ assert.equal(saved[saved.indexOf('liq_cap_pct')+1],'buys_m5');
+ assert.ok(saved.indexOf('score')<saved.indexOf('safety'));
+});
 test('Financial columns use numeric rather than alphabetical sorting',async()=>{
   const ui=await setup();
   ui.evalJS("sortAssets('liquidity')");
