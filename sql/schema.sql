@@ -57,3 +57,38 @@ CREATE INDEX IF NOT EXISTS observation_ttl ON observations(seen_at);
 CREATE INDEX IF NOT EXISTS research_event_asset_kind_id ON research_events(asset_key,kind,id DESC);
 CREATE INDEX IF NOT EXISTS research_event_kind_id ON research_events(kind,id DESC);
 
+
+-- OUR SCORE v1: immutable decision-time snapshots and separately measured forward
+-- outcomes. Do not backfill using today's score. No trade execution involved.
+CREATE TABLE IF NOT EXISTS score_snapshots (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ asset_key TEXT NOT NULL,
+ chain TEXT NOT NULL,
+ address TEXT NOT NULL,
+ symbol TEXT,
+ pool TEXT NOT NULL,
+ captured_at TEXT NOT NULL,
+ version INTEGER NOT NULL DEFAULT 1,
+ entry_price REAL NOT NULL CHECK(entry_price>0),
+ our_score REAL NOT NULL CHECK(our_score>=0 AND our_score<=100),
+ market_score REAL,
+ safety_score REAL,
+ liquidity REAL,
+ market_cap REAL,
+ buys_m5 INTEGER,
+ sells_m5 INTEGER,
+ quote_seen_at TEXT NOT NULL,
+ UNIQUE(asset_key,captured_at,version)
+);
+CREATE INDEX IF NOT EXISTS score_snapshots_capture ON score_snapshots(captured_at DESC);
+CREATE TABLE IF NOT EXISTS score_outcomes (
+ snapshot_id INTEGER NOT NULL,
+ horizon_min INTEGER NOT NULL,
+ due_at TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'PENDING',
+ observed_at TEXT,
+ observed_price REAL,
+ return_pct REAL,
+ PRIMARY KEY(snapshot_id,horizon_min)
+);
+CREATE INDEX IF NOT EXISTS score_outcomes_due ON score_outcomes(status,due_at);
