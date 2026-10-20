@@ -12,6 +12,16 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 - No real-money trading or transaction signing under any circumstance.
 - The existing original BuyGuy website, real portfolios, and old Night Game simulation ledger are independent of this experimental database.
 
+## WHAT'S GOOD? research front page (20 October 2026)
+
+The logged-in dashboard now opens to **WHAT'S GOOD?**, a five-candidate shortlist calculated locally from the same authenticated /api/status data as TOKEN DATA. It does not run another external crawler, change ledger data, place a trade, or expose private dashboard data publicly.
+
+- Rank top five **eligible** ALIVE/STATIC tokens by OUR SCORE (min 35), using the exact chain-specific token address. Missing/invalid price, market cap or quote; quote age over 30 minutes; pool liquidity under $15k; fewer than five 5m transactions; known mint/holder risk; and archived status disqualify the candidate. **Zero qualifying tokens returns an honest empty state.**
+- Visible **BUY WATCH / RISING / WAIT / CAUTION** labels are *research workflow* verdicts, not buy instructions. Any insufficient safety evidence pushes verdict to CAUTION; parabolic price moves, stale quotes and low liquidity cannot be presented as positive conviction. Independent green-gate evidence continues to govern LP-lock icons.
+- Each shortlist card explains two things separately: **why it is interesting** and **what remains risky**. Shows raw score, approximate quote age, buying versus selling transactions, USD liquidity and liquidity/cap ratio. Provides exact-mint DexScreener chart, OUR SCORE factor inspection, safety gate and read-only on-demand audits when a verified address exists.
+- Clicking **Full research + all tokens** switches to the existing sortable research table and orders it by descending OUR SCORE, without dropping other dashboards or changing saved column layouts. Existing user sessions default to the new home tab once; subsequent user tab choices persist in the new v2 display preference.
+- **Do not backfill five with stale/low-quality names:** this is a focused view, not a top-movers feed. Current rankings remain heuristic and unvalidated; do not interpret score as a probability of profit or guaranteed sell execution.
+
 ## Automatic active-radar cleaning and learning archive (20 October 2026)
 
 The dashboard splits current candidates from historical examples without deleting research:
