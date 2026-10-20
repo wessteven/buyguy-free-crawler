@@ -9,7 +9,7 @@ const evm=/^0x[0-9a-fA-F]{40}$/;
 const num=v=>v===null||v===undefined?null:(Number.isFinite(Number(v))?Number(v):null);
 const stamp=ms=>new Date(ms).toISOString();
 
-export function chooseJournalCandidates(rows,routes=[],now=Date.now()){
+export function rankableJournalUniverse(rows,routes=[],now=Date.now()){
  const latestRoute=new Map();
  for(const r of routes)if(r&&typeof r.asset_key==='string'&&!latestRoute.has(r.asset_key))
   latestRoute.set(r.asset_key,r);
@@ -32,7 +32,23 @@ export function chooseJournalCandidates(rows,routes=[],now=Date.now()){
  }).filter(x=>x.assessment.score!==null&&x.assessment.score>=35)
    .sort((a,b)=>b.assessment.score-a.assessment.score||
     (num(b.row.liquidity)||0)-(num(a.row.liquidity)||0)||
-    a.row.asset_key.localeCompare(b.row.asset_key)).slice(0,5);
+    a.row.asset_key.localeCompare(b.row.asset_key));
+}
+
+export function chooseJournalCandidates(rows,routes=[],now=Date.now()){
+ return rankableJournalUniverse(rows,routes,now).slice(0,5);
+}
+// Rotating, deterministic comparison group from the same eligible population;
+// never cherry-picked using subsequent returns or marked as buy candidates.
+function comparisonHash(input){
+ let hash=2166136261;
+ for(const ch of input){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619);}
+ return hash>>>0;
+}
+export function chooseJournalComparators(rows,routes=[],now=Date.now()){
+ const eligible=rankableJournalUniverse(rows,routes,now).slice(5),hour=Math.floor(now/3600000);
+ return eligible.sort((a,b)=>comparisonHash(a.row.asset_key+':'+hour)-
+   comparisonHash(b.row.asset_key+':'+hour)||a.row.asset_key.localeCompare(b.row.asset_key)).slice(0,3);
 }
 
 export async function runScoreJournal(env,{now=Date.now(),maxOutcomes=12}={}){
@@ -76,7 +92,7 @@ export async function runScoreJournal(env,{now=Date.now(),maxOutcomes=12}={}){
   }
  }
  const latest=Date.parse(last?.captured_at||'');
- // At most five snapshots each clock hour; no D1 asset scans on other runs.
+ // At most five leaders plus three comparison snapshots each clock hour; no D1 asset scans on other runs.
  if(Number.isFinite(latest)&&Math.floor(latest/3600000)===Math.floor(now/3600000))
   return {state:'WAITING_NEXT_HOUR',saved:0,settled,missing};
  const all=(await db.prepare(`SELECT asset_key,chain,address,symbol,pool,status,risk_status,risk_note,
@@ -86,15 +102,17 @@ export async function runScoreJournal(env,{now=Date.now(),maxOutcomes=12}={}){
  // Read a bounded set of route evidence only once per hourly snapshot batch.
  const routes=(await db.prepare(`SELECT at,asset_key,note FROM research_events
      WHERE kind='ROUNDTRIP_QUOTE' ORDER BY id DESC LIMIT 100`).all()).results||[];
- const picks=chooseJournalCandidates(all,routes,now);
+ const leaders=chooseJournalCandidates(all,routes,now),controls=chooseJournalComparators(all,routes,now);
+ const picks=[...leaders.map(x=>({...x,cohort:'TOP5'})),
+  ...controls.map(x=>({...x,cohort:'COMPARATOR'}))];
  let saved=0;
  for(const x of picks){
   const a=x.row;
   const record=await db.prepare(`INSERT OR IGNORE INTO score_snapshots
-    (asset_key,chain,address,symbol,pool,captured_at,version,entry_price,
+    (asset_key,chain,address,symbol,cohort,pool,captured_at,version,entry_price,
     our_score,market_score,safety_score,liquidity,market_cap,buys_m5,sells_m5,quote_seen_at)
-    VALUES (?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?)`).bind(
-    a.asset_key,a.chain,a.address,a.symbol||null,a.pool,nowText,a.price,
+    VALUES (?,?,?,?,?,?,?,1,?,?,?,?,?,?,?,?,?)`).bind(
+    a.asset_key,a.chain,a.address,a.symbol||null,x.cohort,a.pool,nowText,a.price,
     x.assessment.score,a.score,x.assessment.safety,a.liquidity,a.market_cap,
     a.buys_m5,a.sells_m5,a.last_seen).run();
   if((record.meta?.changes||0)!==1)continue;
