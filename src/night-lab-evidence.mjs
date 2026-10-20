@@ -18,7 +18,15 @@ export function evaluateNightLabEvidence(e={}){
   const reasons=[],missing=[];
   const windows=(Array.isArray(e.windows)?e.windows:[]).map(evaluateFlowWindow);
   const completed=windows.filter(w=>w.eligible);
-  const latest=completed.slice(-2);
+  // Never bridge over a missing/incomplete five-minute window. The most recent
+  // TWO supplied windows must both be complete, with verifiable adjacency.
+  const latest=windows.slice(-2);
+  const rawWindows=Array.isArray(e.windows)?e.windows:[];
+  const lastRaw=rawWindows.slice(-2);
+  const timed=lastRaw.length===2&&lastRaw.every(w=>Number.isFinite(Date.parse(w.startUtc||''))&&Number.isFinite(Date.parse(w.endUtc||'')));
+  const adjacent=timed&&Date.parse(lastRaw[0].endUtc)===Date.parse(lastRaw[1].startUtc)
+    &&lastRaw.every(w=>Date.parse(w.endUtc)-Date.parse(w.startUtc)===300000);
+  const persistent=latest.length===2&&latest.every(w=>w.eligible&&w.positive)&&adjacent;
   const liquidity=finite(e.liquidityUsd),cap=finite(e.marketCapUsd),
     fdv=finite(e.fdvUsd),quoteAge=finite(e.quoteAgeMinutes);
   const valuation=cap>0?cap:fdv>0?fdv:null;
@@ -26,7 +34,7 @@ export function evaluateNightLabEvidence(e={}){
   if(!e.chain||!e.address||!e.pool)missing.push('EXACT_IDENTITY_OR_POOL');
   if(valuation===null)missing.push('CAP_AND_FDV');
   if(liquidity===null)missing.push('LIQUIDITY_USD');
-  if(completed.length<2)missing.push('TWO_COMPLETE_FLOW_WINDOWS');
+  if(!persistent)missing.push('TWO_ADJACENT_POSITIVE_5M_WINDOWS');
   if(e.sellQuoteVerified!==true)missing.push('EXECUTABLE_SELL_QUOTE');
   if(e.lpCustodyVerified!==true)missing.push('INDEPENDENT_LP_CUSTODY');
   if(e.holderConcentrationVerified!==true)missing.push('HOLDER_CONCENTRATION');
@@ -38,11 +46,11 @@ export function evaluateNightLabEvidence(e={}){
   if(!(liquidity>=15000))reasons.push('INSUFFICIENT_OR_UNKNOWN_LIQUIDITY');
   if(!(valuation>=50000&&valuation<=250000))reasons.push('OUTSIDE_TARGET_OR_UNKNOWN_VALUATION');
   if(!(quoteAge!==null&&quoteAge>=0&&quoteAge<=30))reasons.push('STALE_OR_UNKNOWN_QUOTE');
-  if(latest.length<2||!latest.every(w=>w.positive))reasons.push('BUYER_PERSISTENCE_NOT_CONFIRMED');
+  if(!persistent)reasons.push('BUYER_PERSISTENCE_NOT_CONFIRMED');
   if(e.paidPromotion===true)reasons.push('PROMOTED_NOT_PROOF_OF_ORGANIC');
   if(e.sellQuoteVerified!==true)reasons.push('SELL_DEPTH_UNVERIFIED');
   if(e.lpCustodyVerified!==true)reasons.push('LP_CUSTODY_UNVERIFIED');
-  const flow=latest.length===2&&latest.every(w=>w.positive)?35:latest.some(w=>w.positive)?12:0;
+  const flow=persistent?35:latest.some(w=>w.eligible&&w.positive)?12:0;
   const market=liquidity>=25000?20:liquidity>=15000?12:0;
   const capFit=valuation>=50000&&valuation<=250000?15:0;
   const freshness=quoteAge!==null&&quoteAge>=0&&quoteAge<=15?10:quoteAge!==null&&quoteAge<=30&&quoteAge>=0?6:0;
