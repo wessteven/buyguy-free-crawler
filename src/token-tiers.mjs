@@ -52,27 +52,29 @@ function roundRobin(rows,slots,tick){
 export function selectRefreshTargets(rows,{now=new Date().toISOString(),limit=20}={}){
  const cap=Math.max(1,Math.min(25,limit)),stamp=Date.parse(now);
  const tick=Number.isFinite(stamp)?Math.floor(stamp/600000):0;
- const src=Array.isArray(rows)?rows:[];
- const eligible=src.filter(x=>x&&x.status!=='TRASH'&&
-   (['ALIVE','STATIC','DEAD'].includes(x.status)||x.pinned===1));
+ const eligible=(Array.isArray(rows)?rows:[]).filter(x=>x&&x.status!=='TRASH'&&
+   (['ALIVE','STATIC','DEAD'].includes(x.status)||x.pinned===1||Number(x.has_position)===1));
  const seen=new Set(),out=[];
- const append=list=>{for(const x of list){if(!x||seen.has(x.asset_key)||out.length>=cap)continue;
-   seen.add(x.asset_key);out.push(x)}};
- const held=eligible.filter(x=>Number(x.has_position)===1);
- append(held.slice(0,cap));
+ const append=(list,ceiling=cap)=>{for(const x of list){
+   if(!x||seen.has(x.asset_key)||out.length>=ceiling)continue;
+   seen.add(x.asset_key);out.push(x);
+ }};
+ append(eligible.filter(x=>Number(x.has_position)===1));
  if(out.length>=cap)return out;
- const remaining=cap-out.length;
  const watched=eligible.filter(x=>x.pinned===1&&!seen.has(x.asset_key));
- const hot=eligible.filter(x=>x.pinned!==1&&!seen.has(x.asset_key)&&tokenTier(x,stamp).tier==='HOT');
- const not=eligible.filter(x=>x.pinned!==1&&!seen.has(x.asset_key)&&tokenTier(x,stamp).tier==='NOT');
- const hotSlots=Math.max(1,Math.floor(remaining*0.40));
- const pinnedSlots=Math.max(1,Math.floor(remaining*0.30));
- const notSlots=Math.max(1,remaining-hotSlots-pinnedSlots);
- append(roundRobin(hot,hotSlots,tick));
- append(roundRobin(watched,pinnedSlots,tick));
- append(roundRobin(not,notSlots,tick));
- // Fill unused quota with any remaining candidates, fair rotation within queues.
- for(const pool of [hot,watched,not])
-   append(roundRobin(pool,cap,tick));
+ const archive=eligible.filter(x=>x.status==='DEAD'&&x.pinned!==1&&!seen.has(x.asset_key));
+ const hot=eligible.filter(x=>x.status!=='DEAD'&&x.pinned!==1&&!seen.has(x.asset_key)&&tokenTier(x,stamp).tier==='HOT');
+ const not=eligible.filter(x=>x.status!=='DEAD'&&x.pinned!==1&&!seen.has(x.asset_key)&&tokenTier(x,stamp).tier==='NOT');
+ const remaining=cap-out.length;
+ // Reserve approximately 15% for background revival checks; preserve held/pinned priority.
+ const reserved=archive.length?Math.min(remaining,Math.max(1,Math.ceil(remaining*.15))):0;
+ const activeLimit=cap-reserved,activeSlots=activeLimit-out.length;
+ append(roundRobin(hot,Math.ceil(activeSlots*.45),tick),activeLimit);
+ append(roundRobin(watched,Math.ceil(activeSlots*.35),tick),activeLimit);
+ append(roundRobin(not,activeSlots,tick),activeLimit);
+ for(const pool of [hot,watched,not])append(roundRobin(pool,cap,tick),activeLimit);
+ append(roundRobin(archive,reserved,tick));
+ // Active opportunities get all unused slots. Archive uses surplus only.
+ for(const pool of [hot,watched,not,archive])append(roundRobin(pool,cap,tick));
  return out;
 }
