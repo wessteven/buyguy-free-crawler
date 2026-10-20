@@ -407,16 +407,15 @@ test('Ten-minute scan timer shows countdown, overdue overtime and unknown runs w
  assert.match(page.html,/setInterval\(pollScanClock,30000\)/);
 });
 
-test('Moby app links preserve only exact user-supplied per-mint share codes',async()=>{
+test('Moby app links use only exact per-token invite URLs, bypassing landing pages',async()=>{
  const page=await tableSandbox();
  const known=[
-  ['YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump','cLJFHSHGm7b','1792416904'],
-  ['ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump','szgvvaurn7b','1792456149'],
-  ['9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump','61ywAgtrn7b','1792456136']
+  ['YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump','cLJFHSHGm7b'],
+  ['ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump','szgvvaurn7b'],
+  ['9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump','61ywAgtrn7b']
  ];
- for(const [mint,code,version] of known){
-   const expected='https://twitter.mobyscreener.com/solana/'+mint+
-     '?app_url=https%3A%2F%2Finvite.mobyscreener.com%2F'+code+'&v='+version;
+ for(const [mint,code] of known){
+   const expected='https://invite.mobyscreener.com/'+code;
    assert.equal(page.evalJS("mobyChartUrl('solana','"+mint+"')"),expected);
  }
  const unknown='6NLUC3veg7NGuQBNewE1UM7G6ir2mymJM4PvwdkGpump';
@@ -432,6 +431,8 @@ test('Moby app links preserve only exact user-supplied per-mint share codes',asy
  const html=page.assets.innerHTML;
  assert.equal((html.match(/Moby app ↗/g)||[]).length,3);
  assert.equal((html.match(/Moby web ↗/g)||[]).length,1);
- assert.match(html,/invite\.mobyscreener\.com%2Fszgvvaurn7b&amp;v=1792456149/);
- assert.doesNotMatch(html,/invite\.mobyscreener\.com%2FcLJFHSHGm7b[^<]*6NLUC3/);
+ assert.match(html,/href="https:\/\/invite\.mobyscreener\.com\/szgvvaurn7b"/);
+ assert.match(html,/href="https:\/\/invite\.mobyscreener\.com\/61ywAgtrn7b"/);
+ assert.doesNotMatch(html,/twitter\.mobyscreener\.com/);
+ assert.doesNotMatch(html,/invite\.mobyscreener\.com\/cLJFHSHGm7b[^<]*6NLUC3/);
 });
