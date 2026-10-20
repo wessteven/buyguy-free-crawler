@@ -64,6 +64,10 @@ tbody tr:hover{background:#174029}
  border-radius:2px;padding:3px 5px;white-space:nowrap;text-decoration:none;
  background:#173e26;font-weight:bold;display:inline-block}
 .moby-chart-link:focus-visible{outline:2px solid #a1ffc0}
+.dex-chart-link{color:#c5fce2!important;border:1px solid #457b65;
+ border-radius:2px;padding:3px 5px;white-space:nowrap;text-decoration:none;
+ background:#103728;font-weight:bold;display:inline-block}
+.dex-chart-link:focus-visible{outline:2px solid #a1ffc0}
 .research-guide{font-size:10px}
 #greenDialog{background:#09190e;color:#bbfccc;border:1px solid #467553;font:11px ui-monospace,Consolas,monospace;
  width:min(92vw,520px);max-height:76vh;overflow:auto;padding:12px}
@@ -196,6 +200,7 @@ const assetColumns=[
  {key:'topBps',name:'Top acct %',type:'number'},
  {key:'address',name:'Copy address',type:'text'},
  {key:'trade_on',name:'Trade on',type:'text'},
+ {key:'chart',name:'Chart',type:'text'},
  {key:'socials',name:'Socials',type:'number'},
  {key:'risk',name:'Mint review',type:'text'},
  {key:'flags',name:'Mint/holder flags',type:'text'}
@@ -216,6 +221,10 @@ function validOrder(maybe){
  if(!current.includes('trade_on')&&order.includes('address')){
    order.splice(order.indexOf('trade_on'),1);
    order.splice(order.indexOf('address')+1,0,'trade_on');
+ }
+ if(!current.includes('chart')&&order.includes('trade_on')){
+   order.splice(order.indexOf('chart'),1);
+   order.splice(order.indexOf('trade_on')+1,0,'chart');
  }
  return order;
 }
@@ -311,6 +320,24 @@ function tradeOnCell(row){
    '" target="_self" rel="nofollow" referrerpolicy="no-referrer" '+
    'title="Moby WEBSITE for this exact contract (not verified as an in-app deeplink). Check the contract address before trading." '+
    'aria-label="Open '+escapeSocial(row.symbol||'token')+' on Moby website">Moby web ↗</a></td>';
+}
+// DEX Screener resolves chart pages from exact chain + token contract, not
+// ticker/symbol. Do not guess a pool, follow a social URL, or substitute mints.
+function dexChartUrl(chain,address){
+ const token=String(address||'');
+ if(chain==='solana'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token))
+   return 'https://dexscreener.com/solana/'+token;
+ if(chain==='robinhood'&&/^0x[0-9a-fA-F]{40}$/.test(token))
+   return 'https://dexscreener.com/robinhood/'+token.toLowerCase();
+ return null;
+}
+function chartCell(row){
+ const url=dexChartUrl(row.chain,row.address);
+ if(!url)return '<td>—</td>';
+ return '<td><a class="dex-chart-link" href="'+escapeSocial(url)+
+   '" target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer" '+
+   'title="View this token contract on DEX Screener. If no pool is indexed, DEX Screener may not show a chart." '+
+   'aria-label="View DEX Screener chart for '+escapeSocial(row.symbol||'token')+'">View chart ↗</a></td>';
 }
 function addressCell(row){
  const address=String(row.address||'');
@@ -546,7 +573,7 @@ function renderAssets(){
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></span>'+controls+'</th>';
  }).join('');
  const rows=orderedAssetRows().filter(row=>view==='all'||(view==='hot')===(row.tier==='HOT')).map(row=>'<tr>'+assetOrder.map(key=>
- key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='trade_on'?tradeOnCell(row):key==='symbol'?tokenCell(row):
+ key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='trade_on'?tradeOnCell(row):key==='chart'?chartCell(row):key==='symbol'?tokenCell(row):
  ['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))
  ).join('')+'</tr>').join('');
  wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
