@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import worker from '../src/viewer.mjs';
 import {ourScoreAssessment,journalSafetyScore,scoreForJournal} from '../src/our-score-core.mjs';
-import {chooseJournalCandidates,runScoreJournal,JOURNAL_HORIZONS} from '../src/score-journal.mjs';
+import {chooseJournalCandidates,chooseJournalComparators,runScoreJournal,JOURNAL_HORIZONS} from '../src/score-journal.mjs';
 
 const NOW=Date.parse('2026-10-20T09:02:00Z');
 const ASSET='So11111111111111111111111111111111111111112';
@@ -89,8 +89,8 @@ function fakeDatabase(){
      statements.push({type:'run',sql,params:this.params||[]});
      if(sql.includes('INSERT OR IGNORE INTO score_snapshots')){
       const p=this.params;const id=next++;
-      snapshots.push({id,asset_key:p[0],chain:p[1],address:p[2],symbol:p[3],pool:p[4],
-       captured_at:p[5],entry_price:p[6],our_score:p[7]});
+      snapshots.push({id,asset_key:p[0],chain:p[1],address:p[2],symbol:p[3],cohort:p[4],pool:p[5],
+       captured_at:p[6],entry_price:p[7],our_score:p[8]});
       return {meta:{changes:1,last_row_id:id}};
      }
      if(sql.includes('INSERT OR IGNORE INTO score_outcomes')){
@@ -128,6 +128,22 @@ test('Once-per-hour snapshots preserve frozen score, four horizons, and missed e
  assert.equal(missed.missing,1);
  assert.equal(db.horizons[0].status,'MISSED_DATA');
  assert.equal(db.snapshots[0].our_score,first.saved?db.snapshots[0].our_score:null);
+});
+test('Rotating control group contains no top-five picks and cannot use future returns',()=>{
+ const base=makeAsset(),valid=[];
+ for(let i=0;i<11;i++){
+  const address=ASSET.slice(0,-2)+'A'+String.fromCharCode(71+i);
+  valid.push({...base,asset_key:'solana:'+address,address,symbol:'CANDIDATE_'+i,
+   score:80-i,liquidity:90000-i*4000,buys_m5:40-i*2});
+ }
+ const leaders=chooseJournalCandidates(valid,[],NOW);
+ const control=chooseJournalComparators(valid,[],NOW);
+ assert.equal(leaders.length,5);
+ assert.equal(control.length,3);
+ assert.ok(control.every(x=>!leaders.some(l=>l.row.asset_key===x.row.asset_key)));
+ assert.deepEqual(control.map(x=>x.row.asset_key),
+  chooseJournalComparators([...valid].reverse(),[],NOW).map(x=>x.row.asset_key));
+ assert.equal(chooseJournalComparators(valid.slice(0,4),[],NOW).length,0);
 });
 test('D1 schema supports immutable score/quote records and four uniquely keyed outcomes',()=>{
  const py=`import sqlite3,sys
