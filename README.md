@@ -12,6 +12,19 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 - No real-money trading or transaction signing under any circumstance.
 - The existing original BuyGuy website, real portfolios, and old Night Game simulation ledger are independent of this experimental database.
 
+## Automatic active-radar cleaning and learning archive (20 October 2026)
+
+The dashboard splits current candidates from historical examples without deleting research:
+
+- **TOKEN DATA / HOT / NOT:** only currently active or cooling assets (plus protected pinned/open-paper holdings), with an explicit **Active** count. `NOT` is not the dead-token archive.
+- **📚 Archive:** dormant `DEAD` assets, subdivided into a prominent learning shelf (historic peak momentum score >=60, 10+ observations, prediction outcomes, material on-chain/route research, or paper-trade history) and a collapsed **Quiet storage** section. The "peak score" is historical screening evidence, **not** a price multiple or profit.
+- **TRASH:** unresolved/no-quote addresses (after 24h) which are excluded from refresh. Valid identified tokens are never automatically trashed merely because their quotes grew old.
+- **Reversible decisions:** after 24h and at least three persistently weak observations, a candidate can move to `DEAD` when buyers, 5m transactions and volume/liquidity are all low. Independently, a token with no usable quote for 48h becomes dormant; an identified but never-quoted asset archives after 72h.
+- **Protected cases:** pinned addresses, open paper positions and pending predictions cannot be automatically retired or trashed; all archived observations, evidence, prediction records, trades and notes remain in D1.
+- **Genuine comebacks:** a small (~15%) rotating share of quote-refresh slots is reserved for dormant assets. A previously archived asset only returns to active tracking when an exact-mint quote shows meaningful liquidity, buyers, buy/sell balance and non-collapsing price flow. A generic fresh quote is not a comeback. No status is a safety approval and nothing here triggers trades.
+
+These are cautious heuristics, not a claim to predict that a dormant coin can never recover. Everything remains in the research ledger. No destructive database migration or deletion is required.
+
 ## Research labels (never confuse them)
 
 - `ALIVE`: market momentum score, **not** evidence of contract safety.
