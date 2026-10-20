@@ -1352,8 +1352,7 @@ list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
 // Aggregate the latest token socials once rather than rescanning the entire
 // research_events history for every asset in the active dashboard.
 list("SELECT a.*,e.note AS socials_json FROM assets a "+
- "LEFT JOIN (SELECT asset_key,MAX(id) AS last_id FROM research_events WHERE kind='TOKEN_SOCIALS' GROUP BY asset_key) soc ON soc.asset_key=a.asset_key "+
- "LEFT JOIN research_events e ON e.id=soc.last_id "+
+ "LEFT JOIN research_events e ON e.id=(SELECT id FROM research_events WHERE asset_key=a.asset_key AND kind='TOKEN_SOCIALS' ORDER BY id DESC LIMIT 1) "+
  "WHERE a.status IN ('ALIVE','STATIC') OR (a.pinned=1 AND a.status='DEAD') OR EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') "+
  "ORDER BY a.pinned DESC,a.score DESC LIMIT 500"),
 list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
