@@ -1,0 +1,20 @@
+{
+  "cycle": 16,
+  "utc": "2026-10-20T20:09:29.952Z",
+  "local_day": "2026-10-21",
+  "mode": "research_only",
+  "pro_verified": true,
+  "shared_allowance_used": false,
+  "leading_research": [
+    "PIKA",
+    "SEED"
+  ],
+  "controls": [
+    "people.fun",
+    "BORLY",
+    "BULLRUN"
+  ],
+  "qualified": 0,
+  "source": "Helius, Blockscout PRO, DexScreener boost discovery",
+  "caveat": "No verified executable sell routes or LP custody"
+}
