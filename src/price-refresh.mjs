@@ -72,7 +72,7 @@ export async function refreshKnownQuotes(env,{fetcher=fetch,now=new Date().toISO
     "WHERE a.status!='TRASH' AND "+
     "(a.status IN ('ALIVE','STATIC','DEAD') OR a.pinned=1 OR "+
     "EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN')) "+
-    "ORDER BY a.asset_key LIMIT ?").bind(500).all()).results||[];
+    "ORDER BY CASE WHEN a.pinned=1 OR EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') THEN 0 WHEN a.status='ALIVE' THEN 1 WHEN a.status='STATIC' THEN 2 ELSE 3 END, a.last_seen DESC, a.asset_key LIMIT ?").bind(500).all()).results||[];
   const tracked=selectRefreshTargets(all,{now,limit:max});
   const accepted=[],failures=[];
   for(const chain of ['solana','robinhood']){
