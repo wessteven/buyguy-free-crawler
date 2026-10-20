@@ -54,3 +54,6 @@ CREATE TABLE IF NOT EXISTS research_events (
  kind TEXT NOT NULL, note TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS observation_ttl ON observations(seen_at);
+CREATE INDEX IF NOT EXISTS research_event_asset_kind_id ON research_events(asset_key,kind,id DESC);
+CREATE INDEX IF NOT EXISTS research_event_kind_id ON research_events(kind,id DESC);
+
