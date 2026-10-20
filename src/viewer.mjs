@@ -78,6 +78,11 @@ tbody tr:hover{background:#174029}
 #greenDialog .audit-title{font-weight:800;color:#d5ffdc}
 #assets .green-button,.asset-view .green-button{min-height:0!important;padding:1px 2px!important;border:0!important;background:transparent!important;font-weight:800;line-height:1.15;white-space:nowrap}
 #assets .green-progress{font-size:9px;color:#9cc3a4;display:block}
+#assets .our-score-btn,.asset-view .our-score-btn{padding:2px 5px!important;min-height:0!important;border:1px solid #3c9062!important;background:#14402b!important;color:#e0ffe7!important;font-weight:900;font-variant-numeric:tabular-nums}
+#ourScoreDialog{background:#08180f;color:#d8fce5;border:1px solid #47835b;font:11px ui-monospace,Consolas,monospace;width:min(94vw,550px);max-height:80vh;overflow:auto;padding:12px}
+#ourScoreDialog::backdrop{background:rgba(0,0,0,.8)}
+#ourScoreBreakdown table{width:100%;font-size:10px}
+#ourScoreBreakdown td,#ourScoreBreakdown th{white-space:normal!important;text-align:left}
 
 @media(max-width:400px){body{padding:4px!important}.bg-tab{font-size:9px!important}.stat{padding:2px 4px!important}th,td{padding:3px 4px!important}}
 /* The token table owns vertical scroll, so the column header remains visible.
@@ -145,7 +150,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <section><h2>Token research</h2><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div><span id="copyStatus" role="status" aria-live="polite"></span>
 </section>
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
-<section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend"><strong>Market Score (0–100)</strong> ranks observed trading opportunity from liquidity, market-cap fit, buyer flow, volume, price change and pool age — not safety or a forecast. <strong>Safety Evidence (0–100 or —)</strong> reflects mint/holder review, pool liquidity, indicative round-trip quote and quote freshness. Tap it to inspect the independent <strong>seven-check safety screen</strong>. <strong>Liq/Cap %</strong> = USD pool liquidity ÷ reported USD market cap × 100; missing cap means —. 🔒 appears beside the ratio only when the independent <strong>Pool custody / LP lock</strong> safety check passes for the matched pool with recent on-chain evidence. The lock does not mean 100% of liquidity is locked or guarantee sellability. A high ratio alone does not verify LP locks or a sell route. Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
+<section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend"><strong>Market Score (0–100)</strong> ranks observed trading opportunity from liquidity, market-cap fit, buyer flow, volume, price change and pool age — not safety or a forecast. <strong>Safety Evidence (0–100 or —)</strong> reflects mint/holder review, pool liquidity, indicative round-trip quote and quote freshness. Tap it to inspect the independent <strong>seven-check safety screen</strong>. <strong>OUR SCORE (0–100)</strong> ranks independently rated factors using explicit weights. Tap for the breakdown. Thin liquidity, extreme spikes, stale quotes and flagged risk reduce the score. It is a research ranking, not a trade or safety verdict. <strong>Liq/Cap %</strong> = USD pool liquidity ÷ reported USD market cap × 100; missing cap means —. 🔒 appears beside the ratio only when the independent <strong>Pool custody / LP lock</strong> safety check passes for the matched pool with recent on-chain evidence. The lock does not mean 100% of liquidity is locked or guarantee sellability. A high ratio alone does not verify LP locks or a sell route. Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
 </div>
 <div class="tab-panel" id="panel-hot" role="tabpanel" aria-labelledby="tab-hot" hidden>
 <section><h2>HOT // FRESH MOMENTUM <span id="hotCount" class="hint"></span></h2>
@@ -179,6 +184,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <button id="auditClose" type="button">CLOSE</button></dialog>
 <dialog id="greenDialog" aria-labelledby="greenTitle"><h2 id="greenTitle">GREEN LIGHT CHECK</h2>
 <div id="greenDetails"></div><button id="greenClose" type="button">CLOSE</button></dialog>
+<dialog id="ourScoreDialog" aria-labelledby="ourScoreTitle"><h2 id="ourScoreTitle">OUR SCORE // FACTORS</h2><div id="ourScoreBreakdown"></div><button id="ourScoreClose" type="button">CLOSE</button></dialog>
 </div>
 <p class="hint">Research only. Top token accounts can include AMM pools, escrows and custodians, not unique holder wallets. Mint checks do not verify liquidity locks or executable exits. Paper trades remain disabled.</p>
 <script>
@@ -191,6 +197,7 @@ const layoutKey='buyguy.assetColumns.v2',sortKey='buyguy.assetSort.v1',foldKey='
 // Buying decision -> market structure -> token safety -> contract -> supporting details.
 const assetColumns=[
  {key:'symbol',name:'Token',type:'text'},
+ {key:'our_score',name:'OUR SCORE',type:'number'},
  {key:'audit',name:'Audit',type:'text'},
  {key:'chain',name:'Chain',type:'text'},
  {key:'price',name:'Price $',type:'number'},
@@ -223,6 +230,10 @@ function validOrder(maybe){
    typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
  const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
  // Inject newly introduced columns into saved layouts without resetting other positions.
+ if(!current.includes('our_score')&&order.includes('symbol')){
+   order.splice(order.indexOf('our_score'),1);
+   order.splice(order.indexOf('symbol')+1,0,'our_score');
+ }
  if(!current.includes('liq_cap_pct')&&order.includes('market_cap')){
    order.splice(order.indexOf('liq_cap_pct'),1);
    order.splice(order.indexOf('market_cap')+1,0,'liq_cap_pct');
@@ -485,6 +496,71 @@ function liqCapCell(row){
  return '<td>'+ratio+' <span class="lp-lock-verified" role="img" aria-label="Verified pool LP lock" '+
    'title="Recent independent on-chain LP custody and lock verification for the matched pool. Locked share is not quantified; this does not guarantee a successful exit.">🔒</span></td>';
 }
+// OUR SCORE is a transparent weighted research heuristic, not a predicted return.
+// Related metrics are weighted modestly to reduce double-counting. No ticker,
+// token unit price, or cosmetic indicator receives points.
+const ourScoreWeights=[['Liquidity / Cap',20],['Pool liquidity',15],
+ ['Market cap',10],['Buy/sell balance',15],['5m activity',10],
+ ['1h trend',10],['Quote freshness',5],['Market Score',5],['Safety Evidence',10]];
+const ourNum=v=>v===null||v===undefined||v===''?null:(Number.isFinite(Number(v))?Number(v):null);
+const ourClamp=n=>Math.max(0,Math.min(100,n));
+function ourScoreAssessment(row){
+ const missing={score:null,base:null,factors:[],caveats:['Missing core market evidence.']};
+ if(!row||['DEAD','TRASH'].includes(row.status))return missing;
+ const liq=ourNum(row.liquidity),cap=ourNum(row.market_cap),
+  price=ourNum(row.price),ratio=ourNum(row.liq_cap_pct);
+ if(!(liq>0&&cap>0&&price>0&&ratio!==null))return missing;
+ const buys=ourNum(row.buys_m5),sells=ourNum(row.sells_m5);
+ const volume=buys===null||sells===null?null:buys+sells;
+ const trend=ourNum(row.change_h1),age=ourNum(row.quote_age);
+ const market=ourNum(row.score),safety=ourNum(row.safety);
+ const factors=[];
+ function add(name,weight,quality,reason){
+  const rating=quality===null?0:Math.round(ourClamp(quality)*10)/10;
+  factors.push({name,weight,rating,points:weight*rating/100,
+   reason:(quality===null?'Missing data (0 credit). ':'')+reason});
+ }
+ const ratioRating=ratio<=10?ratio*3.5:ratio<=25?35+(ratio-10)*1.7:
+  ratio<=50?60.5+(ratio-25)*1.58:ratio<=100?100:ratio<=200?95:75;
+ add('Liquidity / Cap',20,ratioRating,'Quoted USD liquidity relative to market cap; not lock verification.');
+ add('Pool liquidity',15,liq>=100000?100:liq>=50000?90:liq>=25000?75:
+  liq>=15000?55:liq>=5000?30:5,'Depth of reported USD pool liquidity.');
+ add('Market cap',10,cap>=50000&&cap<=250000?100:cap>250000&&cap<=1000000?80:
+  cap>1000000&&cap<=10000000?60:cap>10000000?35:cap>=20000?70:30,
+  'Early-discovery target; market cap is not intrinsic value.');
+ add('Buy/sell balance',15,volume===null||volume<=0?null:
+  volume<5?Math.max(0,(buys/volume-.3)*100):ourClamp((buys/volume-.3)*200),
+  '5m buy share; trades may be bots or wash activity.');
+ add('5m activity',10,volume===null?null:volume>=100?100:volume>=50?85:
+  volume>=20?70:volume>=12?55:volume>=5?25:5,'5m transactions, not unique buyers.');
+ add('1h trend',10,trend===null?null:trend>150?5:trend>80?35:
+  trend>35?75:trend>=0?85+Math.min(trend,12)*1.25:
+  trend>=-10?60:trend>=-25?30:5,'Big parabolic spikes and sharp drops score poorly.');
+ add('Quote freshness',5,age===null||age<0?null:age<=15?100:
+  age<=30?80:age<=60?50:age<=120?20:0,'Minutes since last matched market quote.');
+ add('Market Score',5,market,'Existing market model with low weight to avoid double counting.');
+ add('Safety Evidence',10,safety,'Independent partial evidence; unknown is not safe.');
+ const base=factors.reduce((acc,f)=>acc+f.points,0);let total=base;
+ const caveats=[];
+ function limit(max,explanation){if(total>max)total=max;caveats.push(explanation);}
+ if(safety===null)limit(75,'No completed safety evidence: maximum 75.');
+ if(liq<15000)limit(40,'Thin pool (<$15k): maximum 40.');
+ if(ratio>200)limit(70,'Ratio >200% requires cap verification: maximum 70.');
+ if(trend!==null&&trend>150)limit(60,'1h spike over 150%: maximum 60.');
+ if(age===null||age<0||age>120)limit(35,'Stale or missing quote: maximum 35.');
+ else if(age>30)limit(65,'Quote older than 30 minutes: maximum 65.');
+ if(row.green?.status==='RISK'||['MINT_CONTROL_RISK','HOLDER_CONCENTRATION_RISK'].includes(row.risk_status))
+  limit(15,'On-chain safety risk flagged: maximum 15.');
+ if(row.topBps!==null&&row.topBps!==undefined&&Number(row.topBps)>4000)
+  limit(35,'Largest token account >40% of supply: maximum 35.');
+ return {score:Math.round(total*10)/10,base:Math.round(base*10)/10,factors,caveats};
+}
+function ourScoreCell(row){
+ const value=row.our_score===null||row.our_score===undefined?'—':row.our_score.toFixed(1);
+ return '<td><button type="button" class="our-score-btn" data-our-key="'+
+  escapeSocial(row.asset_key||'')+'" aria-label="OUR SCORE breakdown for '+
+  escapeSocial(row.symbol||'token')+'" title="View factor weights and rankings">'+value+'</button></td>';
+}
 function assetRow(a,routes=[]){
  const audit=riskInfo(a);
  const safetyInfo=safetyAssessment(a,routes),signalInfo=signalAssessment(a),directionInfo=directionAssessment(a);
@@ -495,13 +571,15 @@ function assetRow(a,routes=[]){
  try{const raw=JSON.parse(a.socials_json||'[]');if(Array.isArray(raw))supplied=raw;}catch{}
  const socialLinks=supplied.filter(item=>item&&typeof item==='object'&&safeExternalLink(item.url))
     .slice(0,24).map(item=>({label:String(item.label||'Link').slice(0,18),url:safeExternalLink(item.url)}));
- return {...a,liq_cap_pct:liquidityCapPercentage(a.liquidity,a.market_cap),
+ const enriched={...a,liq_cap_pct:liquidityCapPercentage(a.liquidity,a.market_cap),
    buys_m5:Number(a.buys_m5)||0,sells_m5:Number(a.sells_m5)||0,
    tier:a.tier||'NOT',tier_reason:a.tier_reason||'QUOTE_UNVERIFIED',quote_age:a.quote_age??null,
    socials:socialLinks.length,socialLinks,
    safety:safetyInfo.score,momentum:signalInfo.rank,direction:directionInfo.value,
    safetyInfo,signalInfo,directionInfo,
    topBps,risk:a.risk_status||'UNVERIFIED',flags:flags.join(', ')||'Not fully reviewed'};
+ const ranked=ourScoreAssessment(enriched);
+ return {...enriched,our_score:ranked.score,ourScoreInfo:ranked};
 }
 function formatUsd(raw){
  if(raw===null||raw===undefined||raw==='')return '—';
@@ -642,7 +720,7 @@ function renderAssets(){
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></span>'+controls+'</th>';
  }).join('');
  const rows=orderedAssetRows().filter(row=>view==='all'||(view==='hot')===(row.tier==='HOT')).map(row=>'<tr>'+assetOrder.map(key=>
- key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='trade_on'?tradeOnCell(row):key==='chart'?chartCell(row):key==='liq_cap_pct'?liqCapCell(row):key==='symbol'?tokenCell(row):
+ key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='trade_on'?tradeOnCell(row):key==='chart'?chartCell(row):key==='liq_cap_pct'?liqCapCell(row):key==='our_score'?ourScoreCell(row):key==='symbol'?tokenCell(row):
  ['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))
  ).join('')+'</tr>').join('');
  wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
@@ -828,6 +906,29 @@ document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter
 document.getElementById('logout').onclick=logout;
 document.getElementById('refresh').onclick=refresh;
 document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
+function inspectOurScore(key){
+ const row=assetRows.find(r=>r.asset_key===key);
+ if(!row)return;
+ const dialog=document.getElementById('ourScoreDialog');
+ const out=document.getElementById('ourScoreBreakdown');
+ if(!dialog||!out)return;
+ const info=row.ourScoreInfo;
+ let body='<p><strong>'+escapeSocial(row.symbol||row.asset_key)+'</strong> · '+
+  (info.score===null?'UNRANKED':info.score.toFixed(1)+'/100')+'</p>';
+ if(info.factors.length){
+  body+='<table><thead><tr><th>Factor</th><th>Rating</th><th>Weight</th><th>Points</th></tr></thead><tbody>'+
+   info.factors.map(f=>'<tr title="'+escapeSocial(f.reason)+'"><td>'+escapeSocial(f.name)+
+   '</td><td>'+f.rating.toFixed(1)+'/100</td><td>'+f.weight+'%</td><td>'+
+   f.points.toFixed(2)+'</td></tr>').join('')+'</tbody></table>'+
+   '<p>Weighted total before limits: '+info.base.toFixed(1)+'/100</p>'+
+   info.factors.map(f=>'<p class="hint"><strong>'+escapeSocial(f.name)+
+     ':</strong> '+escapeSocial(f.reason)+'</p>').join('');
+ }else body+='<p>Core liquidity, cap or price data unavailable.</p>';
+ if(info.caveats.length)body+='<p><strong>Adjustments:</strong> '+
+  escapeSocial(info.caveats.join(' '))+'</p>';
+ out.innerHTML=body+'<p class="hint">Research ranking only. Not a safety guarantee or forecast. Verify contract, pool and sell routes.</p>';
+ if(!dialog.open)dialog.showModal();
+}
 function inspectGreen(key){
  const row=assetRows.find(x=>x.asset_key===key);
  if(!row)return;
@@ -909,6 +1010,8 @@ async function runAuditFromTable(key){
 }
 for(const id of ['assets','hotAssets','notAssets','archiveAssets','archiveQuietWrap']){
  document.getElementById(id)?.addEventListener('click',event=>{
+ const our=event.target?.closest?.('button[data-our-key]');
+ if(our){inspectOurScore(our.dataset.ourKey);return;}
  const copy=event.target?.closest?.('button[data-address]');
  if(copy){copyAddress(copy.dataset.address);return;}
  const inspect=event.target?.closest?.('button[data-green-key]');
@@ -919,6 +1022,7 @@ for(const id of ['assets','hotAssets','notAssets','archiveAssets','archiveQuietW
 }
 document.getElementById('auditClose').onclick=()=>document.getElementById('auditDialog').close();
 document.getElementById('greenClose').onclick=()=>document.getElementById('greenDialog').close();
+document.getElementById('ourScoreClose').onclick=()=>document.getElementById('ourScoreDialog').close();
 function watchlistTable(pins){
  const rows=(Array.isArray(pins)?pins:[]).map(a=>[
  a.chain,a.symbol==='PENDING'||!a.symbol?'AWAITING QUOTE':a.symbol,
