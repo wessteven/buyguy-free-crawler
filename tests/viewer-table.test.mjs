@@ -357,6 +357,33 @@ test('WHAT\'S GOOD tells the truth about unknown safety and escapes token names'
  assert.doesNotMatch(html,/<img[^>]*onerror=/);
  assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/);
 });
+test('Outcomes tab clearly distinguishes pending, missed, pool-changed and measured OUR SCORE returns',async()=>{
+ const page=await tableSandbox();
+ assert.match(page.html,/id="scoreJournal"/);
+ assert.match(page.html,/OUR SCORE LEARNING JOURNAL/);
+ const samples=[
+  {id:1,asset_key:'solana:So11111111111111111111111111111111111111112',
+   symbol:'EXAMPLE',captured_at:'2026-10-20T09:02:00Z',our_score:77.3,
+   horizon_min:15,status:'EVALUATED',return_pct:13.41},
+  {id:1,horizon_min:60,status:'MISSED_DATA',return_pct:null},
+  {id:1,horizon_min:360,status:'POOL_CHANGED',return_pct:null},
+  {id:1,horizon_min:1440,status:'PENDING',return_pct:null}
+ ];
+ const html=page.evalJS('scoreJournalTable('+JSON.stringify(samples)+',"READY")');
+ assert.match(html,/EXAMPLE/);
+ assert.match(html,/77\.3\/100/);
+ assert.match(html,/\+13\.4%/);
+ assert.match(html,/Pool changed/);
+ assert.match(html,/Missing/);
+ assert.match(html,/Pending/);
+ assert.match(html,/1 measured horizon/);
+ assert.doesNotMatch(html,/NaN|undefined/);
+ const pending=page.evalJS('scoreJournalTable([],"SCHEMA_PENDING")');
+ assert.match(pending,/awaiting D1 schema activation/);
+ const unavailable=page.evalJS('scoreJournalTable([],"UNAVAILABLE")');
+ assert.match(unavailable,/temporarily unavailable/);
+ assert.doesNotMatch(unavailable,/0%/);
+});
 test('Archive keeps learning-rich cases visible and hides low-signal history behind a collapsed section',async()=>{
  const page=await tableSandbox();
  assert.match(page.html,/id="panel-archive"/);
