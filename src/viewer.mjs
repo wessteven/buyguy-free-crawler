@@ -193,7 +193,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <div class="tab-panel" id="panel-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><section><h2>Recent runs</h2><div id="runs"></div></section></div>
 <div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden>
 <section><h2>OUR SCORE LEARNING JOURNAL</h2>
-<p class="hint">Score frozen at discovery; indicative same-pool price observations after 15m, 1h, 6h and 24h. NOT executable trade P&amp;L. Missing data and pool changes aren't counted as wins or losses.</p>
+<p class="hint">Immutable hourly Top 5 snapshots plus three rotating lower-ranked comparison tokens. Same-pool price observations after 15m, 1h, 6h and 24h; NOT executable trade P&amp;L. Missing observations and pool changes are not counted as wins or losses.</p>
 <div id="scoreJournal"></div></section>
 <section><h2>Original Market Score prediction outcomes</h2><div id="predictions"></div></section></div>
 <div class="tab-panel" id="panel-address" role="tabpanel" aria-labelledby="tab-address" hidden>
@@ -979,12 +979,12 @@ function scoreJournalTable(rows,state){
    if(r.status==='MISSED_DATA')counts.missed++;
    return r.status==='POOL_CHANGED'?'Pool changed':r.status==='MISSED_DATA'?'Missing':'Pending';
   });
-  return [s.captured_at,s.symbol||s.asset_key,s.our_score+'/100',...results];
+  return [s.captured_at,s.cohort==='COMPARATOR'?'Comparison':'Top 5',s.symbol||s.asset_key,s.our_score+'/100',...results];
  });
  return '<p class="hint">'+counts.observed+' measured horizon observations; '+counts.positive+
   ' positive, '+(counts.observed-counts.positive)+' flat/negative; '+counts.missed+
   ' missed. Early samples are not proof of predictive accuracy.</p>'+
-  table(['Snapshot UTC','Token','OUR SCORE','15m','1h','6h','24h'],data);
+  table(['Snapshot UTC','Group','Token','OUR SCORE','15m','1h','6h','24h'],data);
 }
 async function refresh(){try{
  const r=await fetch('/api/status',{credentials:'same-origin',cache:'no-store'});
@@ -1352,7 +1352,7 @@ const evaluated=assets.map(asset=>({...asset,...(()=>{const item=tokenTier(asset
 const paper=await getPaperSnapshot(env);
 let scoreJournal=[],scoreJournalStatus='READY';
 try{
- scoreJournal=(await env.DB.prepare(`SELECT s.id,s.asset_key,s.symbol,s.captured_at,s.our_score,
+ scoreJournal=(await env.DB.prepare(`SELECT s.id,s.asset_key,s.symbol,s.cohort,s.captured_at,s.our_score,
    h.horizon_min,h.status,h.return_pct
    FROM score_snapshots s JOIN score_outcomes h ON h.snapshot_id=s.id
    WHERE s.id IN (SELECT id FROM score_snapshots ORDER BY captured_at DESC LIMIT 20)
