@@ -407,32 +407,31 @@ test('Ten-minute scan timer shows countdown, overdue overtime and unknown runs w
  assert.match(page.html,/setInterval\(pollScanClock,30000\)/);
 });
 
-test('Moby app links use only exact per-token invite URLs, bypassing landing pages',async()=>{
+test('Moby links never use app invites that can silently load the wrong token',async()=>{
  const page=await tableSandbox();
  const known=[
-  ['YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump','cLJFHSHGm7b'],
-  ['ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump','szgvvaurn7b'],
-  ['9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump','61ywAgtrn7b']
+  'YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump',
+  'ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump',
+  '9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump',
+  '6NLUC3veg7NGuQBNewE1UM7G6ir2mymJM4PvwdkGpump'
  ];
- for(const [mint,code] of known){
-   const expected='https://invite.mobyscreener.com/'+code;
-   assert.equal(page.evalJS("mobyChartUrl('solana','"+mint+"')"),expected);
+ const urls=known.map(mint=>page.evalJS("mobyChartUrl('solana','"+mint+"')"));
+ assert.equal(new Set(urls).size,known.length);
+ for(let i=0;i<known.length;i++){
+   assert.equal(urls[i],'https://mobyscreener.com/solana/'+known[i]);
+   assert.equal(urls[i].includes('invite.mobyscreener.com'),false);
+   assert.equal(urls[i].includes('twitter.mobyscreener.com'),false);
  }
- const unknown='6NLUC3veg7NGuQBNewE1UM7G6ir2mymJM4PvwdkGpump';
- assert.equal(page.evalJS("mobyChartUrl('solana','"+unknown+"')"),
-   'https://mobyscreener.com/solana/'+unknown);
  assert.equal(page.evalJS("mobyChartUrl('solana','invalid-address!')"),null);
  const rh='0x2cc0fac44b8252f6b10208b091aff2c94b4da77d';
  assert.equal(page.evalJS("mobyChartUrl('robinhood','"+rh+"')"),
   'https://www.mobyscreener.com/token/'+rh);
- const rows=known.map(([address])=>({...example[0],asset_key:'solana:'+address,address,tier:'HOT'}));
- rows.push({...example[0],asset_key:'solana:'+unknown,address:unknown,tier:'HOT'});
+ const rows=known.map(address=>({...example[0],asset_key:'solana:'+address,address,tier:'HOT'}));
  page.evalJS('setAssetData('+JSON.stringify(rows)+')');
  const html=page.assets.innerHTML;
- assert.equal((html.match(/Moby app ↗/g)||[]).length,3);
- assert.equal((html.match(/Moby web ↗/g)||[]).length,1);
- assert.match(html,/href="https:\/\/invite\.mobyscreener\.com\/szgvvaurn7b"/);
- assert.match(html,/href="https:\/\/invite\.mobyscreener\.com\/61ywAgtrn7b"/);
+ assert.equal((html.match(/Moby web ↗/g)||[]).length,known.length);
+ assert.equal((html.match(/Moby app ↗/g)||[]).length,0);
+ assert.doesNotMatch(html,/invite\.mobyscreener\.com/);
  assert.doesNotMatch(html,/twitter\.mobyscreener\.com/);
- assert.doesNotMatch(html,/invite\.mobyscreener\.com\/cLJFHSHGm7b[^<]*6NLUC3/);
+ for(const mint of known)assert.ok(html.includes('href="https://mobyscreener.com/solana/'+mint+'"'));
 });
