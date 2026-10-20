@@ -54,6 +54,9 @@ export async function cronScan(env,fetcher=fetch){
     }
     const statements=[];
     for(const a of pools){
+      const revival=Number(a.score)>=60&&Number(a.liquidity)>=50000&&
+        Number(a.buys_m5)>=8&&Number(a.tx_m5)>=12&&
+        a.buys_m5>=1.2*Math.max(1,a.sells_m5)&&Number(a.change_h1)>-15?1:0;
       statements.push(env.DB.prepare(`INSERT OR IGNORE INTO assets
         (asset_key,chain,address,symbol,pool,provider,status,risk_status,first_seen,updated_at,pool_created,
         score,price,liquidity,market_cap,buys_m5,sells_m5,tx_m5,change_h1,volume_h24,last_seen,last_action)
@@ -65,11 +68,11 @@ export async function cronScan(env,fetcher=fetch){
         symbol=?,pool=?,provider=?,updated_at=?,last_seen=?,pool_created=COALESCE(pool_created,?),
         score=?,price=?,liquidity=?,market_cap=?,buys_m5=?,sells_m5=?,tx_m5=?,change_h1=?,volume_h24=?,
         observations=observations+1,misses=0,
-        status=CASE WHEN status='DEAD' THEN 'STATIC' ELSE status END,
-        last_action=CASE WHEN status='DEAD' THEN 'REACTIVATED: observed fresh pool quote' ELSE last_action END
+        status=CASE WHEN status='DEAD' AND ?=1 AND risk_status NOT IN ('MINT_CONTROL_RISK','HOLDER_CONCENTRATION_RISK') THEN 'ALIVE' ELSE status END,
+        last_action=CASE WHEN status='DEAD' AND ?=1 AND risk_status NOT IN ('MINT_CONTROL_RISK','HOLDER_CONCENTRATION_RISK') THEN 'REACTIVATED: fresh verified buyer momentum' ELSE last_action END
         WHERE asset_key=? AND status!='TRASH' AND updated_at<=?`)
         .bind(a.symbol,a.pool,a.source,stamp,stamp,a.pool_created,a.score,a.price,a.liquidity,a.market_cap,
-        a.buys_m5,a.sells_m5,a.tx_m5,a.change_h1,a.volume_h24,a.asset_key,stamp));
+        a.buys_m5,a.sells_m5,a.tx_m5,a.change_h1,a.volume_h24,revival,revival,a.asset_key,stamp));
       statements.push(env.DB.prepare(`INSERT OR IGNORE INTO observations
         (asset_key,seen_at,pool,provider,price,liquidity,buys_m5,sells_m5,score)
         SELECT ?,?,?,?,?,?,?,?,? WHERE EXISTS
