@@ -1,0 +1,89 @@
+{
+  "cycle": "03",
+  "captured_at_utc": "2026-10-20T10:55:15Z",
+  "execution": "research_only",
+  "passes_completed": 4,
+  "passes_attempted": 6,
+  "pro_auth_verified": true,
+  "prior_reference": "data/night-lab/2026-10-20/2026-10-20T09-30-49-160Z-prompted-deep-pass-02.json",
+  "observations": [
+    {
+      "symbol": "Satoshi",
+      "chain": "solana",
+      "mint": "SAtoZGJkh4Eid9EQZYXWnCNVn5asZrWZLouBMX1SHi1",
+      "helius_indicative_usdc": 0.00007079261,
+      "helius_slot": 459204437,
+      "pool": "7jTCpYho9RJhCn9ZyrLPjwGWkacGhJVdzL2cZni3UdUh",
+      "gecko_pool_liquidity_usd_approx": 23000,
+      "gecko_cap_usd_approx": 70420,
+      "liquidity_cap_pct_approx": 32.66,
+      "state": "ACTIVE",
+      "score": null,
+      "confidence": "medium-low",
+      "missing": [
+        "distinct_buyers",
+        "raw_candles",
+        "LP_proof",
+        "sell_quote"
+      ]
+    },
+    {
+      "symbol": "EVOLVE",
+      "chain": "solana",
+      "pool_identity": "unconfirmed for trending pool",
+      "cap_usd_approx": 68180,
+      "liquidity_usd_approx": 22600,
+      "state": "COOLING",
+      "confidence": "low",
+      "missing": [
+        "exact_trending_pool_mint",
+        "raw_candles",
+        "distinct_buyers"
+      ]
+    },
+    {
+      "symbol": "COLLECTOOOR",
+      "chain": "solana",
+      "cap_usd_approx": 383370,
+      "liquidity_usd_approx": 68400,
+      "state": "COOLING",
+      "confidence": "low",
+      "missing": [
+        "unique_buyers",
+        "LP_proof"
+      ]
+    },
+    {
+      "symbol": "FORKIUS",
+      "chain": "solana",
+      "cap_usd_approx": 42590,
+      "liquidity_usd_approx": 16800,
+      "state": "ACTIVE",
+      "cohort": "comparison",
+      "confidence": "low",
+      "missing": [
+        "mint",
+        "pool",
+        "risk",
+        "buyer_counts"
+      ]
+    }
+  ],
+  "sources": [
+    "https://www.geckoterminal.com/solana/pumpswap/pools",
+    "https://www.geckoterminal.com/solana/pools",
+    "Helius connected Solana Reader",
+    "Blockscout PRO authentication diagnostic"
+  ],
+  "limitations": [
+    "No same-pool OHLCV",
+    "No executable sell quotes",
+    "No independently verified unique buyer acceleration",
+    "Some GeckoTerminal page snapshots are asynchronous"
+  ],
+  "lessons": [
+    "Never match ticker alone",
+    "Gate ranking on matched pool liquidity and independent buyer counts",
+    "Treat drawdown plus high volume as a failure-control signal"
+  ]
+}
