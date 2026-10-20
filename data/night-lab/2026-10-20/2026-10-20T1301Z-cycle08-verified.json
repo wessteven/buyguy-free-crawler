@@ -1,0 +1,121 @@
+{
+  "cycle": "08",
+  "captured_at_utc": "2026-10-20T13:01Z",
+  "pro_auth_verified_at": "2026-10-20T12:59:50.846Z",
+  "research_only": true,
+  "passes": {
+    "complete": 4,
+    "partial": 4,
+    "unavailable": 2
+  },
+  "prior_records_retained_by_reference": 48,
+  "prior_path": "data/night-lab/2026-10-20/2026-10-20T125510Z-cycle07-summary.json",
+  "quotes": {
+    "Satoshi": {
+      "mint": "SAtoZGJkh4Eid9EQZYXWnCNVn5asZrWZLouBMX1SHi1",
+      "helius_usdc": 0.00004779999,
+      "prior": 0.000074024836
+    },
+    "FORKIUS": {
+      "mint": "7xTMgacureYyKpaQZwP6LHR1tywEaBjAYfj9zidipump",
+      "helius_usdc": 0.000020826323,
+      "prior": 0.000023944562
+    },
+    "EVOLVE": {
+      "mint": "687h1VDXkAWCKBZqPmefvs4y4k1VtPogoriikhsqpump",
+      "helius_usdc": 0.000038200236,
+      "prior": 0.000039584174
+    },
+    "BORLY": {
+      "mint": "ECFmFaHyJ8krXErN1QAxqUq97xCFUWYv9Ax5j2Aspump",
+      "helius_usdc": 0.0012857231,
+      "prior": 0.0009601867
+    }
+  },
+  "seed": {
+    "contract": "0x6AdB9Cd443F4653572101E2F91b35ea1ed5f6b69",
+    "holders": 117,
+    "price": 0.00006803,
+    "verified": true,
+    "reserve_reconciliation": "unresolved",
+    "geckoterminal_pool": "0x574596ca78e0ec91044f9c72d3a07c952892ee3219e6a2fb0f85d4e424d62237"
+  },
+  "pool_samples": {
+    "FORKIUS": {
+      "pool": "8uzUfQhxmTSGCunXB6ndTtZHxexyshEKbgsZjVAXh2tT",
+      "windows_latest_first": [
+        [
+          4,
+          6,
+          3,
+          5
+        ],
+        [
+          7,
+          13,
+          5,
+          12
+        ],
+        [
+          2,
+          3,
+          2,
+          2
+        ],
+        [
+          5,
+          8,
+          5,
+          8
+        ]
+      ],
+      "fields": [
+        "buys",
+        "sells",
+        "distinct_buy_fee_payers",
+        "distinct_sell_fee_payers"
+      ]
+    },
+    "Satoshi": {
+      "pool": "7jTCpYho9RJhCn9ZyrLPjwGWkacGhJVdzL2cZni3UdUh",
+      "windows_latest_first": [
+        [
+          2,
+          0,
+          2,
+          0
+        ],
+        [
+          2,
+          1,
+          2,
+          1
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          1,
+          1,
+          1,
+          1
+        ]
+      ],
+      "warning": "sample is not fresh relative to current observation"
+    }
+  },
+  "source_urls": [
+    "https://www.geckoterminal.com/robinhood/pools/0x574596ca78e0ec91044f9c72d3a07c952892ee3219e6a2fb0f85d4e424d62237",
+    "https://www.geckoterminal.com/explore/new-crypto-pools/robinhood"
+  ],
+  "no_trades": true,
+  "limitations": [
+    "new launch exact addresses not verified",
+    "independent live pool quotes unavailable",
+    "LP proof unavailable",
+    "Satoshi latest pool transactions stale"
+  ]
+}
