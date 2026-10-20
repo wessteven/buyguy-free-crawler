@@ -209,6 +209,20 @@ test('OUR SCORE column sorts descending, opens breakdown, and preserves saved la
  assert.match(saved.html,/id="ourScoreDialog"/);
  assert.match(saved.html,/id="ourScoreClose"/);
 });
+test('Rank OUR SCORE shortcut sorts high-to-low and is visible above the token grid',async()=>{
+ const page=await tableSandbox();
+ assert.match(page.html,/id="sortOurScore"[^>]*>Rank OUR SCORE/);
+ const base={...example[0],status:'ALIVE',market_cap:120000,price:0.001,
+   score:75,quote_age:7,change_h1:10,risk_status:'PARTIAL_ONCHAIN_REVIEW'};
+ const rich={...base,symbol:'STRONG',liquidity:90000,buys_m5:29,sells_m5:8};
+ const weak={...base,symbol:'WEAK',liquidity:18000,buys_m5:5,sells_m5:32};
+ page.evalJS('setAssetData('+JSON.stringify([weak,rich])+')');
+ page.ui.get('sortOurScore').onclick();
+ assert.equal(page.evalJS('assetSort.key'),'our_score');
+ assert.equal(page.evalJS('assetSort.direction'),'desc');
+ assert.ok(page.assets.innerHTML.indexOf('STRONG')<page.assets.innerHTML.indexOf('WEAK'));
+ assert.equal(JSON.parse(page.storage.get('buyguy.assetSort.v1')).key,'our_score');
+});
 test('Financial columns use numeric rather than alphabetical sorting',async()=>{
   const ui=await setup();
   ui.evalJS("sortAssets('liquidity')");
