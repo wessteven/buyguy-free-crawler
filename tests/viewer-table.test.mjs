@@ -388,6 +388,40 @@ test('Trade on follows Copy address in all views and opens a chain-specific Moby
  const saved=await tableSandbox(new Map([['buyguy.assetColumns.v2',JSON.stringify(['chain','address','symbol'])]]));
  assert.equal(saved.evalJS("assetOrder.indexOf('trade_on')"),saved.evalJS("assetOrder.indexOf('address')")+1);
 });
+test('Chart follows Trade on and opens the exact Solana or Robinhood token on DEX Screener',async()=>{
+ const page=await tableSandbox();
+ const sol='ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump';
+ const rh='0x2cc0fac44b8252f6b10208b091aff2c94b4da77d';
+ const rows=[
+  {...example[0],asset_key:'solana:'+sol,address:sol,symbol:'COLLECTOOOR',tier:'HOT'},
+  {...example[1],asset_key:'robinhood:'+rh,address:rh,symbol:'INJOH',tier:'NOT'}
+ ];
+ page.evalJS('setAssetData('+JSON.stringify(rows)+')');
+ const order=page.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(order[order.indexOf('trade_on')+1],'chart');
+ assert.equal(page.evalJS("dexChartUrl('solana','"+sol+"')"),'https://dexscreener.com/solana/'+sol);
+ assert.equal(page.evalJS("dexChartUrl('robinhood','"+rh+"')"),'https://dexscreener.com/robinhood/'+rh);
+ assert.match(page.assets.innerHTML,/href="https:\/\/dexscreener\.com\/solana\/ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump"/);
+ assert.match(page.assets.innerHTML,/href="https:\/\/dexscreener\.com\/robinhood\/0x2cc0fac44b8252f6b10208b091aff2c94b4da77d"/);
+ assert.match(page.assets.innerHTML,/target="_blank" rel="noopener noreferrer nofollow"/);
+ assert.match(page.ui.get('hotAssets').innerHTML,/View chart ↗/);
+ assert.match(page.ui.get('notAssets').innerHTML,/View chart ↗/);
+ assert.equal(page.evalJS("dexChartUrl('solana','<script>alert(1)</script>')"),null);
+ assert.equal(page.evalJS("dexChartUrl('robinhood','0xWRONG')"),null);
+ assert.equal(page.evalJS("dexChartUrl('unknown','"+sol+"')"),null);
+});
+test('Chart column is added alongside Trade on for saved layouts without rearranging other columns',async()=>{
+ const key='buyguy.assetColumns.v2';
+ const old=['symbol','chain','address','trade_on','socials','risk','flags'];
+ const saved=await tableSandbox(new Map([[key,JSON.stringify(old)]]));
+ const order=saved.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(order[order.indexOf('trade_on')+1],'chart');
+ assert.ok(order.indexOf('socials')>order.indexOf('chart'));
+ const muchOlder=await tableSandbox(new Map([[key,JSON.stringify(['symbol','address','socials'])]]));
+ const migrated=muchOlder.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(migrated[migrated.indexOf('address')+1],'trade_on');
+ assert.equal(migrated[migrated.indexOf('trade_on')+1],'chart');
+});
 test('Ten-minute scan timer shows countdown, overdue overtime and unknown runs without resets from wall clock',async()=>{
  const page=await tableSandbox();
  const epoch=Date.parse('2026-10-20T00:00:00.000Z');
