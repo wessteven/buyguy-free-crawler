@@ -68,6 +68,7 @@ tbody tr:hover{background:#174029}
  border-radius:2px;padding:3px 5px;white-space:nowrap;text-decoration:none;
  background:#103728;font-weight:bold;display:inline-block}
 .dex-chart-link:focus-visible{outline:2px solid #a1ffc0}
+.lp-lock-verified{display:inline-block;margin-left:3px;white-space:nowrap;vertical-align:baseline;cursor:help}
 .research-guide{font-size:10px}
 #greenDialog{background:#09190e;color:#bbfccc;border:1px solid #467553;font:11px ui-monospace,Consolas,monospace;
  width:min(92vw,520px);max-height:76vh;overflow:auto;padding:12px}
@@ -144,7 +145,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <section><h2>Token research</h2><div class="asset-toolbar"><button id="resetAssetColumns" type="button">Reset columns</button><span class="hint" id="assetOrderStatus" role="status" aria-live="polite"></span></div><div id="assets" aria-label="Sortable, rearrangeable token research table"></div><span id="copyStatus" role="status" aria-live="polite"></span>
 </section>
 <section><h2>Read-only $40 round-trip quotes</h2><p class="hint">Quote availability is NOT proof of an executable sale. No trade has been sent.</p><div id="routeReviews"></div></section>
-<section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend"><strong>Market Score (0–100)</strong> ranks observed trading opportunity from liquidity, market-cap fit, buyer flow, volume, price change and pool age — not safety or a forecast. <strong>Safety Evidence (0–100 or —)</strong> reflects mint/holder review, pool liquidity, indicative round-trip quote and quote freshness. Tap it to inspect the independent <strong>seven-check safety screen</strong>. <strong>Liq/Cap %</strong> = USD pool liquidity ÷ reported USD market cap × 100; missing cap means —. A high ratio does not verify LP locks or a sell route. Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
+<section aria-label="Token research guide" class="research-guide"><h2>Guide &amp; indicators</h2><p class="hint indicator-legend"><strong>Market Score (0–100)</strong> ranks observed trading opportunity from liquidity, market-cap fit, buyer flow, volume, price change and pool age — not safety or a forecast. <strong>Safety Evidence (0–100 or —)</strong> reflects mint/holder review, pool liquidity, indicative round-trip quote and quote freshness. Tap it to inspect the independent <strong>seven-check safety screen</strong>. <strong>Liq/Cap %</strong> = USD pool liquidity ÷ reported USD market cap × 100; missing cap means —. 🔒 appears beside the ratio only when the independent <strong>Pool custody / LP lock</strong> safety check passes for the matched pool with recent on-chain evidence. The lock does not mean 100% of liquidity is locked or guarantee sellability. A high ratio alone does not verify LP locks or a sell route. Safety: 🟢 7/7 independently confirmed · 🟡 partial evidence · 🔴 identified risk · ⚫ unknown. Signal: 🚀 acceleration · 📈 rising · 📉 falling · 🥱 quiet · ☠️ inactive. 180° direction: ⬆️ ↗️ ➡️ ↘️ ⬇️ tracks recorded 1-hour price change, not future direction.</p><p class="hint">Tap a heading to sort ↑ ↓. Drag headings to move columns (including on mobile); swipe the rows sideways to see more columns. Social links are project-supplied and unverified. Keyboard: Shift + ←/→ moves a selected heading.</p></section>
 </div>
 <div class="tab-panel" id="panel-hot" role="tabpanel" aria-labelledby="tab-hot" hidden>
 <section><h2>HOT // FRESH MOMENTUM <span id="hotCount" class="hint"></span></h2>
@@ -472,6 +473,18 @@ function formatLiqCapPct(pct){
  if(pct===null||pct===undefined||!Number.isFinite(pct))return '—';
  return (pct!==0&&pct<0.1?pct.toFixed(3):pct<10?pct.toFixed(2):pct.toFixed(1))+'%';
 }
+// Only the server-side seven-check gate can verify a lock. Do not infer one
+// from Liq/Cap %, token claims, LP supply gaps, burns or partial safety scores.
+function verifiedPoolLock(row){
+ return Array.isArray(row?.green?.checks)&&
+  row.green.checks.some(c=>c?.name==='Pool custody / LP lock'&&c.passed===true);
+}
+function liqCapCell(row){
+ const ratio=formatLiqCapPct(row.liq_cap_pct);
+ if(ratio==='—'||!verifiedPoolLock(row))return cell(ratio);
+ return '<td>'+ratio+' <span class="lp-lock-verified" role="img" aria-label="Verified pool LP lock" '+
+   'title="Recent independent on-chain LP custody and lock verification for the matched pool. Locked share is not quantified; this does not guarantee a successful exit.">🔒</span></td>';
+}
 function assetRow(a,routes=[]){
  const audit=riskInfo(a);
  const safetyInfo=safetyAssessment(a,routes),signalInfo=signalAssessment(a),directionInfo=directionAssessment(a);
@@ -629,7 +642,7 @@ function renderAssets(){
      '<span class="sort-indicator" aria-hidden="true">'+indicator+'</span></span>'+controls+'</th>';
  }).join('');
  const rows=orderedAssetRows().filter(row=>view==='all'||(view==='hot')===(row.tier==='HOT')).map(row=>'<tr>'+assetOrder.map(key=>
- key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='trade_on'?tradeOnCell(row):key==='chart'?chartCell(row):key==='symbol'?tokenCell(row):
+ key==='socials'?socialCell(row):key==='flags'?flagsCell(row):key==='audit'?auditCell(row):key==='address'?addressCell(row):key==='trade_on'?tradeOnCell(row):key==='chart'?chartCell(row):key==='liq_cap_pct'?liqCapCell(row):key==='symbol'?tokenCell(row):
  ['safety','momentum','direction'].includes(key)?indicatorCell(row,key):cell(columnValue(row,key))
  ).join('')+'</tr>').join('');
  wrap.innerHTML='<table><thead><tr>'+colHtml+'</tr></thead><tbody>'+rows+'</tbody></table>';
