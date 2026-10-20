@@ -45,7 +45,7 @@ export function evaluateNightLabEvidence(e={}){
   const flow=latest.length===2&&latest.every(w=>w.positive)?35:latest.some(w=>w.positive)?12:0;
   const market=liquidity>=25000?20:liquidity>=15000?12:0;
   const capFit=valuation>=50000&&valuation<=250000?15:0;
-  const freshness=quoteAge!==null&&quoteAge>=0&&quoteAge<=15?10:quoteAge<=30&&quoteAge>=0?6:0;
+  const freshness=quoteAge!==null&&quoteAge>=0&&quoteAge<=15?10:quoteAge!==null&&quoteAge<=30&&quoteAge>=0?6:0;
   const verified=(e.sellQuoteVerified===true?8:0)+(e.lpCustodyVerified===true?7:0)+
     (e.holderConcentrationVerified===true?5:0);
   const raw=flow+market+capFit+freshness+verified;
