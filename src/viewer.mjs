@@ -997,6 +997,18 @@ function scoreJournalTable(rows,state){
 // D1 Free daily allowance normally resets at 00:00 UTC. This is an estimate,
 // not proof that a particular database is healthy or its quota has recovered.
 let d1QuotaBlocked=false;
+// Remember the quota error for this UTC day so the password screen can show
+// the countdown after reload without saving any credentials.
+const d1QuotaKey='buyguy-d1-quota-day';
+const utcDay=()=>new Date().toISOString().slice(0,10);
+try{d1QuotaBlocked=sessionStorage.getItem(d1QuotaKey)===utcDay();}catch{}
+function setD1QuotaBlocked(blocked){
+ d1QuotaBlocked=blocked;
+ try{if(blocked)sessionStorage.setItem(d1QuotaKey,utcDay());
+ else sessionStorage.removeItem(d1QuotaKey);}catch{}
+ updateD1ResetCountdown();
+}
+
 function updateD1ResetCountdown(){
  const node=document.getElementById('d1ResetClock');
  if(!node)return;
@@ -1010,6 +1022,7 @@ function updateD1ResetCountdown(){
  node.textContent='D1 estimated UTC quota reset in '+hh+':'+mm+':'+ss+' (00:00 UTC). Refresh after reset to verify recovery.';
 }
 if(typeof setInterval==='function')setInterval(updateD1ResetCountdown,1000);
+if(typeof queueMicrotask==='function')queueMicrotask(updateD1ResetCountdown);
 async function refresh(){try{
  const r=await fetch('/api/status',{credentials:'same-origin',cache:'no-store'});
  if(r.status===401){
@@ -1021,14 +1034,14 @@ async function refresh(){try{
    let message='HTTP '+r.status;
    try{const failure=await r.json();
      if(failure.error==='D1_READ_QUOTA'){
-       d1QuotaBlocked=true;updateD1ResetCountdown();
+       setD1QuotaBlocked(true);
        message='Cloudflare D1 daily row-read allowance exhausted. Live rankings unavailable until midnight UTC reset.';
      }
    }catch{}
    throw Error(message);
  }
  const x=await r.json();
- d1QuotaBlocked=false;updateD1ResetCountdown();
+ setD1QuotaBlocked(false);
  document.getElementById('login').style.display='none';
  document.getElementById('board').style.display='block';
  document.getElementById('msg').textContent='';
