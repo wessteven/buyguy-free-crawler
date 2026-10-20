@@ -291,26 +291,15 @@ function auditCell(row){
  return '<td><button type="button" class="audit-btn" data-audit-key="'+escapeSocial(address)+
   '" aria-label="Run live audit of '+escapeSocial(row.symbol||'token')+'">⚡ AUDIT</button></td>';
 }
-// The "Open in Mobile App" button on Moby's interstitial links straight to
-// invite.mobyscreener.com/{token-specific-code}. User confirmed this URL for
-// COLLECTOOOR. The full twitter.mobyscreener.com share URLs show an extra
-// landing page before their app button, so skip that intermediate step.
-// Codes are token-specific and must never be reused for other mints.
-// Other mints keep a clearly labeled Moby web fallback, NOT a fake app link.
-const MOBY_SUPPLIED_APP_LINKS=Object.freeze({
- 'YE2mBZx8sL1bhfWpoR9dPAozmKhGE8eKa4sEEQ5pump':'https://invite.mobyscreener.com/cLJFHSHGm7b',
- 'ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump':'https://invite.mobyscreener.com/szgvvaurn7b',
- '9A1VFXY8ETKNSP2jN3rnTF99jDTnbR8j3JqVHas4pump':'https://invite.mobyscreener.com/61ywAgtrn7b'
-});
-function mobySuppliedAppUrl(chain,address){
- const token=String(address||'');
- return chain==='solana'&&Object.prototype.hasOwnProperty.call(MOBY_SUPPLIED_APP_LINKS,token)?
-   MOBY_SUPPLIED_APP_LINKS[token]:null;
-}
+// Moby invite URLs and app handoff have repeatedly opened the WRONG token
+// (NEETOPIA) on the user's Android device, including with token-specific codes.
+// Do not advertise an unverified app deep link for real-money trading.
+// Use the exact mint-specific WEBSITE URL, plus the existing Copy address
+// button as a safe manual lookup fallback. No buy/sell action is initiated.
 function mobyChartUrl(chain,address){
  const token=String(address||'');
  if(chain==='solana'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(token))
-   return mobySuppliedAppUrl(chain,token)||'https://mobyscreener.com/solana/'+token;
+   return 'https://mobyscreener.com/solana/'+token;
  if(chain==='robinhood'&&/^0x[0-9a-fA-F]{40}$/.test(token))
    return 'https://www.mobyscreener.com/token/'+token.toLowerCase();
  return null;
@@ -318,15 +307,10 @@ function mobyChartUrl(chain,address){
 function tradeOnCell(row){
  const url=mobyChartUrl(row.chain,row.address);
  if(!url)return '<td>—</td>';
- const app=Boolean(mobySuppliedAppUrl(row.chain,row.address));
- const label=app?'Moby app ↗':'Moby web ↗';
- const title=app?
-   'User-supplied Moby invite URL for this exact token. Attempts direct app handoff; behavior depends on device app link settings. Does not place a trade.':
-   'Opens Moby website. No token-specific app link is available; confirm contract before trading.';
  return '<td><a class="moby-chart-link" href="'+escapeSocial(url)+
    '" target="_self" rel="nofollow" referrerpolicy="no-referrer" '+
-   'title="'+escapeSocial(title)+'" '+
-   'aria-label="Open '+escapeSocial(row.symbol||'token')+' via '+(app?'Moby app link':'Moby website')+'">'+label+'</a></td>';
+   'title="Moby WEBSITE for this exact contract (not verified as an in-app deeplink). Check the contract address before trading." '+
+   'aria-label="Open '+escapeSocial(row.symbol||'token')+' on Moby website">Moby web ↗</a></td>';
 }
 function addressCell(row){
  const address=String(row.address||'');
