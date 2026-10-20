@@ -192,7 +192,7 @@ test('OUR SCORE column sorts descending, opens breakdown, and preserves saved la
    chain:'robinhood',symbol:'LOW',liquidity:12000,buys_m5:3,sells_m5:29,change_h1:-25};
  ui.evalJS('setAssetData('+JSON.stringify([low,high])+')');
  const order=ui.evalJS('assetOrder.join(",")').split(',');
- assert.equal(order[order.indexOf('symbol')+1],'our_score');
+ assert.equal(order[order.indexOf('audit')+1],'our_score');
  assert.match(ui.assets.innerHTML,/OUR SCORE/);
  assert.match(ui.assets.innerHTML,/our-score-btn/);
  ui.evalJS("sortAssets('our_score')");
@@ -204,7 +204,7 @@ test('OUR SCORE column sorts descending, opens breakdown, and preserves saved la
  const saved=await tableSandbox(new Map([['buyguy.assetColumns.v2',
    JSON.stringify(['market_cap','symbol','score','safety'])]]));
  const migrate=saved.evalJS('assetOrder.join(",")').split(',');
- assert.equal(migrate[migrate.indexOf('symbol')+1],'our_score');
+ assert.equal(migrate[migrate.indexOf('audit')+1],'our_score');
  assert.equal(saved.evalJS('columnByKey.our_score.type'),'number');
  assert.match(saved.html,/id="ourScoreDialog"/);
  assert.match(saved.html,/id="ourScoreClose"/);
