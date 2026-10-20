@@ -12,6 +12,19 @@ Live dashboard: https://buyguy-free-radar.wessteven.workers.dev/dashboard
 - No real-money trading or transaction signing under any circumstance.
 - The existing original BuyGuy website, real portfolios, and old Night Game simulation ledger are independent of this experimental database.
 
+## OUR SCORE calibration journal (20 October 2026)
+
+Research only, no live or simulated trading. Added `src/our-score-core.mjs` (frozen version-1 factor formula, regression-checked against the dashboard), `src/score-journal.mjs`, `score_snapshots` and `score_outcomes` tables.
+
+- **Once per UTC clock hour**, independent Cloudflare Worker research stage selects up to five tokens meeting fresh quote, exact chain-contract identity, pool, minimum liquidity, minimum 5m transactions and known-risk exclusions. Scores and market conditions are **recorded at decision time**; they are never rewritten using later information.
+- Quotes are measured at the **first observed matching-asset pool** within 30 minutes after each 15-minute, 1-hour, 6-hour or 24-hour due time. Observations use the existing indexed price-history ledger. No candles or prices are invented if provider data are missing.
+- `EVALUATED`: same pool, price observed; outcome is indicative percentage change of the raw quote. `POOL_CHANGED`: the quote belongs to a different pool, **not** a measured return. `MISSED_DATA`: no valid future quote by the 45-minute outcome deadline. Otherwise `PENDING`.
+- **Outcomes** dashboard tab displays immutable score at snapshot time and each horizon's return/status. Partial samples are prominently labelled **not proof of predictive accuracy**. These figures ignore slippage, price impact, fees and real-world sellability. The separate paper-wallet experiment remains **disabled**.
+- Hourly ledger reads are intentionally bounded (up to 120 active market records, 100 latest route events, five snapshots, and at most 12 outstanding horizon evaluations per scheduled run). Journal failures are isolated from market discovery and on-chain audits. If the schema isn't initialized, the stage reports `SCHEMA_PENDING`, not fabricated historical results.
+- **Live activation is pending:** Cloudflare D1 Free daily row-read quota is exhausted. The existing hourly GitHub crawler reruns the idempotent `sql/schema.sql` initializer; database migrations and real journal data cannot be confirmed until Cloudflare's quota resets and a complete verified run succeeds.
+
+No weights are automatically retrained at this stage. The experiment first needs credible forward outcomes and a sufficient, unbiased sample.
+
 ## D1 Free row-read budget and recovery (20 October 2026)
 
 The automated Cloudflare D1 deployment check exposed a hard provider limitation: **the account exceeded its free-tier daily rows-read allowance**. The dashboard Worker can be published independently, but live D1-backed rankings are **unavailable** until Cloudflare resets the allowance at **midnight UTC**. Do not claim this as an operational successful end-to-end deployment while reads are blocked.
