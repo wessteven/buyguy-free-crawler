@@ -8,11 +8,12 @@ import {runPaperGame} from './paper-ops.mjs';
 import {screenTradeRoutes} from './route-ops.mjs';
 import {refreshKnownQuotes} from './price-refresh.mjs';
 import {runGreenProbes} from './green-probes.mjs';
+import {runScoreJournal} from './score-journal.mjs';
 export async function scheduledResearch(env,{
- market=cronScan,verify=verifyPendingMints,retire=retireDormantAssets,paper=runPaperGame,route=screenTradeRoutes,refresh=refreshKnownQuotes,greenProbes=runGreenProbes
+ market=cronScan,verify=verifyPendingMints,retire=retireDormantAssets,paper=runPaperGame,route=screenTradeRoutes,refresh=refreshKnownQuotes,greenProbes=runGreenProbes,scoreJournal=runScoreJournal
 }={}){
   if(!env?.DB)throw Error('D1 binding missing');
-  const report={market:'SKIPPED',refresh:'SKIPPED',risk:'SKIPPED',route:'SKIPPED',retirement:'SKIPPED',greenProbes:'SKIPPED',paper:'DISABLED'};
+  const report={market:'SKIPPED',refresh:'SKIPPED',risk:'SKIPPED',route:'SKIPPED',retirement:'SKIPPED',greenProbes:'SKIPPED',scoreJournal:'SKIPPED',paper:'DISABLED'};
   try{
     report.market=await market(env);
   }catch(error){
@@ -62,6 +63,14 @@ export async function scheduledResearch(env,{
   }catch(error){
     report.retirement='FAILED';
     console.warn('Retirement update interrupted:',error?.name||'UnknownError');
+  }
+  // Collect immutable research snapshots independently of simulated trades.
+  // A quota outage or un-applied schema must never interrupt discovery.
+  try{
+    report.scoreJournal=await scoreJournal(env);
+  }catch(error){
+    report.scoreJournal='FAILED';
+    console.warn('OUR SCORE history interrupted:',error?.name||'UnknownError');
   }
   // The switch defaults off and is NEVER set by deployment.
   if(env.PAPER_SIMULATION_ENABLED==='true'){
