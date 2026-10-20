@@ -1,0 +1,54 @@
+{
+  "cycle": "prompted-05",
+  "captured_at_utc": "2026-10-20T12:25Z",
+  "pro_verified_at": "2026-10-20T12:24:12.431Z",
+  "shared_allowance_used": false,
+  "passes_attempted": 10,
+  "passes_complete": 5,
+  "passes_partial": 4,
+  "passes_unavailable": 1,
+  "retained_previous_records": 44,
+  "new_discovery_controls": 3,
+  "newly_refreshed_satoshi": true,
+  "quotes": [
+    {
+      "symbol": "FORKIUS",
+      "mint": "7xTMgacureYyKpaQZwP6LHR1tywEaBjAYfj9zidipump",
+      "price_usdc": 0.000023944562,
+      "helius_slot": 459229010
+    },
+    {
+      "symbol": "EVOLVE",
+      "mint": "687h1VDXkAWCKBZqPmefvs4y4k1VtPogoriikhsqpump",
+      "price_usdc": 0.000039584174,
+      "helius_slot": 459229092
+    },
+    {
+      "symbol": "BORLY",
+      "mint": "ECFmFaHyJ8krXErN1QAxqUq97xCFUWYv9Ax5j2Aspump",
+      "price_usdc": 0.0009601867,
+      "helius_slot": 459229099
+    },
+    {
+      "symbol": "Satoshi",
+      "mint": "SAtoZGJkh4Eid9EQZYXWnCNVn5asZrWZLouBMX1SHi1",
+      "price_usdc": 0.000074024836,
+      "helius_slot": 459229017
+    }
+  ],
+  "risk": {
+    "seed_contract_verified": true,
+    "seed_pool_liquidity_reconciliation": "unresolved",
+    "unique_buyer_acceleration": "unverified",
+    "same_pool_ohlcv": "unavailable",
+    "lp_lock": "unverified",
+    "sell_quotes": "unavailable"
+  },
+  "controls": [
+    "KOLSHI",
+    "CATRYU",
+    "solienne.ai"
+  ],
+  "buy_qualified": 0,
+  "notes": "Full 48-record file produced locally; GitHub summary is not a substitute for full file. Source GeckoTerminal and connected Helius/Blockscout."
+}
