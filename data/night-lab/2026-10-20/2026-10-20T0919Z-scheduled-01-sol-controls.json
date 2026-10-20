@@ -1,0 +1,47 @@
+{
+  "note": "GeckoTerminal pool pages, quote timestamps retained; 5m candles and unique buyers unavailable",
+  "rows": [
+    {
+      "symbol": "aDOGymous",
+      "mint": "Cv37ZBhXDgza5cgePpjHshEXz9JPsLNcwUAQrBgcpump",
+      "pool": "7ZKafTLoaC8L4KhNSwUiD8qcWCPRDQNDkPT1yNGduKc4",
+      "cap_usd": 396510,
+      "liquidity_usd": 53393,
+      "liq_cap_pct": 13.47,
+      "buys_24h": 3161,
+      "sells_24h": 1029,
+      "gt_security": 38.52,
+      "quote_time_2026_10_20": "01:11Z",
+      "flag": "dev_holdings_above_10pct",
+      "source": "https://www.geckoterminal.com/solana/pools/7ZKafTLoaC8L4KhNSwUiD8qcWCPRDQNDkPT1yNGduKc4"
+    },
+    {
+      "symbol": "BORLY_A",
+      "mint": "ECFmFaHyJ8krXErN1QAxqUq97xCFUWYv9Ax5j2Aspump",
+      "pool": "3pUeKCLPfocGPGYo6MvbfkZSuqTUkQ3EAPZ99aDhSj8r",
+      "cap_usd": 1750000,
+      "liquidity_usd": 122002,
+      "liq_cap_pct": 6.97,
+      "buys_24h": 42219,
+      "sells_24h": 16812,
+      "gt_security": 60.47,
+      "quote_time_2026_10_20": "08:47Z",
+      "flag": "above_target_cap",
+      "source": "https://www.geckoterminal.com/solana/pools/3pUeKCLPfocGPGYo6MvbfkZSuqTUkQ3EAPZ99aDhSj8r"
+    },
+    {
+      "symbol": "COLLECTOOOR",
+      "mint": "ESnW5ZbLmoEAg2QEMxnMsY9R3aS8Kw58HJacYURmpump",
+      "pool": "9YF6sZskPr7yEShde3MqP4aCxgYNRicdrXpxr9gFYe27",
+      "cap_usd": 363420,
+      "liquidity_usd": 66147,
+      "liq_cap_pct": 18.2,
+      "buys_24h": 36613,
+      "sells_24h": 28902,
+      "gt_security": 43,
+      "quote_time_2026_10_20": "08:43Z",
+      "flag": "volatile_high_turnover",
+      "source": "https://www.geckoterminal.com/solana/pools/9YF6sZskPr7yEShde3MqP4aCxgYNRicdrXpxr9gFYe27"
+    }
+  ]
+}
