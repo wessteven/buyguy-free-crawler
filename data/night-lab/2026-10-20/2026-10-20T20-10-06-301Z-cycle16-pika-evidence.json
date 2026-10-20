@@ -1,0 +1,69 @@
+{
+  "cycle": 16,
+  "recorded_at_utc": "2026-10-20T20:10:06.301Z",
+  "record": {
+    "symbol": "PIKA",
+    "chain": "solana",
+    "address": "7XBdVqzZFYwpBz7VshzWZWd7ms1sG9f9UQ8YiHqapump",
+    "pool": "46gTBAw39NQops2miKGoMVhSmDj6yf9Z5Fk9xtpCqfu3",
+    "price_usd": 0.00008419184,
+    "fdv_proxy_usd": 81245.83,
+    "market_cap_usd": null,
+    "liquidity_spot_usd": 23920,
+    "liquidity_fdv_pct": 29.44,
+    "source": "Helius DAS and pool balances",
+    "retrieved_at": "2026-10-20T20:08:02Z",
+    "flow_5m": [
+      [
+        "19:45",
+        43,
+        23,
+        43,
+        30,
+        -139.2
+      ],
+      [
+        "19:50",
+        38,
+        29,
+        38,
+        33,
+        -103.7
+      ],
+      [
+        "19:55",
+        46,
+        21,
+        43,
+        36,
+        372.14
+      ],
+      [
+        "20:00",
+        44,
+        41,
+        44,
+        38,
+        -652.01
+      ]
+    ],
+    "flow_columns": [
+      "utc_start",
+      "buys",
+      "sells",
+      "distinct_buy_fee_payers",
+      "meaningful_buy_fee_payers",
+      "estimated_net_usd"
+    ],
+    "score_provisional": 49,
+    "state": "ACTIVE",
+    "confidence": "MEDIUM_FOR_FLOW",
+    "missing": [
+      "sell_quote",
+      "lp_lock",
+      "holder_concentration",
+      "1h_complete_candles"
+    ],
+    "source_url": "https://www.helius.dev"
+  }
+}
