@@ -104,8 +104,9 @@ jobs:
           CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
         run: |
           python - <<'PY'
-          import os, json
+          import os,json,time
           from urllib.request import Request,urlopen
+          from urllib.error import HTTPError
           url='https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}/query'.format(os.environ['CF_ACCOUNT_ID'],os.environ['CF_DATABASE_ID'])
           queries=[
             "SELECT COUNT(*) AS n FROM assets",
@@ -116,10 +117,26 @@ jobs:
           ]
           for sql in queries:
             req=Request(url,json.dumps({'sql':sql,'params':[]}).encode(),{'authorization':'Bearer '+os.environ['CF_D1_API_TOKEN'],'content-type':'application/json','accept':'application/json'})
-            with urlopen(req,timeout=25) as res: data=json.load(res)
-            if not data.get('success') or not data.get('result') or not data['result'][0].get('success'):
-              raise SystemExit('D1 verification query failed')
-            print('D1',sql,':',json.dumps(data['result'][0].get('results',[]))[:240])
+            for attempt in range(1,4):
+              try:
+                with urlopen(req,timeout=25) as res:data=json.load(res)
+              except HTTPError as exc:
+                # No secrets or headers are printed, just API-supplied error messages.
+                try:
+                  raw=json.loads(exc.read(4096).decode())
+                  errors=[str(e.get('message','unknown'))[:180] for e in raw.get('errors',[])]
+                except (ValueError,UnicodeError):
+                  errors=['Cloudflare API returned a non-JSON error']
+                print('D1 verification HTTP',exc.code,'query',sql,'attempt',attempt,'errors',errors)
+                if attempt<3 and exc.code in (400,429,500,502,503,504):
+                  time.sleep(attempt*2);continue
+                raise SystemExit('D1 verification blocked: HTTP '+str(exc.code))
+              if not data.get('success') or not data.get('result') or not data['result'][0].get('success'):
+                errors=[str(e.get('message','unknown'))[:180] for e in data.get('errors',[])]
+                print('D1 verification response failure for',sql,errors)
+                raise SystemExit('D1 verification query failed')
+              print('D1',sql,':',json.dumps(data['result'][0].get('results',[]))[:240])
+              break
           PY
       - name: Test external dashboard reachability (Cloudflare 1010 tolerant)
         env:
