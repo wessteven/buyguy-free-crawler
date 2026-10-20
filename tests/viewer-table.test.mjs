@@ -151,6 +151,64 @@ test('Market Score and Safety Evidence are distinct columns with unchanged stabl
  assert.equal(saved[saved.indexOf('liq_cap_pct')+1],'buys_m5');
  assert.ok(saved.indexOf('score')<saved.indexOf('safety'));
 });
+test('OUR SCORE normalizes nine market and safety factors with transparent weights',async()=>{
+ const ui=await tableSandbox();
+ const mint='So11111111111111111111111111111111111111112';
+ const base={...example[0],asset_key:'solana:'+mint,address:mint,
+  symbol:'PROMISING',status:'ALIVE',liquidity:70000,market_cap:110000,
+  price:0.00012,buys_m5:28,sells_m5:9,change_h1:9,score:78,
+  quote_age:7,risk_status:'PARTIAL_ONCHAIN_REVIEW',
+  last_seen:new Date(Date.now()-7*60000).toISOString()};
+ const strong=ui.evalJS('assetRow('+JSON.stringify(base)+')');
+ // vm context objects are cross-realm; assert scalar results rather than deep equal.
+ assert.equal(strong.ourScoreInfo.factors.length,9);
+ assert.equal(strong.ourScoreInfo.factors.reduce((a,f)=>a+f.weight,0),100);
+ assert.ok(strong.our_score>40&&strong.our_score<=100);
+ assert.ok(strong.ourScoreInfo.factors.every(f=>f.rating>=0&&f.rating<=100));
+ assert.ok(strong.ourScoreInfo.factors.every(f=>f.points>=0&&f.points<=f.weight));
+ const huge=ui.evalJS('assetRow('+JSON.stringify({...base,symbol:'PARABOLIC',change_h1:761})+')');
+ assert.ok(huge.our_score<=60,'Do not reward chasing 761% candles');
+ const thin=ui.evalJS('assetRow('+JSON.stringify({...base,liquidity:9000})+')');
+ assert.ok(thin.our_score<=40,'Thin liquidity limits final score');
+ const risky=ui.evalJS('assetRow('+JSON.stringify({...base,risk_status:'MINT_CONTROL_RISK'})+')');
+ assert.ok(risky.our_score<=15,'Critical contract risk overrides momentum');
+ const stale=ui.evalJS('assetRow('+JSON.stringify({...base,quote_age:181})+')');
+ assert.ok(stale.our_score<=35,'Stale quote must not lead');
+ const missing=ui.evalJS('assetRow('+JSON.stringify({...base,market_cap:0})+')');
+ assert.equal(missing.our_score,null,'Missing cap is unranked rather than 0%');
+ const dead=ui.evalJS('assetRow('+JSON.stringify({...base,status:'DEAD'})+')');
+ assert.equal(dead.our_score,null,'Archive cases cannot lead live rankings');
+});
+test('OUR SCORE column sorts descending, opens breakdown, and preserves saved layouts',async()=>{
+ const ui=await tableSandbox();
+ const mint='So11111111111111111111111111111111111111112';
+ const now=new Date(Date.now()-6*60000).toISOString();
+ const baseline={...example[0],asset_key:'solana:'+mint,address:mint,chain:'solana',
+   status:'ALIVE',market_cap:120000,price:0.0001,quote_age:6,last_seen:now,
+   score:85,risk_status:'PARTIAL_ONCHAIN_REVIEW',change_h1:8};
+ const high={...baseline,symbol:'HIGH',liquidity:90000,buys_m5:40,sells_m5:9};
+ const low={...baseline,asset_key:'robinhood:0x2cc0fac44b8252f6b10208b091aff2c94b4da77d',
+   address:'0x2cc0fac44b8252f6b10208b091aff2c94b4da77d',
+   chain:'robinhood',symbol:'LOW',liquidity:12000,buys_m5:3,sells_m5:29,change_h1:-25};
+ ui.evalJS('setAssetData('+JSON.stringify([low,high])+')');
+ const order=ui.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(order[order.indexOf('symbol')+1],'our_score');
+ assert.match(ui.assets.innerHTML,/OUR SCORE/);
+ assert.match(ui.assets.innerHTML,/our-score-btn/);
+ ui.evalJS("sortAssets('our_score')");
+ assert.ok(ui.assets.innerHTML.indexOf('HIGH')<ui.assets.innerHTML.indexOf('LOW'));
+ ui.evalJS("sortAssets('our_score')");
+ assert.ok(ui.assets.innerHTML.indexOf('LOW')<ui.assets.innerHTML.indexOf('HIGH'));
+ assert.match(ui.ui.get('hotAssets').innerHTML,/OUR SCORE/);
+ assert.match(ui.ui.get('notAssets').innerHTML,/OUR SCORE/);
+ const saved=await tableSandbox(new Map([['buyguy.assetColumns.v2',
+   JSON.stringify(['market_cap','symbol','score','safety'])]]));
+ const migrate=saved.evalJS('assetOrder.join(",")').split(',');
+ assert.equal(migrate[migrate.indexOf('symbol')+1],'our_score');
+ assert.equal(saved.evalJS('columnByKey.our_score.type'),'number');
+ assert.match(saved.html,/id="ourScoreDialog"/);
+ assert.match(saved.html,/id="ourScoreClose"/);
+});
 test('Financial columns use numeric rather than alphabetical sorting',async()=>{
   const ui=await setup();
   ui.evalJS("sortAssets('liquidity')");
