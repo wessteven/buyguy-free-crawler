@@ -23,6 +23,9 @@ try{
   else{
    const decoded=normalizeGeckoPoolOHLCV(raw,{mint,pool,asOf,maxBars:240});
    result.status=decoded.status;
+   result.providerSeriesId=String(raw?.data?.id||'').slice(0,160);
+   result.providerBaseMint=raw?.meta?.base?.address||null;
+   result.providerBarsReturned=Array.isArray(raw?.data?.attributes?.ohlcv_list)?raw.data.attributes.ohlcv_list.length:0;
    result.barCount=decoded.bars.length;
    result.earliestBar=decoded.bars[0]?.closeAt??null;
    result.latestBar=decoded.bars.at(-1)?.closeAt??null;
