@@ -17,15 +17,25 @@ export async function runHeliusDiscoveryExperiment(env,{
   program,signatures:discovered.candidates.filter(x=>x.status==='UNCLASSIFIED').map(x=>x.signature),
   fetcher
  });
- // Second-stage classifier must never claim that an arbitrary transaction
- // creates a pool. Only parsed protocol initialization instructions count.
+ // Only exact parsed protocol initialization or known binary IDL discriminators
+ // count as pool leads. Unclassified instructions are not launch evidence.
  const leads=(classified.results||[]).flatMap(row=>
   row.poolEvidence?.status==='POOL_CREATION_LEADS'
    ?row.poolEvidence.leads.filter(lead=>lead.protocol===protocol):[]);
+ const evidenceCounts={parsed:0,binary:0};
+ for(const lead of leads){
+  if(lead.evidence==='PARSED_INITIALIZATION_INSTRUCTION')evidenceCounts.parsed++;
+  if(lead.evidence==='BINARY_IDL_DISCRIMINATOR')evidenceCounts.binary++;
+ }
+ const transactionStatuses={};
+ for(const row of classified.results||[]){
+  transactionStatuses[row.status]=(transactionStatuses[row.status]||0)+1;
+ }
  const verified=await verifyHeliusPoolLeads(env,{leads,targetMint,fetcher});
  return {enabled:true,mode:'READ_ONLY_RESEARCH',protocol,program,
   signaturesScanned:discovered.scanned,transactionsChecked:classified.checked,
-  poolLeads:leads.length,poolsChecked:verified.checked,results:verified.results,
+  poolLeads:leads.length,evidenceCounts,transactionStatuses,
+  poolsChecked:verified.checked,results:verified.results,
   status:'RESEARCH_PIPELINE_COMPLETE',
   caveat:'Exact parsed or IDL-discriminator-matched binary initialization leads are considered; account checks do not prove pool creation timing or safety.'};
 }
