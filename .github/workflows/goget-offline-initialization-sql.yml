@@ -1,0 +1,20 @@
+name: GOGET Offline Initialization SQL
+on:
+  push:
+    paths:
+      - 'research/test_d1_initialization_sql.py'
+      - '.github/workflows/goget-offline-initialization-sql.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sqlite_reproduction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate crawler schema locally without D1 or production engine
+        run: python -m unittest discover -s research -p 'test_d1_initialization_sql.py' -v
