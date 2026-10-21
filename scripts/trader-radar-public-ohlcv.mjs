@@ -12,6 +12,7 @@ const events=[
  {name:'PHP_LAST_DISPOSAL',at:'2026-10-21T06:15:30Z'}
 ];
 const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),12000);
+let fullBars=[];
 let result={status:'NO_PROVIDER_RESPONSE',mint,pool,barCount:0,examples:[],historicalLiquidityVerified:false,
   executableQuotesVerified:false};
 try{
@@ -28,6 +29,7 @@ try{
    result.providerBaseMint=raw?.meta?.base?.address||null;
    result.providerBarsReturned=Array.isArray(raw?.data?.attributes?.ohlcv_list)?raw.data.attributes.ohlcv_list.length:0;
    result.barCount=decoded.bars.length;
+   fullBars=decoded.bars.map(b=>[Math.floor(Date.parse(b.closeAt)/1000),b.openUsd,b.highUsd,b.lowUsd,b.closeUsd,b.volumeUsd]);
    result.earliestBar=decoded.bars[0]?.closeAt??null;
    result.latestBar=decoded.bars.at(-1)?.closeAt??null;
    result.examples=events.map(e=>{
@@ -47,3 +49,5 @@ console.log('TRADER_RADAR_PUBLIC_OHLCV',JSON.stringify({...result,
  quoteCurrency:'USD',asOf,claimedPriceType:'CLOSED_INTERVAL_OHLCV_ONLY',
  matchedControlReturn:null,predictiveAlphaEstablished:false,
  caveat:'Historical pool candle close is not an executable fill and lacks independently timestamped liquidity. Never backfill contemporaneous depth from live pool reserves.'}));
+
+if(fullBars.length)console.log('TRADER_RADAR_PUBLIC_OHLCV_SERIES',JSON.stringify({mint,pool,asOf,source:'GECKOTERMINAL_PUBLIC_API_EXACT_POOL',historicalLiquidityVerified:false,executionQuoteVerified:false,bars:fullBars}));
