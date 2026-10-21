@@ -58,3 +58,10 @@ Research only. These explorer records are **not** Helius replay results.
 - Cloudflare D1 deliberately NOT tested because it requires an authenticated POST. Token-specific DEX Screener quote endpoints also NOT tested; public provider health does not establish which historical crawler request failed.
 - General BuyGuy V3 Tests on commit `cd98477e` passed (run `39604696784`).
 - Pump.fun historical migration remains pending authenticated exact `getTransaction` and `getAccountInfo` owner/layout. Do not promote candidate pool to verified.
+
+## Token quote diagnostics and recurring crawler failure (2026-10-22)
+- General BuyGuy V3 Tests on journal commit `47ae37c1` passed (run `39604809472`). Scheduled crawler run `39640656731`, job `119362967320`, on that commit failed with the same `HTTP Error 400: Bad Request`; no request origin in log.
+- Added research-only `research/token_quote_probe.py`, `research/test_token_quote_probe.py` and `.github/workflows/goget-token-quote-probe.yml` with fixed public GET calls and no D1 access or secrets.
+- Token quote workflow `39660676526` passed 3/3 offline tests; live DEX Screener requests for wrapped SOL and researched Kimchi mint both returned HTTP 200 with JSON pair arrays. General BuyGuy V3 Tests on `d361eca0` also passed (run `39660676501`).
+- These tests do not reproduce the failing scheduled crawler's precise request. Cloudflare D1 API requires authenticated POST; it was deliberately not queried, so D1 remains a hypothesis, not a confirmed cause.
+- Historical Pump.fun migration `4NXg3BhMk7VHaa5mWkptwSweHXZCuBeFcL5hqonuFmMTNFbu4sRLkp4i81psZFbBkAJCF18Vbm8kpp8KPmGhF1kx` still lacks independently retrieved raw transaction accounts and verified pool account owner/layout in this session. No claim of a validated pool fixture.
