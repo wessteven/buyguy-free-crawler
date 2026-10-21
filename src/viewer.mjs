@@ -74,8 +74,11 @@ tbody tr:hover{background:#174029}
 .good-intro{white-space:normal;max-width:750px}
 .good-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:7px;margin:7px 0}
 .good-item{min-width:0;background:#0d2417;border:1px solid #315c41;border-left:3px solid #589b6c;padding:8px}
-.good-item h3{display:flex;align-items:center;gap:6px;justify-content:space-between;font-size:13px;margin:0 0 4px;overflow-wrap:anywhere}
-.good-item .good-grade{font-size:19px;font-weight:900;color:#c2ffcb;font-variant-numeric:tabular-nums}
+.good-item h3{display:flex;align-items:flex-start;gap:9px;justify-content:space-between;font-size:13px;margin:0 0 5px;overflow-wrap:anywhere}
+.good-item .good-heading{display:flex;flex-direction:column;gap:3px;min-width:0}
+.good-item .good-pricing{font-size:11px;font-weight:400;color:#a8d1b4;line-height:1.35;font-variant-numeric:tabular-nums}
+.good-item .good-pricing strong{font-weight:700;color:#dbffe4}
+.good-item .good-grade{font-size:19px;font-weight:900;color:#c2ffcb;font-variant-numeric:tabular-nums;white-space:nowrap;flex-shrink:0}
 .good-verdict{display:inline-block;font-size:10px;padding:2px 5px;border:1px solid #588b65;color:#e6ffe8;white-space:nowrap}
 .good-verdict.caution{border-color:#ba965c;color:#ffdc9e}
 .good-item p{white-space:normal;overflow-wrap:anywhere;margin:4px 0;line-height:1.4}
@@ -758,6 +761,20 @@ function goodCandidates(rows=assetRows){
    (ourNum(b.liquidity)||0)-(ourNum(a.liquidity)||0)||
    String(a.asset_key||'').localeCompare(String(b.asset_key||''))).slice(0,5);
 }
+// Show the exact token quote without scientific notation or rounding tiny
+// meme-token prices to zero; abbreviate market cap to keep mobile cards compact.
+function formatGoodPrice(raw){
+ const n=ourNum(raw);
+ return n===null||n<=0?'—':'$'+new Intl.NumberFormat('en-US',{
+  notation:'standard',maximumSignificantDigits:6
+ }).format(n);
+}
+function formatGoodMarketCap(raw){
+ const n=ourNum(raw);
+ return n===null||n<=0?'—':'$'+new Intl.NumberFormat('en-US',{
+  notation:n>=1000?'compact':'standard',maximumFractionDigits:n>=1000?1:2
+ }).format(n);
+}
 function renderGood(){
  const wrap=document.getElementById('goodCards');
  if(!wrap)return;
@@ -772,7 +789,10 @@ function renderGood(){
   const verdict=goodVerdict(row),proof=goodReasons(row),url=dexChartUrl(row.chain,row.address);
   const link=url?'<a href="'+escapeSocial(url)+'" target="_blank" rel="noopener noreferrer nofollow" referrerpolicy="no-referrer">Chart ↗</a>':'';
   const name=escapeSocial(row.symbol||'Unnamed token'),key=escapeSocial(row.asset_key||'');
-  return '<article class="good-item"><h3><span>#'+(i+1)+' '+name+'</span><span class="good-grade">'+row.our_score.toFixed(1)+'/100</span></h3>'+
+  return '<article class="good-item"><h3><span class="good-heading"><span class="good-name">#'+(i+1)+' '+name+'</span>'+
+    '<span class="good-pricing">Price <strong>'+formatGoodPrice(row.price)+'</strong> · Cap <strong>'+
+    formatGoodMarketCap(row.market_cap)+'</strong></span></span>'+
+    '<span class="good-grade">'+row.our_score.toFixed(1)+'/100</span></h3>'+
     '<span class="good-verdict '+verdict.tone+'">'+verdict.label+'</span>'+
     '<p><strong>Why:</strong> '+escapeSocial(proof.why)+'.</p>'+
     '<p><strong>Watch out:</strong> '+escapeSocial(proof.risk)+'.</p>'+

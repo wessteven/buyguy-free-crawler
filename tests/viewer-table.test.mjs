@@ -320,6 +320,27 @@ test('WHAT\'S GOOD sorts only qualified fresh candidates, max five, with visible
  assert.equal(page.evalJS('activeTab'),'research');
  assert.equal(page.evalJS('assetSort.key'),'our_score');
 });
+test("WHAT'S GOOD headings show USD price and compact market cap without mobile overflow",async()=>{
+ const page=await tableSandbox();
+ const mint='So11111111111111111111111111111111111111112';
+ const token={...example[0],chain:'solana',asset_key:'solana:'+mint,address:mint,
+  symbol:'PRECISE',status:'ALIVE',tier:'HOT',market_cap:123400,
+  liquidity:95000,price:0.000000123456,buys_m5:45,sells_m5:6,
+  quote_age:5,score:85,change_h1:9,risk_status:'PARTIAL_ONCHAIN_REVIEW',
+  last_seen:new Date(Date.now()-5*60000).toISOString()};
+ page.evalJS('setAssetData('+JSON.stringify([token])+')');
+ const html=page.ui.get('goodCards').innerHTML;
+ assert.match(html,/class="good-name">#1 PRECISE<\/span>/);
+ assert.match(html,/class="good-pricing">Price <strong>\$0\.000000123456<\/strong> · Cap <strong>\$123\.4K<\/strong>/);
+ assert.match(html,/class="good-grade">[0-9.]+\/100<\/span>/);
+ assert.match(page.html,/\.good-item \.good-heading\{display:flex;flex-direction:column/);
+ assert.match(page.html,/\.good-item \.good-grade\{[^}]*white-space:nowrap/);
+ assert.doesNotMatch(html,/e-\d+/i,'Tiny market prices must be human readable');
+ assert.equal(page.evalJS('formatGoodPrice(0.00234567)'),'$0.00234567');
+ assert.equal(page.evalJS('formatGoodMarketCap(2480000)'),'$2.5M');
+ assert.equal(page.evalJS('formatGoodPrice(null)'),'—');
+ assert.equal(page.evalJS('formatGoodMarketCap(null)'),'—');
+});
 test('WHAT\'S GOOD never promotes a mismatched or invalid chain contract',async()=>{
  const page=await tableSandbox();
  const base={...example[0],chain:'solana',
