@@ -28,13 +28,15 @@ export async function runHeliusDiscoveryExperiment(env,{
   if(lead.evidence==='BINARY_IDL_DISCRIMINATOR')evidenceCounts.binary++;
  }
  const transactionStatuses={};
+ const rpcErrorReasons={};
  for(const row of classified.results||[]){
   transactionStatuses[row.status]=(transactionStatuses[row.status]||0)+1;
+  if(row.rpcErrorReason)rpcErrorReasons[row.rpcErrorReason]=(rpcErrorReasons[row.rpcErrorReason]||0)+1;
  }
  const verified=await verifyHeliusPoolLeads(env,{leads,targetMint,fetcher});
  return {enabled:true,mode:'READ_ONLY_RESEARCH',protocol,program,
   signaturesScanned:discovered.scanned,transactionsChecked:classified.checked,
-  poolLeads:leads.length,evidenceCounts,transactionStatuses,
+  poolLeads:leads.length,evidenceCounts,transactionStatuses,rpcErrorReasons,
   poolsChecked:verified.checked,results:verified.results,
   status:'RESEARCH_PIPELINE_COMPLETE',
   caveat:'Exact parsed or IDL-discriminator-matched binary initialization leads are considered; account checks do not prove pool creation timing or safety.'};
