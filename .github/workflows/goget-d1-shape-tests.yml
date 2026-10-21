@@ -1,0 +1,20 @@
+name: GOGET Offline D1 Shape Tests
+on:
+  push:
+    paths:
+      - 'research/test_d1_request_shape.py'
+      - '.github/workflows/goget-d1-shape-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline_shape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate source AST without importing crawler or contacting D1
+        run: python -m unittest discover -s research -p 'test_d1_request_shape.py' -v
