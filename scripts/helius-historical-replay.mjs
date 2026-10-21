@@ -21,7 +21,9 @@ if(!key||!signature||!expectedPool||!['PUMPSWAP','RAYDIUM_CPMM'].includes(protoc
    leadDetected:item.leadDetected,instructionEvidence:item.instructionEvidence,
    otherLeads:item.otherLeads,outcome:item.outcome,
    poolAccountStatus:item.poolVerification?.status||'NOT_CHECKED',
-   poolAccountVerified:item.poolVerification?.poolAccountVerified===true
+   poolAccountVerified:item.poolVerification?.poolAccountVerified===true,
+   ownerMatchesExpected:item.poolVerification?.ownerMatchesExpected??null,
+   layoutVerified:item.poolVerification?.layoutVerified??null
   }));
   if(item.outcome==='INCONCLUSIVE_RPC')process.exitCode=2;
  }catch(error){
