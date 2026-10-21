@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {parseNewPools,cronScan} from '../src/light-scan.mjs';
-import {parseDexQuotes} from '../src/dex-fallback.mjs';
+import {parseDexQuotes,dexFallback} from '../src/dex-fallback.mjs';
 
 const mint='So11111111111111111111111111111111111111112';
 const fixture={included:[{id:'solana_'+mint,type:'token',attributes:{address:mint,symbol:'CRONTEST'}}],
@@ -114,4 +114,24 @@ test('DEX fallback rejects wrong chain, same ticker with different contract, zer
     liquidity:{usd:90000},pairAddress:'pool'}]).length,0);
   assert.equal(parseDexQuotes([{chainId:'solana',baseToken:{address:'not-a-token'},priceUsd:1,
     liquidity:{usd:90000},pairAddress:'pool'}]).length,0);
+});
+
+test('DEX fallback retries a transient HTTP 503 once and preserves exact token identity',async()=>{
+  const calls=[];
+  const quote={chainId:'solana',baseToken:{address:mint,symbol:'DEMO'},pairAddress:'POOL2',
+    priceUsd:'0.002',liquidity:{usd:65000},txns:{m5:{buys:12,sells:3}}};
+  const result=await dexFallback(async url=>{
+    calls.push(url);
+    if(url.includes('token-profiles')&&calls.filter(x=>x===url).length===1)return {ok:false,status:503};
+    if(url.includes('token-profiles'))return {ok:true,json:async()=>[{chainId:'solana',tokenAddress:mint}]};
+    return {ok:true,json:async()=>[quote]};
+  });
+  assert.equal(calls.length,3);
+  assert.equal(result.length,1);
+  assert.equal(result[0].address,mint);
+});
+test('DEX fallback does not retry HTTP 429',async()=>{
+  let calls=0;
+  await assert.rejects(dexFallback(async()=>{calls++;return {ok:false,status:429}}),/429/);
+  assert.equal(calls,1);
 });
