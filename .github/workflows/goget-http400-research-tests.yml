@@ -1,0 +1,21 @@
+name: GOGET HTTP 400 Research Tests
+on:
+  push:
+    paths:
+      - 'research/http400_triage.py'
+      - 'research/test_http400_triage.py'
+      - '.github/workflows/goget-http400-research-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline_triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run offline HTTP 400 diagnostics only
+        run: python -m unittest discover -s research -p 'test_http400_triage.py' -v
