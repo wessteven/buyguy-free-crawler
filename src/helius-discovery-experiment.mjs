@@ -27,5 +27,5 @@ export async function runHeliusDiscoveryExperiment(env,{
   signaturesScanned:discovered.scanned,transactionsChecked:classified.checked,
   poolLeads:leads.length,poolsChecked:verified.checked,results:verified.results,
   status:'RESEARCH_PIPELINE_COMPLETE',
-  caveat:'Only explicit parsed initialization evidence is considered. Binary instructions remain unclassified; account checks do not prove pool creation timing or safety.'};
+  caveat:'Exact parsed or IDL-discriminator-matched binary initialization leads are considered; account checks do not prove pool creation timing or safety.'};
 }
