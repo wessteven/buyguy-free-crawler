@@ -63,3 +63,31 @@ export async function classifyHeliusSignatures(env,{signatures=[],program,fetche
  }
  return {enabled:true,source:'Helius Solana RPC',checked:results.length,results};
 }
+
+// Pool creation leads require an exact known program plus explicit parsed instruction.
+// Most on-chain instructions are binary; these remain UNCLASSIFIED until decoded
+// against the protocol IDL and independently verified via the pool account.
+import {PUMPSWAP} from './pumpswap.mjs';
+import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
+export function classifyPoolCreationLead(transaction){
+ if(!transaction||transaction.meta?.err)return {status:'FAILED_OR_MISSING',leads:[]};
+ const instructions=[
+  ...(transaction.transaction?.message?.instructions||[]),
+  ...(transaction.meta?.innerInstructions||[]).flatMap(x=>x.instructions||[])
+ ];
+ const protocols=new Map([[PUMPSWAP,'PUMPSWAP'],[RAYDIUM_CPMM,'RAYDIUM_CPMM']]);
+ const leads=[];
+ for(const ix of instructions){
+  const protocol=protocols.get(ix?.programId);
+  if(!protocol)continue;
+  const type=String(ix?.parsed?.type||'');
+  if(!['initialize','initializePool','createPool'].includes(type))continue;
+  const info=ix?.parsed?.info||{};
+  const pool=info.pool||info.poolState||info.poolAccount;
+  if(!base58.test(pool||''))continue;
+  leads.push({protocol,pool,evidence:'PARSED_INITIALIZATION_INSTRUCTION',
+   verified:false});
+ }
+ return {status:leads.length?'POOL_CREATION_LEADS':'UNCLASSIFIED',leads,
+  caveat:'Parsed initialization is a lead only; account ownership, state, mint pair and reserves require separate verification.'};
+}
