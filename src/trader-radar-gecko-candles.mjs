@@ -7,14 +7,18 @@ const asNumber=x=>{if((typeof x!=='number'&&typeof x!=='string')||x==='')return 
 const stamp=x=>typeof x==='string'&&Number.isFinite(Date.parse(x))?Date.parse(x):null;
 export const GECKOTERMINAL_POOLS_API='https://api.geckoterminal.com/api/v2/networks/solana/tokens/{MINT}/pools';
 export const GECKOTERMINAL_CANDLES_API='https://api.geckoterminal.com/api/v2/networks/solana/pools/{POOL}/ohlcv/minute';
-export function normalizeGeckoPoolOHLCV(payload,{mint,pool,asOf,aggregate=1,maxBars=500}={}){
+export function normalizeGeckoPoolOHLCV(payload,{mint,pool,asOf,aggregate=1,maxBars=500,endpointPoolExact=false}={}){
  const no=reason=>({status:reason,bars:[],executionQuotes:[],completeHistoricalLiquidity:false});
  if(!isSolanaAddress(mint)||!isSolanaAddress(pool)||stamp(asOf)===null)return no('INVALID_IDENTITY_OR_CUTOFF');
  if(![1,5,15].includes(aggregate))return no('INVALID_INTERVAL');
  const base=payload?.meta?.base?.address,raw=payload?.data?.attributes?.ohlcv_list;
  const id=payload?.data?.id;
  if(base!==mint||!Array.isArray(raw))return no('NO_INDEPENDENT_MINT_MATCH');
- if(typeof id==='string'&&!id.includes(pool))return no('POOL_ID_MISMATCH');
+ // GeckoTerminal may use opaque UUID series IDs; only allow those when the
+ // caller retrieved this response from the exact pool-address endpoint.
+ const opaque=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id||'');
+ if(typeof id==='string'&&!id.includes(pool)&&
+   !(opaque&&endpointPoolExact===true&&payload?.data?.type==='ohlcv'))return no('POOL_ID_MISMATCH');
  const map=new Map();const cutoff=stamp(asOf);
  for(const bar of raw.slice(0,Math.max(1,Math.min(1000,maxBars)))){
   if(!Array.isArray(bar)||bar.length<6)continue;
