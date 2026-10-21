@@ -1,0 +1,23 @@
+name: GOGET Public Token Quotes
+on:
+  push:
+    paths:
+      - 'research/token_quote_probe.py'
+      - 'research/test_token_quote_probe.py'
+      - '.github/workflows/goget-token-quote-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  token_quote_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run offline tests
+        run: python -m unittest discover -s research -p 'test_token_quote_probe.py' -v
+      - name: Check public token quotes
+        run: python research/token_quote_probe.py
