@@ -38,3 +38,9 @@ Research only. These explorer records are **not** Helius replay results.
 - Historical migration signature `4NXg3BhMk7VHaa5mWkptwSweHXZCuBeFcL5hqonuFmMTNFbu4sRLkp4i81psZFbBkAJCF18Vbm8kpp8KPmGhF1kx` remains **not retrieved through raw getTransaction** in this session. Candidate `6yzJjoxUUrXX8qfnV9mUNqXQHWAqb7mvrkaKm2kJMrkx` remains **unverified** by raw getAccountInfo owner and layout. Do not claim successful replay or confirmed pool.
 - Production crawler failure run `39552534028` logged only `HTTP Error 400: Bad Request` in `src/engine.py`. The exception arises from `urllib.request.urlopen`, which is used for both Cloudflare D1 requests and market-provider requests; the log does not identify the failing URL. No root cause established and no production files or D1 modified.
 - Next safe diagnostic: an isolated mocked `urllib.error.HTTPError` test against a non-production diagnostic helper that redacts tokens and reports only allowlisted host, request class, and HTTP status. Do not alter the production crawler until failure origin is independently established.
+
+## HTTP 400 offline triage helper (2026-10-21)
+- Added `research/http400_triage.py` and `research/test_http400_triage.py` as independent Python research artifacts, with mocked HTTP errors only. No production engine import, API call, D1 access, workflow modification or trading integration.
+- Tests assert that known provider categories are safely labeled without emitting URLs/secrets; unlabelled historical crawler logs remain `UNCLASSIFIED` rather than inventing a source.
+- These tests require explicit `python -m unittest discover -s research -p 'test_http400_triage.py'` to execute; existing JavaScript CI passing does **not** establish these Python tests have run.
+- Historical Pump.fun migrate signature and candidate pool still require authenticated raw `getTransaction` and `getAccountInfo`; no independently verified pool-state data available in this pass.
