@@ -3,6 +3,7 @@
 // Each requested stage is one short invocation with its own D1 cooldown lease.
 // Provider errors never make missing data look fresh or establish safe sells.
 import {normalizedWatchAddress} from './watchlist.mjs';
+import {d1ReadQuota} from './hard-refresh.mjs';
 import {parseQuoteRefresh} from './price-refresh.mjs';
 import {checkSolanaMint} from './token-risk.mjs';
 import {fetchLargestAccounts,assessLargestAccounts} from './holder-risk.mjs';
@@ -177,6 +178,9 @@ export async function runTokenAuditStage(env,{assetKey,stage,now=new Date().toIS
   if(stage==='pool')result=await stagePool(env.DB,asset,now,env.HELIUS_RPC_URL,fetcher);
   if(stage==='route')result=await stageRoute(env.DB,asset,now,fetcher,env.JUPITER_API_KEY);
  }catch(error){
+  // Do not swallow a D1 quota exception as a mere provider error and
+  // silently continue another twenty reads from the browser.
+  if(d1ReadQuota(error))throw error;
   const code=String(error?.message||'');
   const kind=/PROVIDER_HTTP_429/.test(code)?'RATE_LIMITED':'PROVIDER_UNAVAILABLE';
   result=publicStatus(kind,stage,kind==='RATE_LIMITED'?'Provider rate limited: no fresh evidence was invented.':'Provider check failed; prior evidence stays unchanged.');

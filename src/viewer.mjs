@@ -1342,7 +1342,7 @@ async function refreshTopFiveDeep(){
    count.failed||count.limited||count.skipped?'FINISHED / PARTIAL':'FINISHED';
   info.textContent='Updated: '+count.success+' · limited: '+count.limited+
    ' · skipped/unavailable: '+count.skipped+' · failed: '+count.failed+
-   ' · full token audit sequences: '+audited+'. '+
+   ' · token audit sequences attempted: '+audited+'. '+
    (interrupted|| (goodRefreshCancelled?'Stopped after current check.':
     'Research only. No orders, proof of LP lock or guarantee of sellability.'));
  }

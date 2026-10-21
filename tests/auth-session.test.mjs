@@ -130,3 +130,26 @@ test('Scan countdown endpoint is cookie-protected, read-only, and returns actual
  });
  assert.equal(calls,1);
 });
+
+test('Deep-refresh stages are authenticated and reject cross-site POST and bad methods before any D1 work',async()=>{
+ const cookie=sessionCookie(await issueSession(secret)).split(';')[0];
+ let queries=0;
+ const secured={ADMIN_TOKEN:secret,DB:{prepare(){queries++;throw Error('Unexpected SQL')}}};
+ const endpoint='/api/top5-refresh',payload={stage:'discovery'};
+ const anon=await worker.fetch(request(endpoint,{method:'POST',data:payload}),secured);
+ assert.equal(anon.status,401);
+ const csrf=await worker.fetch(request(endpoint,{method:'POST',data:payload,
+  headers:{cookie,origin:'https://external.example'}}),secured);
+ assert.equal(csrf.status,403);
+ const crossSite=await worker.fetch(request(endpoint,{method:'POST',data:payload,
+  headers:{cookie,'sec-fetch-site':'cross-site'}}),secured);
+ assert.equal(crossSite.status,403);
+ const method=await worker.fetch(request(endpoint,{method:'GET',headers:{cookie}}),secured);
+ assert.equal(method.status,405);
+ const badStage=await worker.fetch(request(endpoint,{method:'POST',data:{stage:'trade'},
+  headers:{cookie}}),secured);
+ assert.equal(badStage.status,422);
+ const result=await badStage.json();
+ assert.equal(result.error,'INVALID_STAGE');
+ assert.equal(queries,0);
+});
