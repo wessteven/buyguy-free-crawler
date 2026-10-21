@@ -21,3 +21,44 @@ export async function heliusDiscoveryProbe(env,{program,limit=12,fetcher=fetch}=
      status:x.err?'FAILED_TRANSACTION':'UNCLASSIFIED'})),
   caveat:'Signatures are unclassified transactions, not verified new tokens or pools.'};
 }
+
+// Optional second-stage classification, bounded and read-only.
+// A mint initialization is evidence of token creation, not of a tradable pool.
+export function classifyHeliusTransaction(transaction,{program}={}){
+ if(!transaction||transaction.meta?.err)return {status:'FAILED_OR_MISSING',mints:[]};
+ const instructions=[
+  ...(transaction.transaction?.message?.instructions||[]),
+  ...(transaction.meta?.innerInstructions||[]).flatMap(x=>x.instructions||[])
+ ];
+ const tokenPrograms=new Set([
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  'TokenzQdBNbLqP5VEhdkAS6EPF4rEM3LhLQzwkpA3sA'
+ ]);
+ const mints=new Set();
+ for(const ix of instructions){
+  const parsed=ix?.parsed;
+  if(!tokenPrograms.has(ix?.programId)&&!['spl-token','spl-token-2022'].includes(ix?.program))continue;
+  if(!['initializeMint','initializeMint2'].includes(parsed?.type))continue;
+  const mint=parsed?.info?.mint;
+  if(base58.test(mint||''))mints.add(mint);
+ }
+ return {status:mints.size?'MINT_INITIALIZATION_OBSERVED':'UNCLASSIFIED',
+  mints:[...mints],program:base58.test(program||'')?program:null,
+  caveat:'Mint initialization is not pool creation, launch attribution, liquidity or safety certification.'};
+}
+export async function classifyHeliusSignatures(env,{signatures=[],program,fetcher=fetch}={}){
+ if(!env?.HELIUS_RPC_URL)return {enabled:false,reason:'RPC_NOT_CONFIGURED',results:[]};
+ const unique=[...new Set(signatures.filter(x=>typeof x==='string'&&base58.test(x)))].slice(0,5);
+ const results=[];
+ for(const signature of unique){
+  const response=await fetcher(env.HELIUS_RPC_URL,{method:'POST',
+   headers:{'content-type':'application/json'},
+   body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getTransaction',
+    params:[signature,{encoding:'jsonParsed',maxSupportedTransactionVersion:0,commitment:'confirmed'}]})});
+  if(!response.ok){results.push({signature,status:'RPC_HTTP_ERROR',httpStatus:response.status,mints:[]});continue;}
+  const data=await response.json();
+  if(data?.error){results.push({signature,status:'RPC_ERROR',mints:[]});continue;}
+  results.push({signature,...classifyHeliusTransaction(data?.result,{program})});
+ }
+ return {enabled:true,source:'Helius Solana RPC',checked:results.length,results};
+}
