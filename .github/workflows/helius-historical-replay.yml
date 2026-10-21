@@ -1,0 +1,40 @@
+name: GOGET Historical Pool Replay
+on:
+  workflow_dispatch:
+    inputs:
+      protocol:
+        description: 'Protocol with independently verified pool-creation transaction'
+        required: true
+        type: choice
+        options:
+          - RAYDIUM_CPMM
+          - PUMPSWAP
+      tx_signature:
+        description: 'Exact historical Solana transaction signature'
+        required: true
+        type: string
+      expected_pool:
+        description: 'Exact pool-state account from independent explorer evidence'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: goget-historical-pool-replay
+  cancel-in-progress: false
+jobs:
+  historical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Replay exact historical transaction against Helius (read-only)
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          PROTOCOL: ${{ inputs.protocol }}
+          TX_SIGNATURE: ${{ inputs.tx_signature }}
+          EXPECTED_POOL: ${{ inputs.expected_pool }}
+        run: node scripts/helius-historical-replay.mjs
