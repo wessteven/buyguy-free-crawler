@@ -1,0 +1,23 @@
+name: GOGET Trader Radar PR Tests
+on:
+  pull_request:
+    paths:
+      - 'src/trader-radar*.mjs'
+      - 'tests/trader-radar*.test.mjs'
+      - 'data/trader-radar/**'
+      - 'scripts/trader-radar-research.mjs'
+      - '.github/workflows/trader-radar*.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify isolated Trader Radar tests
+        run: node --test tests/trader-radar*.test.mjs
