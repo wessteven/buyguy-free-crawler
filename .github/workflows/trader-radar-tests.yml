@@ -21,3 +21,20 @@ jobs:
           node-version: '22'
       - name: Verify standalone Trader Radar tests
         run: node --test tests/trader-radar*.test.mjs
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify existing JS suite
+        run: node --test tests/*.test.mjs
+      - name: Verify Python crawler tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate current viewer syntax
+        run: node --check src/viewer.mjs
