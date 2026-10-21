@@ -35,8 +35,15 @@ def rows(sql,params=()): return query(sql,params).get('results',[])
 def initialization():
     from pathlib import Path
     schema=Path('sql/schema.sql').read_text()
-    for statement in schema.split(';'):
-        if statement.strip(): query(statement)
+    import sqlite3
+    pending=''
+    for line in schema.splitlines(keepends=True):
+        pending+=line
+        if sqlite3.complete_statement(pending):
+            if pending.strip(): query(pending)
+            pending=''
+    if pending.strip() and not pending.lstrip().startswith('--'):
+        raise ValueError('Incomplete SQL schema statement')
     query('INSERT OR IGNORE INTO paper_account(account,starting_cash,cash,realised,updated_at) VALUES(?,?,?,?,?)',('buyguy-v3',1000,1000,0,now()))
     query('INSERT OR IGNORE INTO leases(name,expires_at,token) VALUES(?,?,?)',('crawler',0,''))
 def social_links(*sources):
