@@ -28,6 +28,7 @@ export async function replayKnownPoolTransactions(env,{cases=[],fetcher=fetch}={
    rpcErrorReason:tx?.rpcErrorReason||null,
    leadDetected:!!match,otherLeads:leads.length-(match?1:0),
    poolVerification:verification?.results?.[0]||null,
+   instructionEvidence:match?.evidence||null,
    outcome:match?'EXPECTED_POOL_INSTRUCTION_FOUND':
     tx?.status==='RPC_ERROR'||tx?.status==='TRANSACTION_UNAVAILABLE'
       ?'INCONCLUSIVE_RPC':'EXPECTED_POOL_INSTRUCTION_NOT_FOUND'});
