@@ -24,11 +24,11 @@ for(let i=0;i<examples.length;i++){
   const response=await fetch(RPC,{method:'POST',
    headers:{'content-type':'application/json'},
    body:JSON.stringify({jsonrpc:'2.0',id:i+1,method:'getTransaction',
-    params:[ex.signature,{encoding:'jsonParsed',commitment:'confirmed',maxSupportedTransactionVersion:0}]}),
+    params:[ex.signature,{encoding:'jsonParsed',commitment:'confirmed',maxSupportedTransactionVersion:1}]}),
    signal:controller.signal});
   if(!response.ok){results.push({label:ex.label,status:'PUBLIC_RPC_HTTP_'+response.status,corroborated:false});continue;}
   const payload=await response.json();
-  if(payload?.error){results.push({label:ex.label,status:'PUBLIC_RPC_JSON_RPC_ERROR',corroborated:false});continue;}
+  if(payload?.error){results.push({label:ex.label,status:'PUBLIC_RPC_JSON_RPC_ERROR',rpcCode:Number.isInteger(payload.error.code)?payload.error.code:null,corroborated:false});continue;}
   const audit=auditRawSignature(ex,payload?.result);
   results.push({label:ex.label,status:audit.status,corroborated:audit.corroborated,
    walletSignerObserved:audit.walletSignerObserved??null,feeLamports:audit.feeLamports??null,
