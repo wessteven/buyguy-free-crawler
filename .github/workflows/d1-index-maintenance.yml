@@ -50,6 +50,11 @@ jobs:
               print('Applied or already present:',sql.split(' ON ')[0].split()[-1],
                     'rows_read:',result.get('meta',{}).get('rows_read'),
                     'rows_written:',result.get('meta',{}).get('rows_written'))
+          # Provider-measured, bounded sample; do not print asset contents.
+          sample="SELECT a.asset_key FROM assets a WHERE a.status IN ('ALIVE','STATIC') ORDER BY a.score DESC LIMIT 500"
+          measured=query(sample)
+          print('MEASURED active-asset sample rows_read:',measured.get('meta',{}).get('rows_read'),
+                'rows_returned:',len(measured.get('results',[])))
           for sql in [
               'EXPLAIN QUERY PLAN SELECT MAX(score) FROM observations WHERE asset_key=?',
               'EXPLAIN QUERY PLAN SELECT COUNT(*) FROM predictions WHERE asset_key=?',
