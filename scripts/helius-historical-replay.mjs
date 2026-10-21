@@ -18,7 +18,8 @@ if(!key||!signature||!expectedPool||!['PUMPSWAP','RAYDIUM_CPMM'].includes(protoc
   const item=report.results[0];
   console.log('HISTORICAL_REPLAY',JSON.stringify({
    protocol,transactionStatus:item.transactionStatus,rpcErrorReason:item.rpcErrorReason,
-   leadDetected:item.leadDetected,otherLeads:item.otherLeads,outcome:item.outcome,
+   leadDetected:item.leadDetected,instructionEvidence:item.instructionEvidence,
+   otherLeads:item.otherLeads,outcome:item.outcome,
    poolAccountStatus:item.poolVerification?.status||'NOT_CHECKED',
    poolAccountVerified:item.poolVerification?.poolAccountVerified===true
   }));
