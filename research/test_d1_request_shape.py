@@ -13,7 +13,7 @@ class D1RequestShapeTests(unittest.TestCase):
         cls.functions = {n.name: n for n in cls.tree.body if isinstance(n, ast.FunctionDef)}
 
     def test_d1_url_template(self):
-        assignments = [n for n in cls.tree.body if isinstance(n, ast.Assign)
+        assignments = [n for n in self.tree.body if isinstance(n, ast.Assign)
                        and any(isinstance(t, ast.Name) and t.id == "CF" for t in n.targets)]
         self.assertEqual(len(assignments), 1)
         self.assertEqual(ast.literal_eval(assignments[0].value),
