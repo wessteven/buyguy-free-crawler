@@ -65,3 +65,11 @@ Research only. These explorer records are **not** Helius replay results.
 - Token quote workflow `39660676526` passed 3/3 offline tests; live DEX Screener requests for wrapped SOL and researched Kimchi mint both returned HTTP 200 with JSON pair arrays. General BuyGuy V3 Tests on `d361eca0` also passed (run `39660676501`).
 - These tests do not reproduce the failing scheduled crawler's precise request. Cloudflare D1 API requires authenticated POST; it was deliberately not queried, so D1 remains a hypothesis, not a confirmed cause.
 - Historical Pump.fun migration `4NXg3BhMk7VHaa5mWkptwSweHXZCuBeFcL5hqonuFmMTNFbu4sRLkp4i81psZFbBkAJCF18Vbm8kpp8KPmGhF1kx` still lacks independently retrieved raw transaction accounts and verified pool account owner/layout in this session. No claim of a validated pool fixture.
+
+## Confirmed offline SQL splitter defect (2026-10-22)
+- Production `src/engine.py` calls `schema.split(';')` inside `initialization()` and submits every nonempty fragment to D1. `sql/schema.sql` contains comment `-- Idempotent; apply to the actual D1 database through the normal migration workflow.`. The comment semicolon splits the line, causing a later fragment to begin with `apply` and become invalid SQL.
+- Initial independent SQLite workflow `39678341574` failed at split statement index 21 with `sqlite3.OperationalError: near "apply": syntax error` (a genuine failure exposed by the original optimistic test).
+- Research-only regression commit `b8a01a5d` now explicitly asserts this defect and verifies the full comment-aware schema executes twice in local SQLite; workflow `39678392304` passed 3/3 tests.
+- This is a verified source-level defect and strong plausible cause of the recurring production HTTP 400, but no live Cloudflare response body/call site was captured. Do not label D1 attribution confirmed.
+- No production code, schema, D1 records, crawler settings or paper trading modified. A production fix requires separate authorization; recommended remedy is SQL-aware splitting/migrations, not naive semicolon splitting.
+- Historical Pump.fun migration transaction and pool-state owner/layout remain unverified; connected reader lacks arbitrary raw historical transaction and account info methods.
