@@ -58,7 +58,15 @@ export async function classifyHeliusSignatures(env,{signatures=[],program,fetche
     params:[signature,{encoding:'jsonParsed',maxSupportedTransactionVersion:0,commitment:'confirmed'}]})});
   if(!response.ok){results.push({signature,status:'RPC_HTTP_ERROR',httpStatus:response.status,mints:[]});continue;}
   const data=await response.json();
-  if(data?.error){results.push({signature,status:'RPC_ERROR',mints:[]});continue;}
+  if(data?.error){
+   const code=Number(data.error.code);
+   const reason=code===-32015?'UNSUPPORTED_TRANSACTION_VERSION':
+    code===-32004?'TRANSACTION_HISTORY_UNAVAILABLE':
+    code===-32602?'INVALID_RPC_PARAMS':'OTHER_RPC_ERROR';
+   results.push({signature,status:'RPC_ERROR',rpcErrorCode:Number.isInteger(code)?code:null,
+    rpcErrorReason:reason,mints:[]});continue;
+  }
+  if(!data?.result){results.push({signature,status:'TRANSACTION_UNAVAILABLE',mints:[]});continue;}
   results.push({signature,...classifyHeliusTransaction(data?.result,{program}),
    poolEvidence:classifyPoolCreationLead(data?.result)});
  }
