@@ -1361,15 +1361,16 @@ list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE'
 list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100"),
 list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','PROGRAM_UPGRADE_PROBE','PUMP_MIGRATION_PROBE','PUMP_MIGRATION_TX_PROBE') ORDER BY id DESC LIMIT 2000"),
 // One grouped pass per history table, not one table scan per archived asset.
-list("SELECT a.asset_key,a.chain,a.address,a.symbol,a.last_seen,a.last_action,a.score,a.observations,"+
- "o.peak_score,COALESCE(p.prediction_count,0) AS prediction_count,COALESCE(t.paper_count,0) AS paper_count,COALESCE(e.research_count,0) AS research_count "+
- "FROM assets a "+
- "LEFT JOIN (SELECT asset_key,MAX(score) AS peak_score FROM observations GROUP BY asset_key) o ON o.asset_key=a.asset_key "+
- "LEFT JOIN (SELECT asset_key,COUNT(*) AS prediction_count FROM predictions GROUP BY asset_key) p ON p.asset_key=a.asset_key "+
- "LEFT JOIN (SELECT asset_key,COUNT(*) AS paper_count FROM paper_positions GROUP BY asset_key) t ON t.asset_key=a.asset_key "+
- "LEFT JOIN (SELECT asset_key,COUNT(*) AS research_count FROM research_events WHERE kind!='TOKEN_SOCIALS' GROUP BY asset_key) e ON e.asset_key=a.asset_key "+
- "WHERE a.status='DEAD' AND a.pinned=0 AND NOT EXISTS (SELECT 1 FROM paper_positions p2 WHERE p2.asset_key=a.asset_key AND p2.status='OPEN') "+
- "ORDER BY COALESCE(o.peak_score,0) DESC,a.observations DESC LIMIT 500"),
+list("WITH ranked AS (SELECT a.asset_key,a.chain,a.address,a.symbol,a.last_seen,a.last_action,a.score,a.observations,"+
+ " (SELECT MAX(o.score) FROM observations o WHERE o.asset_key=a.asset_key) AS peak_score "+
+ " FROM assets a WHERE a.status='DEAD' AND a.pinned=0 "+
+ " AND NOT EXISTS (SELECT 1 FROM paper_positions p2 WHERE p2.asset_key=a.asset_key AND p2.status='OPEN') "+
+ " ORDER BY peak_score DESC,a.observations DESC LIMIT 500) "+
+ "SELECT r.*, "+
+ " (SELECT COUNT(*) FROM predictions p WHERE p.asset_key=r.asset_key) AS prediction_count, "+
+ " (SELECT COUNT(*) FROM paper_positions t WHERE t.asset_key=r.asset_key) AS paper_count, "+
+ " (SELECT COUNT(*) FROM research_events e WHERE e.asset_key=r.asset_key AND e.kind!='TOKEN_SOCIALS') AS research_count "+
+ "FROM ranked r ORDER BY r.peak_score DESC,r.observations DESC"),
 list("SELECT SUM(CASE WHEN status='DEAD' THEN 1 ELSE 0 END) AS dead, SUM(CASE WHEN status='TRASH' THEN 1 ELSE 0 END) AS trash FROM assets")]);
 const recent=new Map();
 for(const event of greenEvents){
