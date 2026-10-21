@@ -71,3 +71,12 @@ test('matched gross returns remain research-only, with latency and no automatic 
  assert.equal(x.alphaEstablished,false);
  assert.equal(x.automaticTradeAllowed,false);
 });
+
+test('opaque GeckoTerminal UUID series must have exact endpoint provenance and base-mint match',()=>{
+ const revised=structuredClone(payload);
+ revised.data.id='a193180e-20c4-4c7a-a0a6-19f65738e2f3';
+ revised.data.type='ohlcv';
+ assert.equal(normalizeGeckoPoolOHLCV(revised,{mint,pool,asOf}).bars.length,0);
+ assert.equal(normalizeGeckoPoolOHLCV(revised,{mint,pool,asOf,endpointPoolExact:true}).bars.length,2);
+ assert.equal(normalizeGeckoPoolOHLCV(revised,{mint:control,pool,asOf,endpointPoolExact:true}).bars.length,0);
+});
