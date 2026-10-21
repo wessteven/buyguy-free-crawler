@@ -20,7 +20,7 @@ Retrieved four sequential pages of 100 enhanced transactions for the PHP wallet,
 
 The shorthand in the previous journal about no substantial USDC receipts was insufficiently precise. The expanded analysis identified many **large positive USDC movements outside the PHP trades**. These often occur simultaneously with an outgoing **different** token:
 
-- 21 Oct 05:21:37 UTC: ~4,587.00 net USDC credit and ~1,795,715.40 units of `DvdmEnzt...pump` leaving, signature `3vaVfVGqhHJfDqnFqmrjPg3vLsKcJmusmMwXYB2a4DxQAxKFgJXAXFEWfY9gxWg6pPpQ77KmdPDEDPtzyT64Fj3` (**inspect exact register for spelling**).
+- 21 Oct 05:21:37 UTC: ~4,587.00 net USDC credit and ~1,795,715.40 units of `DvdmEnzt...pump` leaving, with exact transaction signature retained in the linked 400-transaction register.
 - 21 Oct 05:15:54 UTC: ~522.55 net USDC credit alongside a ~199,523.93-unit outgoing `DvdmEnzt...pump` movement, signature `5poZLDz1MH52TK2RJuDf9Vaoi8pMuvdthT2rbyvJihr16H7eg9gsp6HdBHbnCHzgDVtTf3BtYBmZGWgKdPjZaJD6`.
 - 21 Oct 00:46:59 UTC: ~1,145.94 net USDC credit with outgoing `zi87E9... ` token. These resemble disposals or routed settlement, **not verified independent third-party funding**.
 
