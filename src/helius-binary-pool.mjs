@@ -5,7 +5,9 @@ import {PUMPSWAP} from './pumpswap.mjs';
 import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
 const alphabet='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const address=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const PUMP_BONDING_CURVE='6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P';
 const specs={
+ [PUMP_BONDING_CURVE]:{protocol:'PUMPSWAP',discriminator:[155,234,231,146,236,158,162,30],poolIndex:9,minAccounts:25,evidence:'PUMP_MIGRATE_IDL_DISCRIMINATOR'},
  [PUMPSWAP]:{protocol:'PUMPSWAP',discriminator:[233,146,209,142,207,104,64,188],poolIndex:0,minAccounts:18},
  [RAYDIUM_CPMM]:{protocol:'RAYDIUM_CPMM',discriminator:[175,175,109,31,13,152,155,237],poolIndex:3,minAccounts:20}
 };
@@ -25,5 +27,5 @@ export function binaryPoolCreationLead(ix){
  if(!data||data.length<8||!spec.discriminator.every((byte,i)=>data[i]===byte))return null;
  const pool=ix.accounts[spec.poolIndex];
  if(typeof pool!=='string'||!address.test(pool))return null;
- return {protocol:spec.protocol,pool,evidence:'BINARY_IDL_DISCRIMINATOR',verified:false};
+ return {protocol:spec.protocol,pool,evidence:spec.evidence||'BINARY_IDL_DISCRIMINATOR',verified:false};
 }
