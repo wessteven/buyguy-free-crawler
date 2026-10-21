@@ -223,6 +223,7 @@ function table(keys,rows){return '<div class="data-scroll" role="region" aria-la
 const layoutKey='buyguy.assetColumns.v2',sortKey='buyguy.assetSort.v1',foldKey='buyguy.columnFolds.v1';
 // Buying decision -> market structure -> token safety -> contract -> supporting details.
 const assetColumns=[
+ {key:'discovery_number',name:'#',type:'number'},
  {key:'symbol',name:'Token',type:'text'},
  {key:'our_score',name:'OUR SCORE',type:'number'},
  {key:'audit',name:'Audit',type:'text'},
@@ -257,6 +258,10 @@ function validOrder(maybe){
    typeof key==='string'&&columnByKey[key]&&maybe.indexOf(key)===index):[];
  const order=current.concat(initialColumnKeys.filter(key=>!current.includes(key)));
  // Inject newly introduced columns into saved layouts without resetting other positions.
+ if(!current.includes('discovery_number')){
+   order.splice(order.indexOf('discovery_number'),1);
+   order.unshift('discovery_number');
+ }
  if(!current.includes('liq_cap_pct')&&order.includes('market_cap')){
    order.splice(order.indexOf('liq_cap_pct'),1);
    order.splice(order.indexOf('market_cap')+1,0,'liq_cap_pct');
@@ -791,8 +796,8 @@ function archiveLesson(a){
 }
 function archiveTable(items){
  if(!items.length)return '<p class="hint">No archived tokens in this group.</p>';
- const head='<thead><tr><th>Token</th><th>Chain</th><th>Peak market score</th><th>Quotes</th><th>Lesson</th><th>Last seen</th><th>Archive reason</th><th>Chart</th><th>Address</th></tr></thead>';
- return '<table>'+head+'<tbody>'+items.map(a=>'<tr>'+tokenCell(a)+cell(a.chain)+
+ const head='<thead><tr><th>#</th><th>Token</th><th>Chain</th><th>Peak market score</th><th>Quotes</th><th>Lesson</th><th>Last seen</th><th>Archive reason</th><th>Chart</th><th>Address</th></tr></thead>';
+ return '<table>'+head+'<tbody>'+items.map(a=>'<tr>'+cell(a.discovery_number??'—')+tokenCell(a)+cell(a.chain)+
     cell(a.peak_score??'—')+cell(a.observations??0)+
     cell(archiveLesson(a)||'Low-signal reference')+cell(a.last_seen||'No verified quote')+
     cell(a.last_action||'Quiet background')+chartCell(a)+addressCell(a)+'</tr>').join('')+
@@ -1351,7 +1356,7 @@ const [runs,assets,wallet,predictions,routes,pinned,greenEvents,archive,archiveC
 list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
 // Aggregate the latest token socials once rather than rescanning the entire
 // research_events history for every asset in the active dashboard.
-list("SELECT a.*,e.note AS socials_json FROM assets a "+
+list("SELECT a.rowid AS discovery_number,a.*,e.note AS socials_json FROM assets a "+
  "LEFT JOIN research_events e ON e.id=(SELECT id FROM research_events WHERE asset_key=a.asset_key AND kind='TOKEN_SOCIALS' ORDER BY id DESC LIMIT 1) "+
  "WHERE a.status IN ('ALIVE','STATIC') OR (a.pinned=1 AND a.status='DEAD') OR EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') "+
  "ORDER BY a.pinned DESC,a.score DESC LIMIT 500"),
@@ -1361,7 +1366,7 @@ list("SELECT at,asset_key,note FROM research_events WHERE kind='ROUNDTRIP_QUOTE'
 list("SELECT asset_key,chain,address,symbol,status,risk_status,pinned,last_seen FROM assets WHERE pinned=1 ORDER BY first_seen DESC LIMIT 100"),
 list("SELECT at,asset_key,kind,note FROM research_events WHERE kind IN ('MINT_AUTHORITY_REVIEW','ROUNDTRIP_QUOTE','BENEFICIAL_OWNER_AUDIT','POOL_CUSTODY_AUDIT','OWNER_CLUSTER_PROBE','POOL_IDENTITY_PROBE','PROGRAM_UPGRADE_PROBE','PUMP_MIGRATION_PROBE','PUMP_MIGRATION_TX_PROBE') ORDER BY id DESC LIMIT 2000"),
 // One grouped pass per history table, not one table scan per archived asset.
-list("WITH ranked AS (SELECT a.asset_key,a.chain,a.address,a.symbol,a.last_seen,a.last_action,a.score,a.observations,"+
+list("WITH ranked AS (SELECT a.rowid AS discovery_number,a.asset_key,a.chain,a.address,a.symbol,a.last_seen,a.last_action,a.score,a.observations,"+
  " (SELECT MAX(o.score) FROM observations o WHERE o.asset_key=a.asset_key) AS peak_score "+
  " FROM assets a WHERE a.status='DEAD' AND a.pinned=0 "+
  " AND NOT EXISTS (SELECT 1 FROM paper_positions p2 WHERE p2.asset_key=a.asset_key AND p2.status='OPEN') "+
