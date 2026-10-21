@@ -93,3 +93,10 @@ CREATE TABLE IF NOT EXISTS score_outcomes (
  PRIMARY KEY(snapshot_id,horizon_min)
 );
 CREATE INDEX IF NOT EXISTS score_outcomes_due ON score_outcomes(status,due_at);
+
+-- D1 archive lookups: avoid per-token full scans when rendering history.
+-- Idempotent; apply to the actual D1 database through the normal migration workflow.
+CREATE INDEX IF NOT EXISTS archive_predictions_asset ON predictions(asset_key);
+CREATE INDEX IF NOT EXISTS archive_paper_positions_asset ON paper_positions(asset_key);
+CREATE INDEX IF NOT EXISTS archive_observations_peak ON observations(asset_key,score DESC);
+CREATE INDEX IF NOT EXISTS archive_assets_filter ON assets(status,pinned);
