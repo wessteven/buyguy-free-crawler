@@ -16,12 +16,18 @@ Research only. These explorer records are **not** Helius replay results.
 - Explorer shows successful Pump.fun AMM pool creation via a `migrate` action on Aug 30 2026.
 - **Not a verified `create_pool` instruction**; this could be a distinct migration path and is a useful **coverage-gap candidate**, not a positive test for the current `create_pool` discriminator.
 - Explorer identifies PumpSwap market/pool-state candidate `6yzJjoxUUrXX8qfnV9mUNqXQHWAqb7mvrkaKm2kJMrkx`; this is NOT yet owner/layout verified via Helius. Distinguish it from the token vaults `1H6GLnCjpRdA53oVAJ3rjag1idqLyPJKvVRNw6Siomxdm` and `2GbqFM6qYeBRkobBDWnYXYHT9TEbjydg1n9EnA2a9ZRwt`.
-- Pump.fun `migrate` is a different instruction/program from PumpSwap `create_pool`; the existing binary decoder does not handle this route. Treat as a **known migration coverage gap**, not as a failed `create_pool` decoder fixture.
+- Pump.fun `migrate` is a different instruction/program from PumpSwap `create_pool`. **The research decoder now supports migration** using the official pump.json discriminator `[155,234,231,146,236,158,162,30]`, with pool at instruction account index 9 and 25 required accounts; synthetic regression tests pass. Live historical replay is still pending.
 - Expected pool-state address remains NOT independently verified through Helius account ownership/layout.
 
 ## Validation protocol
 1. Retrieve each transaction with authenticated Helius `getTransaction`, `encoding:jsonParsed`, `maxSupportedTransactionVersion:0`.
-2. Resolve account index 3 (Raydium) or 0 (PumpSwap create_pool) using the transaction's actual instruction accounts, including versioned account lookups.
+2. Resolve account index 3 (Raydium CPMM initialize), index 0 (PumpSwap create_pool), or index 9 (Pump.fun bonding-curve migrate) using the transaction's actual instruction accounts, including versioned account lookups.
 3. Independently verify pool-state owner and layout before entering `expected_pool`.
 4. Run the manual workflow with exact signature and verified expected pool; record positive, negative, or RPC-inconclusive outcomes.
-5. Keep separate labels for PumpSwap `migrate` and `create_pool` paths. Do not convert a migration into a create_pool positive fixture.
+5. Keep separate labels for Pump.fun `migrate` and PumpSwap `create_pool` paths. Do not convert a migration into a create_pool positive fixture.
+
+## Latest verification status (2026-10-21)
+- GitHub Actions BuyGuy V3 Tests passed for owner/layout regression commit `a17bffd9`, owner/layout flags `97ed8f8e`, and manual replay logging `c2cd51fc`.
+- Connected Helius enhanced transaction reader returned activity involving candidate `6yzJjoxUUrXX8qfnV9mUNqXQHWAqb7mvrkaKm2kJMrkx`, but **did not provide raw `getAccountInfo` owner or binary state** and did not retrieve the exact historical migration signature. This does not verify the fixture.
+- Manual replay **not executed**; no ground-truth positive, negative or RPC-inconclusive result for the historical signature exists yet. The manual workflow requires an authenticated Helius RPC and confirmed expected pool.
+- Separate production crawler workflow run `39552534028` failed in its crawler execution step; this is not a historical replay failure. No production remediation performed under this research task.
