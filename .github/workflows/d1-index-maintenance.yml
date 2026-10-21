@@ -1,0 +1,61 @@
+name: GOGET D1 Index Maintenance
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/d1-index-maintenance.yml'
+permissions:
+  contents: read
+jobs:
+  indexes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply idempotent D1 indexes and report provider row reads
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json,os,sys
+          from urllib.request import Request,urlopen
+          from urllib.error import HTTPError
+          names=('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')
+          if any(not os.environ.get(x) for x in names):
+              raise SystemExit('Missing Cloudflare D1 API credentials; no migration attempted')
+          url='https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}/query'.format(os.environ['CF_ACCOUNT_ID'],os.environ['CF_DATABASE_ID'])
+          statements=[
+              'CREATE INDEX IF NOT EXISTS archive_predictions_asset ON predictions(asset_key)',
+              'CREATE INDEX IF NOT EXISTS archive_paper_positions_asset ON paper_positions(asset_key)',
+              'CREATE INDEX IF NOT EXISTS archive_observations_peak ON observations(asset_key,score DESC)',
+              'CREATE INDEX IF NOT EXISTS archive_assets_filter ON assets(status,pinned)'
+          ]
+          def query(sql):
+              req=Request(url,json.dumps({'sql':sql,'params':[]}).encode(),{
+                  'authorization':'Bearer '+os.environ['CF_D1_API_TOKEN'],
+                  'content-type':'application/json','accept':'application/json'})
+              try:
+                  with urlopen(req,timeout=45) as response: data=json.load(response)
+              except HTTPError as error:
+                  print('D1 HTTP error',error.code,'for',sql.split(' ')[0])
+                  raise SystemExit('Stopped safely: D1 request rejected')
+              if not data.get('success') or not data.get('result') or not data['result'][0].get('success'):
+                  print('D1 SQL operation rejected:',sql.split(' ')[0])
+                  raise SystemExit('Stopped: index maintenance failed')
+              return data['result'][0]
+          for sql in statements:
+              result=query(sql)
+              print('Applied or already present:',sql.split(' ON ')[0].split()[-1],
+                    'rows_read:',result.get('meta',{}).get('rows_read'),
+                    'rows_written:',result.get('meta',{}).get('rows_written'))
+          for sql in [
+              'EXPLAIN QUERY PLAN SELECT MAX(score) FROM observations WHERE asset_key=?',
+              'EXPLAIN QUERY PLAN SELECT COUNT(*) FROM predictions WHERE asset_key=?',
+              'EXPLAIN QUERY PLAN SELECT COUNT(*) FROM paper_positions WHERE asset_key=?'
+          ]:
+              # EXPLAIN queries with literal placeholder test key, never private wallet data.
+              result=query(sql.replace('?',"'__GOGET_QUERY_PLAN_TEST__'"))
+              print('Query plan:',json.dumps(result.get('results',[]))[:900])
+          PY
