@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {heliusDiscoveryProbe} from '../src/helius-discovery-probe.mjs';
+import {heliusDiscoveryProbe,classifyHeliusTransaction,classifyHeliusSignatures} from '../src/helius-discovery-probe.mjs';
 const program='11111111111111111111111111111111';
 test('probe stays off without configured RPC and program',async()=>{
  assert.equal((await heliusDiscoveryProbe({})).enabled,false);
@@ -20,4 +20,34 @@ test('bounded read-only RPC never labels a signature as a token',async()=>{
  assert.equal(requests,1);
  assert.equal(result.candidates.length,1);
  assert.equal(result.candidates[0].status,'UNCLASSIFIED');
+});
+
+test('parsed SPL mint initialization is evidence only, not tradability',()=>{
+ const tx={meta:{err:null},transaction:{message:{instructions:[{
+  program:'spl-token',parsed:{type:'initializeMint2',info:{mint:program}}
+ }]}}};
+ const out=classifyHeliusTransaction(tx);
+ assert.equal(out.status,'MINT_INITIALIZATION_OBSERVED');
+ assert.deepEqual(out.mints,[program]);
+ assert.match(out.caveat,/not pool creation/);
+});
+test('failed transaction cannot become a mint discovery',()=>{
+ const tx={meta:{err:{InstructionError:[0,'InvalidArgument']}},transaction:{message:{instructions:[{
+  program:'spl-token',parsed:{type:'initializeMint',info:{mint:program}}
+ }]}}};
+ assert.equal(classifyHeliusTransaction(tx).status,'FAILED_OR_MISSING');
+});
+test('second-stage transaction requests are capped at five and read only',async()=>{
+ let count=0;
+ const signatures=Array.from({length:8},(_,i)=>String(i+1).repeat(88));
+ const result=await classifyHeliusSignatures({HELIUS_RPC_URL:'https://example.org'},{
+  signatures,fetcher:async(_url,options)=>{
+   count++;
+   assert.equal(JSON.parse(options.body).method,'getTransaction');
+   return {ok:true,json:async()=>({result:{meta:{err:null},transaction:{message:{instructions:[]}}}})};
+  }
+ });
+ assert.equal(count,5);
+ assert.equal(result.checked,5);
+ assert.ok(result.results.every(x=>x.status==='UNCLASSIFIED'));
 });
