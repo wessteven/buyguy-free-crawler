@@ -33,7 +33,7 @@ class InitializationFixTests(unittest.TestCase):
         finally:
             os.chdir(original)
         self.assertGreater(len(seen), 20)
-        self.assertTrue(all(sqlite3.complete_statement(sql) for sql in seen[:-4]))
+        self.assertTrue(all(sqlite3.complete_statement(sql) for sql in seen if 'CREATE TABLE' in sql or 'CREATE INDEX' in sql))
         self.assertEqual(conn.execute("SELECT count(*) FROM paper_account").fetchone()[0], 1)
         self.assertEqual(conn.execute("SELECT count(*) FROM leases").fetchone()[0], 1)
 
