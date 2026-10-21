@@ -2,6 +2,7 @@
 // Uses bounded getSignaturesForAddress on a known Solana program; a program
 // signature is a candidate transaction, NOT proof of token creation.
 const base58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const signatureRE=/^[1-9A-HJ-NP-Za-km-z]{80,90}$/;
 export async function heliusDiscoveryProbe(env,{program,limit=12,fetcher=fetch}={}){
  if(!env?.HELIUS_RPC_URL)return {enabled:false,reason:'RPC_NOT_CONFIGURED',candidates:[]};
  if(!base58.test(program||''))return {enabled:false,reason:'PROGRAM_NOT_CONFIGURED',candidates:[]};
@@ -48,7 +49,7 @@ export function classifyHeliusTransaction(transaction,{program}={}){
 }
 export async function classifyHeliusSignatures(env,{signatures=[],program,fetcher=fetch}={}){
  if(!env?.HELIUS_RPC_URL)return {enabled:false,reason:'RPC_NOT_CONFIGURED',results:[]};
- const unique=[...new Set(signatures.filter(x=>typeof x==='string'&&base58.test(x)))].slice(0,5);
+ const unique=[...new Set(signatures.filter(x=>typeof x==='string'&&signatureRE.test(x)))].slice(0,5);
  const results=[];
  for(const signature of unique){
   const response=await fetcher(env.HELIUS_RPC_URL,{method:'POST',
