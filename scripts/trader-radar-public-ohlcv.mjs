@@ -21,9 +21,10 @@ try{
   const raw=await response.json();
   if(raw?.errors?.length)result.status='PROVIDER_ERROR';
   else{
-   const decoded=normalizeGeckoPoolOHLCV(raw,{mint,pool,asOf,maxBars:240});
+   const decoded=normalizeGeckoPoolOHLCV(raw,{mint,pool,asOf,maxBars:240,endpointPoolExact:true});
    result.status=decoded.status;
    result.providerSeriesId=String(raw?.data?.id||'').slice(0,160);
+   result.providerSeriesType=raw?.data?.type||null;
    result.providerBaseMint=raw?.meta?.base?.address||null;
    result.providerBarsReturned=Array.isArray(raw?.data?.attributes?.ohlcv_list)?raw.data.attributes.ohlcv_list.length:0;
    result.barCount=decoded.bars.length;
