@@ -1,0 +1,39 @@
+name: GOGET Manual Helius Live Replay
+on:
+  workflow_dispatch:
+    inputs:
+      protocol:
+        description: 'Pool protocol to inspect'
+        type: choice
+        options:
+          - PUMPSWAP
+          - RAYDIUM_CPMM
+        default: PUMPSWAP
+      signature_limit:
+        description: 'Recent program signatures (1-5)'
+        type: choice
+        options:
+          - '3'
+          - '5'
+          - '1'
+        default: '3'
+permissions:
+  contents: read
+concurrency:
+  group: goget-helius-manual-replay
+  cancel-in-progress: false
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect live Solana pool discovery evidence (read-only)
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          PROTOCOL: ${{ inputs.protocol }}
+          SIGNATURE_LIMIT: ${{ inputs.signature_limit }}
+        run: node scripts/helius-live-replay.mjs
