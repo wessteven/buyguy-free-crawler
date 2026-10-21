@@ -6,8 +6,8 @@ import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
 const alphabet='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const address=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const specs={
- [PUMPSWAP]:{protocol:'PUMPSWAP',discriminator:[233,146,209,142,207,104,64,188],poolIndex:0,minAccounts:5},
- [RAYDIUM_CPMM]:{protocol:'RAYDIUM_CPMM',discriminator:[175,175,109,31,13,152,155,237],poolIndex:3,minAccounts:8}
+ [PUMPSWAP]:{protocol:'PUMPSWAP',discriminator:[233,146,209,142,207,104,64,188],poolIndex:0,minAccounts:18},
+ [RAYDIUM_CPMM]:{protocol:'RAYDIUM_CPMM',discriminator:[175,175,109,31,13,152,155,237],poolIndex:3,minAccounts:20}
 };
 export function decodeBase58Instruction(value){
  if(typeof value!=='string'||value.length>1024||!/^[1-9A-HJ-NP-Za-km-z]+$/.test(value))return null;
