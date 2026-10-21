@@ -19,5 +19,5 @@ jobs:
           node-version: '22'
       - name: Verify raw transaction audit tests
         run: node --test tests/trader-radar-raw-audit.test.mjs
-      - name: Probe three existing signatures through public Solana RPC
+      - name: Probe seven PHP and one XTV transaction against public Solana RPC
         run: node scripts/trader-radar-public-raw-probe.mjs
