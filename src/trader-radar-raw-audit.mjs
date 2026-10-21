@@ -48,7 +48,7 @@ export function auditRawSignature(expected,tx,{toleranceRatio=0.000005}={}){
  if(!tx||tx.meta?.err||tx.transaction?.signatures?.[0]!==expected.signature)
   return reject('MISSING_FAILED_OR_MISMATCHED_RAW_TRANSACTION');
  const t=tx.blockTime;
- if(!Number.isInteger(t)||typeof expected.at!=='string'||
+ if(!Number.isInteger(t)||typeof expected.at!=='string'||!Number.isFinite(Date.parse(expected.at))||
    Math.abs(t*1000-Date.parse(expected.at))>120000)return reject('TIMESTAMP_MISMATCH');
  const a=rawWalletTokenDeltas(expected.wallet,tx);
  if(a.status!=='RAW_BALANCES_PARSED')return reject(a.status);
