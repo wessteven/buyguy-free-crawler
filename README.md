@@ -152,3 +152,9 @@ The user's `HELIUS_API_KEY` is already configured as a private GitHub Actions se
 - Periodic checks can fail on HTTP 429/other upstream outages; fallback is labeled in `runs.provider_errors` as `PARTIAL`, never synthesized as successful price evidence.
 
 [Cloudflare Worker cron](https://developers.cloudflare.com/workers/configuration/cron-triggers/) · [Cloudflare D1](https://developers.cloudflare.com/d1/) · [GitHub Actions](https://docs.github.com/en/actions)
+
+## On-demand WHAT'S GOOD? deep refresh (21 October 2026)
+
+- Authenticated **⟳ REFRESH TOP 5 · DEEP** shows a live, per-stage progress panel with stop-after-current-step. Stages are **new-pool discovery** (GeckoTerminal with existing Dex fallback), **up to 25 tracked exact-contract quote refreshes** (DEX Screener), **rebuild shortlist** from authenticated D1, then a **four-stage read-only audit of each of the up to five qualified leaders** (market, mint/holders, pool/admin, and indicative round-trip route), then final live ranking. The UI labels verified updates separately from limits, unsupported checks and missing evidence.
+- The two new expensive public-data stages are invoked individually via authenticated same-origin `POST /api/top5-refresh`, throttled with **atomic D1 leases** (180 seconds discovery, 120 seconds quotes); per-token stages reuse existing audit cooldowns. No secrets or API URLs are accepted in request bodies; no arbitrary contract can be audited without an existing tracked exact-chain key.
+- If D1 read allowance is exhausted, the workflow stops and displays the existing approximate UTC reset clock. Other missing RPC credentials, third-party 429 responses and quote failures produce transparent partial/failed states rather than fictitious green lights. Browser tab must remain open for all stages. **No real or simulated trades, schedule changes, background tasks or schema edits.**

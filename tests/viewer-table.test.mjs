@@ -266,6 +266,19 @@ test('Navigation order is TOKEN DATA, HOT, NOT, wallet, recent runs, outcomes, a
  assert.equal(ui.get('panel-outcomes').hidden,true);
  assert.match(html,/id="panel-research"[\s\S]*?id="routeReviews"/);
 });
+test('WHAT\\'S GOOD deep-refresh control and progress panel are present',async()=>{
+ const page=await tableSandbox();
+ assert.match(page.html,/id="goodRefreshButton"/);
+ assert.match(page.html,/id="goodRefreshPanel"/);
+ assert.match(page.html,/id="goodRefreshSteps"/);
+ assert.match(page.html,/id="goodRefreshStop"/);
+ assert.match(page.html,/\/api\/top5-refresh/);
+ assert.equal(page.evalJS('goodRefreshRunning'),false);
+ assert.equal(page.evalJS("goodRefreshState({status:'UPDATED',httpStatus:200})"),'success');
+ assert.equal(page.evalJS("goodRefreshState({error:'D1_READ_QUOTA',httpStatus:503})"),'failed');
+ assert.equal(page.evalJS("goodRefreshState({httpStatus:429})"),'limited');
+ assert.equal(page.evalJS("goodRefreshState({status:'UNSUPPORTED',httpStatus:200})"),'skipped');
+});
 test('WHAT\'S GOOD opens first and never fabricates candidates from stale or missing data',async()=>{
  const page=await tableSandbox();
  assert.equal(page.evalJS('activeTab'),'good');

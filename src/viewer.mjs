@@ -5,6 +5,7 @@ import {addWatchedAddress} from './watchlist.mjs';
 import {assessGreenLight} from './green-gate.mjs';
 import {tokenTier,countCoverage} from './token-tiers.mjs';
 import {runTokenAuditStage} from './on-demand-audit.mjs';
+import {runHardRefreshStage,d1ReadQuota} from './hard-refresh.mjs';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
 const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers});
 const esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -86,6 +87,17 @@ tbody tr:hover{background:#174029}
 .good-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 .good-actions button,.good-actions a{font-size:10px;padding:4px 6px;background:#183a28;border:1px solid #497a57;color:#dcffe4;text-decoration:none;min-height:24px}
 .good-empty{white-space:normal;color:#e2c998;padding:9px;border:1px dashed #75633e}
+.good-refresh-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:7px 0}
+#goodRefreshButton{font-size:12px!important;font-weight:800;color:#ceffdc;background:#1b5132;border:1px solid #78bf87}
+#goodRefreshButton:disabled{opacity:.55;cursor:not-allowed}
+.good-refresh-panel{border:1px solid #426d4c;background:#0d2316;padding:7px;margin:6px 0;max-width:100%;overflow-wrap:anywhere}
+.good-refresh-panel summary{cursor:pointer;font-weight:800;color:#bafccb}
+.good-refresh-panel ol{margin:7px 0 0 0;padding:0;list-style:none;max-height:330px;overflow-y:auto}
+.good-refresh-panel li{font-size:10px;padding:5px;border-bottom:1px solid #294d32;overflow-wrap:anywhere}
+.good-refresh-panel li[data-state="success"]{color:#b2ffd0}
+.good-refresh-panel li[data-state="limited"],.good-refresh-panel li[data-state="skipped"]{color:#f2d69b}
+.good-refresh-panel li[data-state="failed"]{color:#ffb6a9}
+#goodRefreshStop[hidden],#goodRefreshPanel[hidden]{display:none}
 .research-guide{font-size:10px}
 #greenDialog{background:#09190e;color:#bbfccc;border:1px solid #467553;font:11px ui-monospace,Consolas,monospace;
  width:min(92vw,520px);max-height:76vh;overflow:auto;padding:12px}
@@ -168,6 +180,14 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <section><h2 class="good-title"><strong>WHAT'S GOOD?</strong> TOP RESEARCH CANDIDATES <span id="goodCount"></span></h2>
 <p class="hint good-intro">Only the best five eligible signals, ranked by OUR SCORE. Each verdict describes research priority, not a recommendation to buy. No qualifying candidates? We show none rather than fill the list with noise.</p>
 <p id="goodDataStatus" class="hint" role="status" aria-live="polite">Waiting for market data…</p>
+<div class="good-refresh-toolbar"><button id="goodRefreshButton" type="button" aria-controls="goodRefreshPanel">⟳ REFRESH TOP 5 · DEEP</button>
+<button id="goodRefreshStop" type="button" hidden>Stop after current step</button>
+<span class="hint">On demand · uses provider/D1 quota · no trades</span></div>
+<details id="goodRefreshPanel" class="good-refresh-panel" hidden open>
+<summary>DEEP REFRESH // <span id="goodRefreshHeadline">Idle</span></summary>
+<p class="hint" id="goodRefreshInfo">Refreshes discovery, up to 25 tracked quotes, then market, contract, pool and route evidence for the ranked top five. Limits and missing data are reported, not guessed.</p>
+<ol id="goodRefreshSteps" aria-label="Detailed refresh steps" aria-live="polite"></ol>
+</details>
 <div id="goodCards" class="good-list" aria-live="polite" aria-label="Five strongest currently qualified crypto research candidates"></div>
 <p id="goodFootnote" class="hint">Evidence is indicative; prices and buying activity can be spoofed. Never assume an LP lock or executable exit.</p>
 <button type="button" id="goodResearch" aria-label="Open full sortable token research">Full research + all tokens ↗</button>
@@ -1029,6 +1049,8 @@ const utcDay=()=>new Date().toISOString().slice(0,10);
 try{d1QuotaBlocked=sessionStorage.getItem(d1QuotaKey)===utcDay();}catch{}
 function setD1QuotaBlocked(blocked){
  d1QuotaBlocked=blocked;
+ const deep=document.getElementById('goodRefreshButton');
+ if(deep)deep.disabled=blocked||goodRefreshRunning;
  try{if(blocked)sessionStorage.setItem(d1QuotaKey,utcDay());
  else sessionStorage.removeItem(d1QuotaKey);}catch{}
  updateD1ResetCountdown();
@@ -1142,6 +1164,8 @@ document.getElementById('enter').onclick=login;
 document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
 document.getElementById('logout').onclick=logout;
 document.getElementById('refresh').onclick=refresh;
+document.getElementById('goodRefreshButton').onclick=refreshTopFiveDeep;
+document.getElementById('goodRefreshStop').onclick=()=>{goodRefreshCancelled=true;};
 document.getElementById('sortOurScore').onclick=()=>{assetSort={key:'our_score',direction:'desc'};saveValue(sortKey,assetSort);renderAssets();};
 document.getElementById('goodResearch').onclick=()=>{activateTab('research',{focus:true});assetSort={key:'our_score',direction:'desc'};saveValue(sortKey,assetSort);renderAssets();};
 document.getElementById('resetAssetColumns').onclick=()=>{resetAssetColumns();document.getElementById('assetOrderStatus').textContent='Default layout restored.'};
@@ -1205,6 +1229,125 @@ function inspectGreen(key){
   '<p class="hint">Read-only screening. No real or paper order was placed by this check.</p>';
  if(!dialog.open)dialog.showModal();
 }
+// Deep refresh is browser-orchestrated across bounded server stages. This
+// panel shows actual stage responses, never a simulated percent-complete.
+let goodRefreshRunning=false,goodRefreshCancelled=false;
+function goodRefreshStep(title){
+ const item=document.createElement('li');
+ item.dataset.state='running';
+ item.textContent='⌛ '+title+' — checking…';
+ document.getElementById('goodRefreshSteps').append(item);
+ return (state,detail)=>{
+  item.dataset.state=state;
+  item.textContent=(state==='success'?'✓ ':state==='failed'?'⚠ ':state==='limited'?'⌛ ':'• ')+
+    title+' — '+String(detail||'No result');
+  item.scrollIntoView?.({block:'nearest'});
+ };
+}
+async function goodRefreshRequest(url,body){
+ const r=await fetch(url,{method:'POST',credentials:'same-origin',cache:'no-store',
+  headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+ let result={};
+ try{result=await r.json()}catch{result={error:'INVALID_PROVIDER_RESPONSE'}};
+ if(result.error==='D1_READ_QUOTA')setD1QuotaBlocked(true);
+ return {httpStatus:r.status,...result};
+}
+function goodRefreshState(result){
+ if(result.error==='D1_READ_QUOTA')return 'failed';
+ if(result.httpStatus===429||result.status==='RATE_LIMITED'||result.status==='COOLDOWN'||
+    result.error==='PROVIDER_RATE_LIMIT')return 'limited';
+ if(result.status==='UPDATED')return 'success';
+ if(result.status==='PARTIAL'||result.status==='UNAVAILABLE'||
+    result.status==='SKIPPED'||result.status==='UNSUPPORTED')return 'skipped';
+ return 'failed';
+}
+async function refreshTopFiveDeep(){
+ if(goodRefreshRunning)return;
+ const button=document.getElementById('goodRefreshButton'),stop=document.getElementById('goodRefreshStop');
+ const panel=document.getElementById('goodRefreshPanel'),headline=document.getElementById('goodRefreshHeadline');
+ const info=document.getElementById('goodRefreshInfo'),steps=document.getElementById('goodRefreshSteps');
+ if(d1QuotaBlocked){
+  panel.hidden=false;panel.open=true;headline.textContent='D1 quota blocked';
+  info.textContent='Live D1 data unavailable. Normal dashboard refresh can check quota recovery after UTC reset.';
+  return;
+ }
+ goodRefreshRunning=true;goodRefreshCancelled=false;button.disabled=true;stop.hidden=false;
+ panel.hidden=false;panel.open=true;steps.textContent='';
+ headline.textContent='RUNNING';info.textContent='Keep this page open; live results appear below. Each check consumes bounded API/D1 allowance.';
+ const count={success:0,limited:0,skipped:0,failed:0};
+ let interrupted='',audited=0;
+ const execute=async(title,url,body)=>{
+  const update=goodRefreshStep(title);
+  try{
+   const result=await goodRefreshRequest(url,body);
+   const state=goodRefreshState(result);
+   count[state]++;
+   update(state,(result.status||result.error||'HTTP '+result.httpStatus)+': '+
+    (result.message||'No current evidence')+
+    (result.retryAfterSeconds?' · retry after '+result.retryAfterSeconds+'s':''));
+   if(result.error==='D1_READ_QUOTA')interrupted='D1 daily read allowance exhausted.';
+   else if(result.httpStatus===401)interrupted='Session expired; please sign in again.';
+   else if(result.httpStatus===503)interrupted='Database or provider stage unavailable.';
+   return result;
+  }catch(e){
+   count.failed++;update('failed','Network error; evidence unchanged.');
+   interrupted='Network interrupted the refresh.';
+   return {status:'ERROR',error:'NETWORK_ERROR'};
+  }
+ };
+ try{
+  await execute('01 · New-pool discovery','/api/top5-refresh',{stage:'discovery'});
+  if(interrupted||goodRefreshCancelled)return;
+  await execute('02 · Existing pool quotes (maximum 25)','/api/top5-refresh',{stage:'quotes'});
+  if(interrupted||goodRefreshCancelled)return;
+  const pickStep=goodRefreshStep('03 · Rebuild ranked eligible shortlist');
+  const ok=await refresh();
+  if(!ok){count.failed++;pickStep('failed',d1QuotaBlocked?'D1 quota unavailable.':'Could not reload candidate data.');interrupted='Ranking reload failed.';return;}
+  const picks=goodCandidates().map(a=>({key:a.asset_key,name:a.symbol||a.asset_key}));
+  count.success++;
+  pickStep('success',picks.length+' verified-chain candidates after updated quote screening.');
+  if(!picks.length){interrupted='No eligible tokens to audit; no candidates invented.';return;}
+  const blockedStages=new Set();
+  for(const [index,token] of picks.entries()){
+   for(const [stage,label] of auditStages){
+    if(interrupted||goodRefreshCancelled)break;
+    if(blockedStages.has(stage)){
+     count.skipped++;
+     goodRefreshStep((index+1)+'/5 · '+token.name+' · '+label)('skipped','Provider rate-limited earlier checks of this type.');
+     continue;
+    }
+    const result=await execute((index+1)+'/5 · '+token.name+' · '+label,
+       '/api/audit',{assetKey:token.key,stage});
+    if(result.status==='RATE_LIMITED'||result.error==='PROVIDER_RATE_LIMIT')blockedStages.add(stage);
+    if(stage==='route')audited++;
+   }
+   if(interrupted||goodRefreshCancelled)break;
+  }
+  if(!interrupted&&!goodRefreshCancelled){
+   const finalStep=goodRefreshStep('FINAL · Rebuild OUR SCORE and top five');
+   const updated=await refresh();
+   if(updated){
+    const final=goodCandidates();
+    count.success++;
+    finalStep('success',final.length+' eligible now; '+final.map(x=>x.symbol||x.asset_key).join(', ')+
+      '. Reordered by current evidence; safety reviews remain incomplete unless independently verified.');
+   }else{
+    count.failed++;finalStep('failed','Latest status unavailable; old rankings are not certified fresh.');
+    interrupted='Final status query failed.';
+   }
+  }
+ }finally{
+  goodRefreshRunning=false;stop.hidden=true;button.disabled=d1QuotaBlocked;
+  headline.textContent=interrupted?'STOPPED / PARTIAL':goodRefreshCancelled?'STOPPED BY USER':
+   count.failed||count.limited||count.skipped?'FINISHED / PARTIAL':'FINISHED';
+  info.textContent='Updated: '+count.success+' · limited: '+count.limited+
+   ' · skipped/unavailable: '+count.skipped+' · failed: '+count.failed+
+   ' · full token audit sequences: '+audited+'. '+
+   (interrupted|| (goodRefreshCancelled?'Stopped after current check.':
+    'Research only. No orders, proof of LP lock or guarantee of sellability.'));
+ }
+}
+
 let auditInProgress=false;
 const auditStages=[['market','01 MARKET'],['mint','02 MINT + HOLDERS'],
  ['pool','03 POOL + ADMIN'],['route','04 BUY / SELL ROUTE']];
@@ -1302,7 +1445,7 @@ export default {async fetch(request,env){const path=new URL(request.url).pathnam
 if(path==='/health')return json({server:'online',scan_status:'not_verified'});
 if(path==='/'||path==='/dashboard')return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 const origin=request.headers.get('origin');
-if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist'||path==='/api/audit')&&origin&&origin!==new URL(request.url).origin)
+if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&origin&&origin!==new URL(request.url).origin)
   return json({error:'forbidden'},403);
 if(path==='/api/login'){
  if(request.method!=='POST')return json({error:'method_not_allowed'},405);
@@ -1324,8 +1467,8 @@ if(path==='/api/logout'){
  output.headers.set('set-cookie',clearSessionCookie());
  return output;
 }
-if(path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock')return json({error:'not_found'},404);
-if(((path==='/api/status'||path==='/api/scan-clock')&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit')&&request.method!=='POST'))
+if(path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock'&&path!=='/api/top5-refresh')return json({error:'not_found'},404);
+if(((path==='/api/status'||path==='/api/scan-clock')&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&request.method!=='POST'))
  return json({error:'method_not_allowed'},405);
 const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
 const cookie=readSessionCookie(request.headers.get('cookie'));
@@ -1338,6 +1481,19 @@ if(path==='/api/scan-clock'){
    return json({started_at:latest?.started_at||null,state:latest?.state||null,
      expected_interval_seconds:600});
  }catch{return json({error:'scan_clock_unavailable'},503)}
+}
+if(path==='/api/top5-refresh'){
+ if((request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site')
+  return json({error:'forbidden'},403);
+ if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+  return json({error:'unsupported_media_type'},415);
+ if(Number(request.headers.get('content-length')||0)>128)return json({error:'request_too_large'},413);
+ let input;try{input=await request.json()}catch{return json({error:'invalid_json'},400)}
+ if(!input||typeof input!=='object'||Array.isArray(input))return json({error:'invalid_input'},422);
+ const result=await runHardRefreshStage(env,{stage:input.stage});
+ const output=json(result,result.httpStatus||200);
+ if(result.httpStatus===429)output.headers.set('retry-after',String(result.retryAfterSeconds||180));
+ return output;
 }
 if(path==='/api/audit'){
  if((request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site')
@@ -1356,7 +1512,7 @@ if(path==='/api/audit'){
    const output=json(result,result.httpStatus||200);
    if(result.httpStatus===429)output.headers.set('retry-after',String(result.retryAfterSeconds||90));
    return output;
- }catch{return json({error:'audit_unavailable'},503)}
+ }catch(e){return json({error:d1ReadQuota(e)?'D1_READ_QUOTA':'audit_unavailable'},503)}
 }
 if(path==='/api/watchlist'){
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
