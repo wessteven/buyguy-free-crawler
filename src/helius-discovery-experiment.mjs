@@ -1,6 +1,6 @@
 // Opt-in, bounded end-to-end Helius research. Never invoked by production cron.
 // No D1 access, no simulated/real trading, no token ranking changes.
-import {heliusDiscoveryProbe,classifyHeliusSignatures,classifyPoolCreationLead} from './helius-discovery-probe.mjs';
+import {heliusDiscoveryProbe,classifyHeliusSignatures} from './helius-discovery-probe.mjs';
 import {verifyHeliusPoolLeads} from './helius-pool-verification.mjs';
 import {PUMPSWAP} from './pumpswap.mjs';
 import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
@@ -19,17 +19,13 @@ export async function runHeliusDiscoveryExperiment(env,{
  });
  // Second-stage classifier must never claim that an arbitrary transaction
  // creates a pool. Only parsed protocol initialization instructions count.
- const leads=[];
- for(const row of classified.results||[]){
-  if(row.status!=='UNCLASSIFIED')continue;
-  // The lightweight signature classifier does not retain raw transactions.
-  // Therefore this stage cannot safely infer a pool; leave leads empty until
-  // a transaction-evidence-preserving classifier is available.
- }
+ const leads=(classified.results||[]).flatMap(row=>
+  row.poolEvidence?.status==='POOL_CREATION_LEADS'
+   ?row.poolEvidence.leads.filter(lead=>lead.protocol===protocol):[]);
  const verified=await verifyHeliusPoolLeads(env,{leads,targetMint,fetcher});
  return {enabled:true,mode:'READ_ONLY_RESEARCH',protocol,program,
   signaturesScanned:discovered.scanned,transactionsChecked:classified.checked,
   poolLeads:leads.length,poolsChecked:verified.checked,results:verified.results,
-  status:'SIGNATURES_CLASSIFIED_POOL_EVIDENCE_NOT_YET_CONNECTED',
-  caveat:'No pool inference from signatures. Parsed transaction evidence must be retained before pool verification.'};
+  status:'RESEARCH_PIPELINE_COMPLETE',
+  caveat:'Only explicit parsed initialization evidence is considered. Binary instructions remain unclassified; account checks do not prove pool creation timing or safety.'};
 }
