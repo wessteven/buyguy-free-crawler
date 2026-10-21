@@ -9,7 +9,7 @@ const plan=buildPhpRawAuditPlan(study);
 if(!plan.complete)throw Error('INCOMPLETE_PHP_PROOF_PLAN');
 const examples=[...plan.events,{
  label:'XTV_ACQUISITION_CONTROL',wallet:'mDR91ufq4S2uSHa9E2PYL7xg4LwcQXaQFP7YK864a1z',
- mint:'6MBf1XdZNSAaDKcxxbnCAngRUxBmHS5Ybe2rLRpump',
+ mint:'6MBf1XdZNSAaDKcxxbnCAngRUxBmwbHS5Ybe2rLRpump',
  quoteMint:SOLANA_USDC,
  signature:'2BqKYNqHnDpgzM4cmdtV6BpX5T6cgoCDegysrhvwYb7jNmbxsyVitj1eWQrqYmCVEQFYB6p7e2A9Bkeq7SbpiFPx',
  at:'2026-10-21T02:03:39Z',side:'BUY_LIKE',baseUnits:157429.423304,quoteUnits:50
