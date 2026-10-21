@@ -266,7 +266,7 @@ test('Navigation order is TOKEN DATA, HOT, NOT, wallet, recent runs, outcomes, a
  assert.equal(ui.get('panel-outcomes').hidden,true);
  assert.match(html,/id="panel-research"[\s\S]*?id="routeReviews"/);
 });
-test('WHAT\\'S GOOD deep-refresh control and progress panel are present',async()=>{
+test("WHAT'S GOOD deep-refresh control and progress panel are present",async()=>{
  const page=await tableSandbox();
  assert.match(page.html,/id="goodRefreshButton"/);
  assert.match(page.html,/id="goodRefreshPanel"/);
