@@ -59,7 +59,8 @@ export async function classifyHeliusSignatures(env,{signatures=[],program,fetche
   if(!response.ok){results.push({signature,status:'RPC_HTTP_ERROR',httpStatus:response.status,mints:[]});continue;}
   const data=await response.json();
   if(data?.error){results.push({signature,status:'RPC_ERROR',mints:[]});continue;}
-  results.push({signature,...classifyHeliusTransaction(data?.result,{program})});
+  results.push({signature,...classifyHeliusTransaction(data?.result,{program}),
+   poolEvidence:classifyPoolCreationLead(data?.result)});
  }
  return {enabled:true,source:'Helius Solana RPC',checked:results.length,results};
 }
