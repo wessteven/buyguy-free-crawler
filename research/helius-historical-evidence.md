@@ -15,7 +15,9 @@ Research only. These explorer records are **not** Helius replay results.
 - Explorer: https://solscan.io/tx/4NXg3BhMk7VHaa5mWkptwSweHXZCuBeFcL5hqonuFmMTNFbu4sRLkp4i81psZFbBkAJCF18Vbm8kpp8KPmGhF1kx
 - Explorer shows successful Pump.fun AMM pool creation via a `migrate` action on Aug 30 2026.
 - **Not a verified `create_pool` instruction**; this could be a distinct migration path and is a useful **coverage-gap candidate**, not a positive test for the current `create_pool` discriminator.
-- Expected pool-state address NOT independently confirmed.
+- Explorer identifies PumpSwap market/pool-state candidate `6yzJjoxUUrXX8qfnV9mUNqXQHWAqb7mvrkaKm2kJMrkx`; this is NOT yet owner/layout verified via Helius. Distinguish it from the token vaults `1H6GLnCjpRdA53oVAJ3rjag1idqLyPJKvVRNw6Siomxdm` and `2GbqFM6qYeBRkobBDWnYXYHT9TEbjydg1n9EnA2a9ZRwt`.
+- Pump.fun `migrate` is a different instruction/program from PumpSwap `create_pool`; the existing binary decoder does not handle this route. Treat as a **known migration coverage gap**, not as a failed `create_pool` decoder fixture.
+- Expected pool-state address remains NOT independently verified through Helius account ownership/layout.
 
 ## Validation protocol
 1. Retrieve each transaction with authenticated Helius `getTransaction`, `encoding:jsonParsed`, `maxSupportedTransactionVersion:0`.
