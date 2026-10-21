@@ -44,3 +44,10 @@ Research only. These explorer records are **not** Helius replay results.
 - Tests assert that known provider categories are safely labeled without emitting URLs/secrets; unlabelled historical crawler logs remain `UNCLASSIFIED` rather than inventing a source.
 - These tests require explicit `python -m unittest discover -s research -p 'test_http400_triage.py'` to execute; existing JavaScript CI passing does **not** establish these Python tests have run.
 - Historical Pump.fun migrate signature and candidate pool still require authenticated raw `getTransaction` and `getAccountInfo`; no independently verified pool-state data available in this pass.
+
+## Recurrent production crawler HTTP 400 — independent confirmation (2026-10-22)
+- Latest scheduled production crawler run `39593590740`, job `119200336391`, on commit `7948199e` failed with exact log `BuyGuy crawler error: HTTP Error 400: Bad Request`, exit code 1.
+- Earlier production crawler run `39552534028`, job `119064742729`, on commit `a4bf53c8` emitted the same exact exception. This establishes recurrence across two commits; neither log identifies the request URL or call site.
+- General `BuyGuy V3 Tests` for commit `7948199e` passed (run `39575799732`); offline `GOGET HTTP 400 Research Tests` passed 4/4 (run `39575799569`). These do not exercise the live crawler network or establish the HTTP 400 root cause.
+- Next diagnostic should obtain non-secret response metadata and a sanitized request category from an explicitly approved diagnostic path; avoid production crawler edits under the research-only constraint. No live D1 access or writes made here.
+- The historical Pump.fun migration candidate remains without authenticated raw historical `getTransaction` accounts and raw pool `getAccountInfo` ownership/layout; no pool verification claim is justified.
