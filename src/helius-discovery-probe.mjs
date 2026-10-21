@@ -70,6 +70,7 @@ export async function classifyHeliusSignatures(env,{signatures=[],program,fetche
 // against the protocol IDL and independently verified via the pool account.
 import {PUMPSWAP} from './pumpswap.mjs';
 import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
+import {binaryPoolCreationLead} from './helius-binary-pool.mjs';
 export function classifyPoolCreationLead(transaction){
  if(!transaction||transaction.meta?.err)return {status:'FAILED_OR_MISSING',leads:[]};
  const instructions=[
@@ -79,6 +80,8 @@ export function classifyPoolCreationLead(transaction){
  const protocols=new Map([[PUMPSWAP,'PUMPSWAP'],[RAYDIUM_CPMM,'RAYDIUM_CPMM']]);
  const leads=[];
  for(const ix of instructions){
+  const binaryLead=binaryPoolCreationLead(ix);
+  if(binaryLead){leads.push(binaryLead);continue;}
   const protocol=protocols.get(ix?.programId);
   if(!protocol)continue;
   const type=String(ix?.parsed?.type||'');
