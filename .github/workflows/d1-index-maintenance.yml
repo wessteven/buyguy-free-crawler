@@ -55,6 +55,23 @@ jobs:
           measured=query(sample)
           print('MEASURED active-asset sample rows_read:',measured.get('meta',{}).get('rows_read'),
                 'rows_returned:',len(measured.get('results',[])))
+          # Read-only provider health: disclose endpoint labels and HTTP codes only.
+          recent=query("SELECT id,state,observed,provider_errors FROM runs ORDER BY id DESC LIMIT 12")
+          for run in recent.get('results',[]):
+              raw=run.get('provider_errors') or '[]'
+              try: errors=json.loads(raw)
+              except (TypeError,ValueError): errors=['unparseable provider error']
+              labels=[]
+              for error in errors if isinstance(errors,list) else []:
+                  msg=str(error)
+                  provider=('GeckoTerminal' if 'gecko' in msg.lower() else
+                            'DEX Screener' if any(t in msg.lower() for t in ('dex','/token','solana:','robinhood:','/community')) else
+                            'Other/unknown')
+                  import re
+                  code=re.search(r'\\b(?:HTTP\\s*|error\\s*)([45][0-9]{2})\\b',msg,re.I)
+                  labels.append(provider+((' HTTP '+code.group(1)) if code else ' (no HTTP code)'))
+              print('SCAN_HEALTH',run.get('id'),run.get('state'),
+                    'observed',run.get('observed'),'warnings',labels[:8])
           for sql in [
               'EXPLAIN QUERY PLAN SELECT MAX(score) FROM observations WHERE asset_key=?',
               'EXPLAIN QUERY PLAN SELECT COUNT(*) FROM predictions WHERE asset_key=?',
