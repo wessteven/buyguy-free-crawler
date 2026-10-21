@@ -1,0 +1,21 @@
+name: GOGET Draft SQL Fix Verification
+on:
+  push:
+    branches:
+      - 'fix/sql-initialization-comment-split'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline_sql_fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify SQL-aware initialization in memory only
+        run: python -m unittest discover -s research -p 'test_initialization_fix.py' -v
+      - name: Run existing Python unit tests
+        run: python -m unittest discover -s tests -v
