@@ -29,18 +29,20 @@ export async function verifyHeliusPoolLeads(env,{leads=[],targetMint=null,fetche
    }
    const account=payload.result.value;
    if(account.owner!==p.program){
-    results.push({...lead,status:'PROGRAM_OWNER_MISMATCH',verified:false});continue;
+    results.push({...lead,status:'PROGRAM_OWNER_MISMATCH',verified:false,
+     ownerMatchesExpected:false,layoutVerified:false});continue;
    }
    const decoded=p.decode(lead.pool,account);
    const layoutOk=decoded.status===(lead.protocol==='PUMPSWAP'?'PUMPSWAP_LAYOUT_VERIFIED':'CPMM_LAYOUT_VERIFIED');
-   if(!layoutOk){results.push({...lead,status:decoded.status,verified:false});continue;}
+   if(!layoutOk){results.push({...lead,status:decoded.status,verified:false,
+    ownerMatchesExpected:true,layoutVerified:false});continue;}
    if(targetMint){
     const checked=await p.inspect(lead.pool,targetMint,env.HELIUS_RPC_URL,fetcher,{prefetchedAccount:account});
     results.push({...lead,status:checked.status,verified:checked.status==='POOL_VAULTS_VERIFIED',
-     poolAccountVerified:true,mintMatched:!['TOKEN_NOT_IN_POOL','MINT_NOT_IN_PUMPSWAP_POOL'].includes(checked.status)});
+     poolAccountVerified:true,ownerMatchesExpected:true,layoutVerified:true,mintMatched:!['TOKEN_NOT_IN_POOL','MINT_NOT_IN_PUMPSWAP_POOL'].includes(checked.status)});
    }else{
     results.push({...lead,status:'POOL_ACCOUNT_LAYOUT_VERIFIED',verified:false,
-     poolAccountVerified:true,mintMatched:null});
+     poolAccountVerified:true,ownerMatchesExpected:true,layoutVerified:true,mintMatched:null});
    }
   }catch(error){results.push({...lead,status:'VERIFICATION_ERROR',verified:false,
     errorType:error?.name||'Error'});}
