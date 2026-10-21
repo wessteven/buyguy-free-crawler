@@ -18,7 +18,7 @@ export function normalizeGeckoPoolOHLCV(payload,{mint,pool,asOf,aggregate=1,maxB
  // caller retrieved this response from the exact pool-address endpoint.
  const opaque=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id||'');
  if(typeof id==='string'&&!id.includes(pool)&&
-   !(opaque&&endpointPoolExact===true&&payload?.data?.type==='ohlcv'))return no('POOL_ID_MISMATCH');
+   !(opaque&&endpointPoolExact===true&&['ohlcv','ohlcv_request_response'].includes(payload?.data?.type)))return no('POOL_ID_MISMATCH');
  const map=new Map();const cutoff=stamp(asOf);
  for(const bar of raw.slice(0,Math.max(1,Math.min(1000,maxBars)))){
   if(!Array.isArray(bar)||bar.length<6)continue;
