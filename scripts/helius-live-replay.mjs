@@ -20,7 +20,7 @@ else{
    protocol,mode:result.mode,signaturesScanned:result.signaturesScanned,
    transactionsChecked:result.transactionsChecked,poolLeads:result.poolLeads,
    poolsChecked:result.poolsChecked,evidenceCounts:result.evidenceCounts,
-   transactionStatuses:result.transactionStatuses,statuses,discoveryStatus:result.status,
+   transactionStatuses:result.transactionStatuses,rpcErrorReasons:result.rpcErrorReasons,statuses,discoveryStatus:result.status,
    caveat:result.caveat
   }));
  }catch(error){
