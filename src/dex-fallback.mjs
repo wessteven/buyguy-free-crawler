@@ -33,14 +33,28 @@ export function parseDexQuotes(rows, limit=8, profiles=[]){
   }
   return [...byKey.values()].sort((a,b)=>b.score-a.score||b.liquidity-a.liquidity).slice(0,limit);
 }
+// One bounded recovery attempt for transient server/network failures only.
+// Never retry HTTP 429/403: respect provider limits and avoid quota amplification.
+async function resilientFetch(fetcher,url){
+  let response;
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      response=await fetcher(url,{headers:{accept:'application/json'}});
+      if(response.ok||![500,502,503,504].includes(response.status)||attempt===1)return response;
+    }catch(error){
+      if(attempt===1)throw error;
+    }
+  }
+  return response;
+}
 export async function dexFallback(fetcher=fetch){
-  const r=await fetcher(PROFILES,{headers:{accept:'application/json'}});
+  const r=await resilientFetch(fetcher,PROFILES);
   if(!r.ok)throw Error('DEX Screener profiles HTTP '+r.status);
   const data=await r.json();
   if(!Array.isArray(data))throw Error('DEX Screener profiles malformed');
   const addresses=[...new Set(data.filter(x=>x.chainId==='solana'&&base58.test(x.tokenAddress||'')).map(x=>x.tokenAddress))].slice(0,15);
   if(!addresses.length)return [];
-  const result=await fetcher(base+'/tokens/v1/solana/'+addresses.join(','),{headers:{accept:'application/json'}});
+  const result=await resilientFetch(fetcher,base+'/tokens/v1/solana/'+addresses.join(','));
   if(!result.ok)throw Error('DEX Screener quotes HTTP '+result.status);
   return parseDexQuotes(await result.json(),8,data);
 }
