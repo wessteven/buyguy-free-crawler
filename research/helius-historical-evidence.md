@@ -51,3 +51,10 @@ Research only. These explorer records are **not** Helius replay results.
 - General `BuyGuy V3 Tests` for commit `7948199e` passed (run `39575799732`); offline `GOGET HTTP 400 Research Tests` passed 4/4 (run `39575799569`). These do not exercise the live crawler network or establish the HTTP 400 root cause.
 - Next diagnostic should obtain non-secret response metadata and a sanitized request category from an explicitly approved diagnostic path; avoid production crawler edits under the research-only constraint. No live D1 access or writes made here.
 - The historical Pump.fun migration candidate remains without authenticated raw historical `getTransaction` accounts and raw pool `getAccountInfo` ownership/layout; no pool verification claim is justified.
+
+## Independent public provider health check (2026-10-22)
+- Created read-only `research/provider_health_probe.py`, offline `research/test_provider_health_probe.py`, and dedicated `.github/workflows/goget-provider-health.yml`; no secrets, production crawler imports, D1 calls or mutations.
+- GitHub workflow `39604696745` completed successfully: 4/4 offline tests passed; public GET requests returned HTTP 200 for DEX Screener boosts, profiles, top boosts and community takeovers, and GeckoTerminal new Solana pools.
+- Cloudflare D1 deliberately NOT tested because it requires an authenticated POST. Token-specific DEX Screener quote endpoints also NOT tested; public provider health does not establish which historical crawler request failed.
+- General BuyGuy V3 Tests on commit `cd98477e` passed (run `39604696784`).
+- Pump.fun historical migration remains pending authenticated exact `getTransaction` and `getAccountInfo` owner/layout. Do not promote candidate pool to verified.
