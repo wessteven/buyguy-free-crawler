@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {heliusDiscoveryProbe,classifyHeliusTransaction,classifyHeliusSignatures} from '../src/helius-discovery-probe.mjs';
+import {heliusDiscoveryProbe,classifyHeliusTransaction,classifyHeliusSignatures,classifyPoolCreationLead} from '../src/helius-discovery-probe.mjs';
 const program='11111111111111111111111111111111';
 test('probe stays off without configured RPC and program',async()=>{
  assert.equal((await heliusDiscoveryProbe({})).enabled,false);
@@ -50,4 +50,24 @@ test('second-stage transaction requests are capped at five and read only',async(
  assert.equal(count,5);
  assert.equal(result.checked,5);
  assert.ok(result.results.every(x=>x.status==='UNCLASSIFIED'));
+});
+
+test('pool lead needs exact protocol and explicit initialization, never verified',async()=>{
+ const {PUMPSWAP}=await import('../src/pumpswap.mjs');
+ const tx={meta:{err:null},transaction:{message:{instructions:[
+  {programId:PUMPSWAP,parsed:{type:'swap',info:{pool:program}}},
+  {programId:PUMPSWAP,parsed:{type:'initialize',info:{pool:program}}}
+ ]}}};
+ const result=classifyPoolCreationLead(tx);
+ assert.equal(result.status,'POOL_CREATION_LEADS');
+ assert.equal(result.leads.length,1);
+ assert.equal(result.leads[0].verified,false);
+ assert.equal(classifyPoolCreationLead({...tx,meta:{err:'failed'}}).leads.length,0);
+});
+test('unknown programs and unparsed binary instructions cannot certify pools',()=>{
+ const tx={meta:{err:null},transaction:{message:{instructions:[
+  {programId:program,parsed:{type:'initialize',info:{pool:program}}},
+  {programId:'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',data:'binary',accounts:[program]}
+ ]}}};
+ assert.equal(classifyPoolCreationLead(tx).status,'UNCLASSIFIED');
 });
