@@ -1,0 +1,23 @@
+name: GOGET Read-Only Provider Health
+on:
+  push:
+    paths:
+      - 'research/provider_health_probe.py'
+      - 'research/test_provider_health_probe.py'
+      - '.github/workflows/goget-provider-health.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public_provider_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run offline probe unit tests
+        run: python -m unittest discover -s research -p 'test_provider_health_probe.py' -v
+      - name: Check public read-only GET endpoints
+        run: python research/provider_health_probe.py
