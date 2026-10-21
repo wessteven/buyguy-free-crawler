@@ -80,3 +80,11 @@ test('opaque GeckoTerminal UUID series must have exact endpoint provenance and b
  assert.equal(normalizeGeckoPoolOHLCV(revised,{mint,pool,asOf,endpointPoolExact:true}).bars.length,2);
  assert.equal(normalizeGeckoPoolOHLCV(revised,{mint:control,pool,asOf,endpointPoolExact:true}).bars.length,0);
 });
+
+test('provider ohlcv_request_response UUID envelopes are accepted only on the exact pool endpoint',()=>{
+ const sample=structuredClone(payload);
+ sample.data.id='611adf5b-8c48-46c9-aa8d-22bb87acb79e';
+ sample.data.type='ohlcv_request_response';
+ assert.equal(normalizeGeckoPoolOHLCV(sample,{mint,pool,asOf,endpointPoolExact:true}).bars.length,2);
+ assert.equal(normalizeGeckoPoolOHLCV(sample,{mint,pool,asOf,endpointPoolExact:false}).bars.length,0);
+});
