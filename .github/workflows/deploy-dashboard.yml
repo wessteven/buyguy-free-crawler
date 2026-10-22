@@ -121,7 +121,8 @@ jobs:
             "SELECT id FROM observations ORDER BY id DESC LIMIT 1",
             "SELECT id,state FROM runs ORDER BY id DESC LIMIT 1",
             "SELECT id,started_at,completed_at,state,discovered,observed,provider_errors FROM runs WHERE id IN (501,503,509) ORDER BY id",
-            "SELECT id,started_at,state,discovered,observed,provider_errors FROM runs ORDER BY id DESC LIMIT 8",
+            "SELECT id,started_at,completed_at,state,discovered,observed,provider_errors FROM runs ORDER BY id DESC LIMIT 12",
+            "SELECT id,asset_key,seen_at,provider FROM observations ORDER BY id DESC LIMIT 5",
             "SELECT starting_cash,cash,realised FROM paper_account WHERE account='buyguy-v3'",
             "SELECT id FROM paper_trades ORDER BY id DESC LIMIT 1"
           ]
