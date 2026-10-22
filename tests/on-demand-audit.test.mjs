@@ -124,6 +124,17 @@ test('Skipped pool and route do not make stale price, LP lock or executable sale
  assert.equal(DB.batches.length,0);
  assert.ok(DB.events.every(e=>e.args[2]==='ON_DEMAND_AUDIT'));
 });
+test('Route audit reports stale quote provenance without calling Jupiter',async()=>{
+ const DB=dbFake({...asset,provider:'GeckoTerminal',last_seen:'2026-10-19T07:00:00.000Z'});
+ let requests=0;
+ const result=await runTokenAuditStage({DB},{assetKey:key,stage:'route',now,
+  fetcher:async()=>{requests++;throw Error('unexpected network request')}});
+ assert.equal(result.status,'SKIPPED');
+ assert.equal(result.reason,'STALE_OR_UNIDENTIFIED_MARKET_QUOTE');
+ assert.equal(result.quoteSource,'GeckoTerminal');
+ assert.equal(result.quoteAgeMinutes,60);
+ assert.equal(requests,0);
+});
 test('Robinhood remains market-only until on-chain provider is actually available',async()=>{
  const rh='0x2cc0fac44b8252f6b10208b091aff2c94b4da77d',id='robinhood:'+rh;
  const row={...asset,asset_key:id,chain:'robinhood',address:rh};
