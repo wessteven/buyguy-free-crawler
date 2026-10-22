@@ -166,5 +166,5 @@ test('Shared D1 provider cooldown skips repeated 429 calls and never fabricates 
  assert.equal(await cronScan({DB},fetcher),0);
  assert.equal(calls.length,2,'cooldowns must suppress both provider requests');
  assert.deepEqual(runs.map(x=>x[2]),['RATE_LIMITED','RATE_LIMITED']);
- assert.deepEqual(runs.map(x=>x[3]),[0,0]);
+ assert.deepEqual(runs.map(x=>x[4]),[0,0]);
 });
