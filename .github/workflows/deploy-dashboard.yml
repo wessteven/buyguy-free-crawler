@@ -120,7 +120,7 @@ jobs:
             "SELECT asset_key FROM assets ORDER BY asset_key LIMIT 1",
             "SELECT id FROM observations ORDER BY id DESC LIMIT 1",
             "SELECT id,state FROM runs ORDER BY id DESC LIMIT 1",
-            "SELECT id,started_at,completed_at,state,discovered,observed,provider_errors FROM runs WHERE id=503 LIMIT 1",
+            "SELECT id,started_at,completed_at,state,discovered,observed,provider_errors FROM runs WHERE id IN (501,503,509) ORDER BY id",
             "SELECT id,started_at,state,discovered,observed,provider_errors FROM runs ORDER BY id DESC LIMIT 8",
             "SELECT starting_cash,cash,realised FROM paper_account WHERE account='buyguy-v3'",
             "SELECT id FROM paper_trades ORDER BY id DESC LIMIT 1"
@@ -145,7 +145,7 @@ jobs:
                 errors=[str(e.get('message','unknown'))[:180] for e in data.get('errors',[])]
                 print('D1 verification response failure for',sql,errors)
                 raise SystemExit('D1 verification query failed')
-              print('D1',sql,':',json.dumps(data['result'][0].get('results',[]))[:240])
+              print('D1',sql,':',json.dumps(data['result'][0].get('results',[]))[:3000])
               break
           PY
       - name: Test external dashboard reachability (Cloudflare 1010 tolerant)
