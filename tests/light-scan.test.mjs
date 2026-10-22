@@ -52,7 +52,7 @@ test('Provider outage becomes a recorded error rather than invented quotes',asyn
   const failures=[],DB={
     prepare(sql){return {bind(...args){return {run:async()=>failures.push({sql,args})}}}}
   };
-  await assert.rejects(cronScan({DB},async()=>({ok:false,status:429})));
+  await assert.rejects(cronScan({DB},async()=>({ok:false,status:503})));
   assert.equal(failures.length,1);
   assert.match(failures[0].sql,/INSERT INTO runs/);
 });
