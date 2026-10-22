@@ -99,12 +99,17 @@ export async function cronScan(env,fetcher=fetch){
     return pools.length;
   }catch(error){
     const message=String(error).slice(0,250);
-    console.error('BuyGuy Cloudflare light scan failed:',message);
+    // Both public providers can independently return 429. Distinguish quota
+    // exhaustion from a scanner defect; do not fabricate observations.
+    const providerLimited=/DEX Screener profiles HTTP 429|DEX Screener quotes HTTP 429/.test(message);
+    const state=providerLimited?'RATE_LIMITED':'ERROR';
+    console.error('BuyGuy Cloudflare light scan '+state+':',message);
     try{
       await env.DB.prepare(`INSERT INTO runs
         (started_at,completed_at,state,discovered,observed,provider_errors)
-        VALUES(?,?,'ERROR',0,0,?)`).bind(stamp,iso(),JSON.stringify([message])).run();
+        VALUES(?,?,?,0,0,?)`).bind(stamp,iso(),state,JSON.stringify([message])).run();
     }catch(e){console.error('Unable to record scan failure:',String(e).slice(0,150))}
+    if(providerLimited)return 0; // Scheduled independent research stages continue.
     throw error;
   }
 }
