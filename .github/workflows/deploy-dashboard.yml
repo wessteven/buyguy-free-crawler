@@ -126,6 +126,8 @@ jobs:
             "SELECT id,asset_key,seen_at,provider FROM observations ORDER BY id DESC LIMIT 5",
             "SELECT id,at,kind FROM research_events ORDER BY id DESC LIMIT 6",
             "SELECT name,expires_at,token FROM leases WHERE name IN ('discovery-provider:gecko','discovery-provider:dex') ORDER BY name",
+            "SELECT id,started_at,completed_at,state,discovered,observed,provider_errors FROM runs WHERE julianday(started_at)>=julianday('2026-10-22T09:00:00Z') ORDER BY id DESC LIMIT 24",
+            "SELECT id,at,kind FROM research_events WHERE julianday(at)>=julianday('2026-10-22T09:00:00Z') ORDER BY id DESC LIMIT 12",
             "SELECT id,started_at,state,discovered,observed,provider_errors FROM runs ORDER BY id DESC LIMIT 16",
             "SELECT id,seen_at,provider FROM observations ORDER BY id DESC LIMIT 8",
             "SELECT id,at,kind FROM research_events ORDER BY id DESC LIMIT 8",
