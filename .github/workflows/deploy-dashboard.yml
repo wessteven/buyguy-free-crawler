@@ -124,12 +124,12 @@ jobs:
             "SELECT id,started_at,completed_at,state,discovered,observed,provider_errors FROM runs ORDER BY id DESC LIMIT 12",
             "SELECT id,asset_key,seen_at,provider FROM observations ORDER BY id DESC LIMIT 5",
             "SELECT id,at,kind FROM research_events ORDER BY id DESC LIMIT 6",
-            "SELECT state,COUNT(*) AS scans,SUM(discovered) AS discovered,SUM(observed) AS observed FROM runs WHERE started_at>=datetime('now','-1 day') GROUP BY state ORDER BY scans DESC",
-            "SELECT COUNT(*) AS total,MIN(started_at) AS oldest,MAX(started_at) AS newest FROM runs WHERE started_at>=datetime('now','-1 day')",
-            "SELECT provider,COUNT(*) AS observations FROM observations WHERE seen_at>=datetime('now','-1 day') GROUP BY provider ORDER BY observations DESC",
-            "SELECT COUNT(*) AS gecko_429 FROM runs WHERE started_at>=datetime('now','-1 day') AND provider_errors LIKE '%GeckoTerminal HTTP 429%'",
-            "SELECT COUNT(*) AS dex_429 FROM runs WHERE started_at>=datetime('now','-1 day') AND provider_errors LIKE '%DEX Screener%HTTP 429%'",
-            "SELECT kind,COUNT(*) AS events FROM research_events WHERE at>=datetime('now','-1 day') GROUP BY kind ORDER BY events DESC LIMIT 12",
+            "SELECT state,COUNT(*) AS scans,SUM(discovered) AS discovered,SUM(observed) AS observed FROM runs WHERE julianday(started_at)>=julianday('now','-1 day') GROUP BY state ORDER BY scans DESC",
+            "SELECT COUNT(*) AS total,MIN(started_at) AS oldest,MAX(started_at) AS newest FROM runs WHERE julianday(started_at)>=julianday('now','-1 day')",
+            "SELECT provider,COUNT(*) AS observations FROM observations WHERE julianday(seen_at)>=julianday('now','-1 day') GROUP BY provider ORDER BY observations DESC",
+            "SELECT COUNT(*) AS gecko_429 FROM runs WHERE julianday(started_at)>=julianday('now','-1 day') AND provider_errors LIKE '%GeckoTerminal HTTP 429%'",
+            "SELECT COUNT(*) AS dex_429 FROM runs WHERE julianday(started_at)>=julianday('now','-1 day') AND provider_errors LIKE '%DEX Screener%HTTP 429%'",
+            "SELECT kind,COUNT(*) AS events FROM research_events WHERE julianday(at)>=julianday('now','-1 day') GROUP BY kind ORDER BY events DESC LIMIT 12",
             "SELECT starting_cash,cash,realised FROM paper_account WHERE account='buyguy-v3'",
             "SELECT id FROM paper_trades ORDER BY id DESC LIMIT 1"
           ]
