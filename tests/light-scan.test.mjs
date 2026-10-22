@@ -53,8 +53,8 @@ test('Provider outage becomes a recorded error rather than invented quotes',asyn
     prepare(sql){return {bind(...args){return {run:async()=>failures.push({sql,args})}}}}
   };
   await assert.rejects(cronScan({DB},async()=>({ok:false,status:503})));
-  assert.equal(failures.length,1);
-  assert.match(failures[0].sql,/INSERT INTO runs/);
+  assert.equal(failures.filter(x=>/INSERT INTO runs/.test(x.sql)).length,1);
+  assert.match(failures.at(-1).sql,/INSERT INTO runs/);
 });
 
 test('Both providers HTTP 429 records RATE_LIMITED and does not invent quotes',async()=>{
@@ -63,9 +63,10 @@ test('Both providers HTTP 429 records RATE_LIMITED and does not invent quotes',a
  const count=await cronScan({DB},async url=>{calls.push(url);return {ok:false,status:429}});
  assert.equal(count,0);
  assert.equal(calls.length,2);
- assert.equal(records.length,1);
- assert.equal(records[0].args[2],'RATE_LIMITED');
- assert.match(records[0].args[3],/429/);
+ const runs=records.filter(x=>/INSERT INTO runs/.test(x.sql));
+ assert.equal(runs.length,1);
+ assert.equal(runs[0].args[2],'RATE_LIMITED');
+ assert.match(runs[0].args[3],/429/);
 });
 test('Actual SQLite validates the D1 INSERT and UPDATE statements', async()=>{
   const statements=[];
@@ -144,4 +145,26 @@ test('DEX fallback does not retry HTTP 429',async()=>{
   let calls=0;
   await assert.rejects(dexFallback(async()=>{calls++;return {ok:false,status:429}}),/429/);
   assert.equal(calls,1);
+});
+
+test('Shared D1 provider cooldown skips repeated 429 calls and never fabricates observations',async()=>{
+ const leases=new Map(),runs=[],calls=[];
+ const DB={
+  prepare(sql){return {bind(...args){return {
+   first:async()=>({expires_at:leases.get(args[0])||0}),
+   run:async()=>{
+    if(sql.includes('INSERT INTO leases'))leases.set(args[0],Math.max(leases.get(args[0])||0,args[1]));
+    if(sql.includes('INSERT INTO runs'))runs.push(args);
+   }
+  }}}},
+  batch:async()=>{throw Error('No provider observations should be written');}
+ };
+ const fetcher=async url=>{calls.push(url);return {ok:false,status:429}};
+ assert.equal(await cronScan({DB},fetcher),0);
+ assert.equal(calls.length,2);
+ assert.equal(leases.size,2);
+ assert.equal(await cronScan({DB},fetcher),0);
+ assert.equal(calls.length,2,'cooldowns must suppress both provider requests');
+ assert.deepEqual(runs.map(x=>x[2]),['RATE_LIMITED','RATE_LIMITED']);
+ assert.deepEqual(runs.map(x=>x[3]),[0,0]);
 });
