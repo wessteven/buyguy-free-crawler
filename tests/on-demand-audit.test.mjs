@@ -70,6 +70,33 @@ test('Per-token market call refreshes exact mint only and persists D1 observatio
  assert.ok(DB.batches[0].some(q=>q.sql.includes('INSERT OR IGNORE INTO observations')));
  assert.ok(DB.events.some(e=>e.args.includes('ON_DEMAND_AUDIT')));
 });
+test('429 primary provider falls back to exact Solana pool without inventing trading counts',async()=>{
+ const DB=dbFake({...asset,pool:'PoolABC',buys_m5:3,sells_m5:2,market_cap:50000});
+ const requests=[];
+ const fetcher=async(url)=>{
+  requests.push(url);
+  if(url.includes('dexscreener'))return {ok:false,status:429};
+  return {ok:true,json:async()=>({data:{id:'solana_PoolABC',
+   relationships:{base_token:{data:{id:'solana_'+mint}}},
+   attributes:{base_token_price_usd:'0.003',reserve_in_usd:'61000',fdv_usd:'99000'}}})};
+ };
+ const result=await runTokenAuditStage({DB},{assetKey:key,stage:'market',now,fetcher});
+ assert.equal(result.status,'UPDATED');
+ assert.equal(result.source,'GeckoTerminal');
+ assert.equal(result.priceUsd,0.003);
+ assert.equal(requests.length,2);
+ assert.equal(DB.batches.length,1);
+ assert.ok(DB.batches[0].some(q=>q.sql.includes('UPDATE assets SET')&&q.args.includes('GeckoTerminal')));
+});
+test('Gecko fallback rejects mismatched pool and token identity',async()=>{
+ const DB=dbFake({...asset,pool:'PoolABC'});
+ const result=await runTokenAuditStage({DB},{assetKey:key,stage:'market',now,
+  fetcher:async(url)=>url.includes('dexscreener')?{ok:false,status:429}:
+   {ok:true,json:async()=>({data:{id:'solana_OTHER',relationships:{base_token:{data:{id:'solana_'+mint}}},
+    attributes:{base_token_price_usd:'2',reserve_in_usd:'999999'}}})}});
+ assert.equal(result.status,'RATE_LIMITED');
+ assert.equal(DB.batches.length,0);
+});
 test('No matching base token or illiquid quote cannot overwrite stale observations',async()=>{
  const DB=dbFake();
  const r=await runTokenAuditStage({DB},{assetKey:key,stage:'market',now,
