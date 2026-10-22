@@ -38,19 +38,63 @@ export function parseNewPools(data,limit=8){
   }
   return candidates.sort((a,b)=>b.score-a.score||b.liquidity-a.liquidity).slice(0,limit);
 }
+// Shared provider cooldowns use the existing D1 leases table, no migration.
+// They are advisory: inability to read/write a lease must not suppress research.
+export const PROVIDER_COOLDOWN_MS=30*60*1000;
+async function cooldownRemaining(db,provider,now){
+  try{
+    const stmt=db.prepare('SELECT expires_at FROM leases WHERE name=?').bind('discovery-provider:'+provider);
+    if(typeof stmt.first!=='function')return 0; // lightweight test doubles
+    const row=await stmt.first();
+    return Math.max(0,Number(row?.expires_at||0)-now);
+  }catch(error){
+    console.warn('Discovery provider cooldown lookup unavailable:',provider,error?.name||'Error');
+    return 0;
+  }
+}
+async function markProviderLimited(db,provider,now){
+  try{
+    const stmt=db.prepare("INSERT INTO leases(name,expires_at,token) VALUES(?,?,?) ON CONFLICT(name) DO UPDATE SET expires_at=MAX(leases.expires_at,excluded.expires_at),token=excluded.token")
+      .bind('discovery-provider:'+provider,now+PROVIDER_COOLDOWN_MS,'HTTP_429');
+    await stmt.run();
+  }catch(error){
+    console.warn('Discovery provider cooldown persistence unavailable:',provider,error?.name||'Error');
+  }
+}
 export async function cronScan(env,fetcher=fetch){
   if(!env.DB)throw new Error('D1 binding is unavailable');
   const stamp=iso();
   try{
     let pools=[],warnings=[];
-    try{
-      const response=await fetcher(FEED,{headers:{accept:'application/json'}});
-      if(!response.ok)throw new Error('GeckoTerminal HTTP '+response.status);
-      pools=parseNewPools(await response.json());
-    }catch(error){
-      // No immediate retries against a 429. Switch to one separate public provider.
-      warnings.push(String(error).slice(0,120));
-      pools=await dexFallback(fetcher);
+    const now=Date.parse(stamp);
+    const geckoWait=await cooldownRemaining(env.DB,'gecko',now);
+    if(geckoWait>0){
+      warnings.push('GeckoTerminal cooldown '+Math.ceil(geckoWait/1000)+'s');
+    }else{
+      try{
+        const response=await fetcher(FEED,{headers:{accept:'application/json'}});
+        if(!response.ok)throw new Error('GeckoTerminal HTTP '+response.status);
+        pools=parseNewPools(await response.json());
+      }catch(error){
+        const message=String(error).slice(0,120);
+        warnings.push(message);
+        if(/GeckoTerminal HTTP 429/.test(message))await markProviderLimited(env.DB,'gecko',now);
+      }
+    }
+    if(warnings.length){
+      const dexWait=await cooldownRemaining(env.DB,'dex',now);
+      if(dexWait>0){
+        warnings.push('DEX Screener cooldown '+Math.ceil(dexWait/1000)+'s');
+        throw Error('DISCOVERY_PROVIDERS_COOLDOWN');
+      }
+      try{
+        pools=await dexFallback(fetcher);
+      }catch(error){
+        const message=String(error).slice(0,120);
+        if(/DEX Screener (profiles|quotes) HTTP 429/.test(message))
+          await markProviderLimited(env.DB,'dex',now);
+        throw error;
+      }
     }
     const statements=[];
     for(const a of pools){
@@ -101,7 +145,7 @@ export async function cronScan(env,fetcher=fetch){
     const message=String(error).slice(0,250);
     // Both public providers can independently return 429. Distinguish quota
     // exhaustion from a scanner defect; do not fabricate observations.
-    const providerLimited=/DEX Screener profiles HTTP 429|DEX Screener quotes HTTP 429/.test(message);
+    const providerLimited=/DEX Screener profiles HTTP 429|DEX Screener quotes HTTP 429|DISCOVERY_PROVIDERS_COOLDOWN/.test(message);
     const state=providerLimited?'RATE_LIMITED':'ERROR';
     console.error('BuyGuy Cloudflare light scan '+state+':',message);
     try{
