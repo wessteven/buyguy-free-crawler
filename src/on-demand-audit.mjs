@@ -31,20 +31,63 @@ async function assetOf(db,key){
 function publicStatus(label,stage,note,extras={}){
  return {stage,status:label,message:note,updated:label==='UPDATED',...extras};
 }
+// Bounded, exact-pool GeckoTerminal fallback. Never relabel a different pool
+// as the verified asset or invent 5-minute buyer counts.
+export async function geckoExactPoolQuote(asset,fetcher=fetch){
+ if(asset.chain!=='solana'||!asset.pool)return null;
+ const url='https://api.geckoterminal.com/api/v2/networks/solana/pools/'+encodeURIComponent(asset.pool);
+ const response=await fetcher(url,{headers:{accept:'application/json'}});
+ if(!response.ok)throw Error('GECKO_HTTP_'+response.status);
+ const body=await response.json(),pool=body?.data;
+ if(pool?.id!=='solana_'+asset.pool)return null;
+ const a=pool.attributes||{},relations=pool.relationships||{};
+ const base=relations.base_token?.data?.id;
+ if(base!=='solana_'+asset.address)return null;
+ const price=Number(a.base_token_price_usd),liquidity=Number(a.reserve_in_usd);
+ if(!(Number.isFinite(price)&&price>0&&Number.isFinite(liquidity)&&liquidity>0))return null;
+ const buys=Number(a.transactions?.m5?.buys),sells=Number(a.transactions?.m5?.sells);
+ const cap=Number(a.market_cap_usd||a.fdv_usd);
+ return {price,liquidity,market_cap:Number.isFinite(cap)&&cap>0?cap:null,
+  buys_m5:Number.isFinite(buys)&&buys>=0?buys:null,
+  sells_m5:Number.isFinite(sells)&&sells>=0?sells:null,pool:asset.pool,
+  source:'GeckoTerminal',quoteTime:null};
+}
 async function stageMarket(db,asset,at,fetcher){
  const url='https://api.dexscreener.com/tokens/v1/'+asset.chain+'/'+asset.address;
- const response=await fetcher(url,{headers:{accept:'application/json'}});
- if(!response.ok)throw Error('PROVIDER_HTTP_'+response.status);
- const parsed=parseQuoteRefresh(await response.json(),[asset],Date.parse(at));
- const quote=parsed.find(q=>q.asset_key===asset.asset_key);
- if(!quote)return publicStatus('UNAVAILABLE','market','No verified fresh quote for this exact contract. Existing data was not replaced.');
+ let quote=null,provider='DEX Screener',primaryError=null;
+ try{
+  const response=await fetcher(url,{headers:{accept:'application/json'}});
+  if(!response.ok)throw Error('PROVIDER_HTTP_'+response.status);
+  const parsed=parseQuoteRefresh(await response.json(),[asset],Date.parse(at));
+  quote=parsed.find(q=>q.asset_key===asset.asset_key)||null;
+ }catch(error){primaryError=String(error?.message||error);}
+ if(!quote&&asset.chain==='solana'&&asset.pool){
+  try{
+   const fallback=await geckoExactPoolQuote(asset,fetcher);
+   if(fallback){
+    provider='GeckoTerminal';
+    // Preserve previous transaction metrics and score: fallback does not
+    // provide independently comparable ranking inputs for every asset.
+    quote={...asset,...fallback,symbol:asset.symbol,score:asset.score,
+      status:asset.status,change_h1:asset.change_h1,volume_h24:asset.volume_h24,
+      pool_created:asset.pool_created,socials:[]};
+   }
+  }catch(error){
+   return publicStatus(/429/.test(String(error))?'RATE_LIMITED':'UNAVAILABLE','market',
+    'Market sources unavailable; exact-pool fallback failed.',{
+     providers:['DEX Screener','GeckoTerminal'],primaryError:primaryError||'NO_MATCH',
+     fallbackError:String(error?.message||error)});
+  }
+ }
+ if(!quote&&primaryError)throw Error(primaryError);
+ if(!quote)return publicStatus('UNAVAILABLE','market','No matching exact-contract or exact-pool quote; previous evidence retained.');
  const updates=[
- db.prepare("UPDATE assets SET symbol=?,pool=?,provider='DEX Screener',updated_at=?,last_seen=?,pool_created=COALESCE(pool_created,?),price=?,liquidity=?,market_cap=?,buys_m5=?,sells_m5=?,tx_m5=?,change_h1=?,volume_h24=?,score=?,status=?,observations=observations+1,misses=0 WHERE asset_key=? AND status!='TRASH' AND (last_seen IS NULL OR last_seen<=?)")
-   .bind(quote.symbol,quote.pool,at,at,quote.pool_created,quote.price,quote.liquidity,
+ db.prepare("UPDATE assets SET symbol=?,pool=?,provider=?,updated_at=?,last_seen=?,pool_created=COALESCE(pool_created,?),price=?,liquidity=?,market_cap=?,buys_m5=?,sells_m5=?,tx_m5=?,change_h1=?,volume_h24=?,score=?,status=?,observations=observations+1,misses=0 WHERE asset_key=? AND status!='TRASH' AND (last_seen IS NULL OR last_seen<=?)")
+   .bind(quote.symbol,quote.pool,provider,at,at,quote.pool_created,quote.price,quote.liquidity,
     quote.market_cap,quote.buys_m5,quote.sells_m5,quote.tx_m5,quote.change_h1,quote.volume_h24,
     quote.score,quote.status,asset.asset_key,at),
- db.prepare("INSERT OR IGNORE INTO observations(asset_key,seen_at,pool,provider,price,liquidity,buys_m5,sells_m5,score) VALUES(?,?,?,'DEX Screener',?,?,?,?,?)")
-   .bind(asset.asset_key,at,quote.pool,quote.price,quote.liquidity,quote.buys_m5,quote.sells_m5,quote.score)
+ db.prepare("INSERT OR IGNORE INTO observations(asset_key,seen_at,pool,provider,price,liquidity,buys_m5,sells_m5,score) VALUES(?,?,?,?,?,?,?,?)")
+   .bind(asset.asset_key,at,quote.pool,provider,quote.price,quote.liquidity,quote.buys_m5,quote.sells_m5,quote.score)
  ];
  if(quote.socials.length){
   const note=JSON.stringify(quote.socials);
@@ -53,8 +96,8 @@ async function stageMarket(db,asset,at,fetcher){
  }
  // Explicit provider evidence only; no quote -> no fabricated timestamp.
  await db.batch(updates);
- return publicStatus('UPDATED','market','DEX Screener exact-contract quote refreshed.',{
-  source:'DEX Screener',pool:quote.pool,liquidityUsd:quote.liquidity,
+ return publicStatus('UPDATED','market',provider+' exact-token/pool quote refreshed.',{
+  source:provider,primaryError:primaryError||null,pool:quote.pool,liquidityUsd:quote.liquidity,
   priceUsd:quote.price,score:quote.score});
 }
 async function stageMint(db,asset,at,rpc,fetcher){
