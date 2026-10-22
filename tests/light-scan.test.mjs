@@ -57,6 +57,16 @@ test('Provider outage becomes a recorded error rather than invented quotes',asyn
   assert.match(failures[0].sql,/INSERT INTO runs/);
 });
 
+test('Both providers HTTP 429 records RATE_LIMITED and does not invent quotes',async()=>{
+ const records=[],calls=[];
+ const DB={prepare(sql){return {bind(...args){return {run:async()=>records.push({sql,args})}}}}};
+ const count=await cronScan({DB},async url=>{calls.push(url);return {ok:false,status:429}});
+ assert.equal(count,0);
+ assert.equal(calls.length,2);
+ assert.equal(records.length,1);
+ assert.equal(records[0].args[2],'RATE_LIMITED');
+ assert.match(records[0].args[3],/429/);
+});
 test('Actual SQLite validates the D1 INSERT and UPDATE statements', async()=>{
   const statements=[];
   const DB={
