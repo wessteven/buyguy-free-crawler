@@ -1284,7 +1284,11 @@ async function refreshTopFiveDeep(){
    count[state]++;
    update(state,(result.status||result.error||'HTTP '+result.httpStatus)+': '+
     (result.message||'No current evidence')+
-    (result.retryAfterSeconds?' · retry after '+result.retryAfterSeconds+'s':''));
+    (result.retryAfterSeconds?' · retry after '+result.retryAfterSeconds+'s':'')+
+    (result.source?' · provider '+result.source:'')+
+    (result.primaryError?' · primary '+result.primaryError:'')+
+    (result.fallbackError?' · fallback '+result.fallbackError:'')+
+    (result.quoteSource?' · quote '+result.quoteSource:''));
    if(result.error==='D1_READ_QUOTA')interrupted='D1 daily read allowance exhausted.';
    else if(result.httpStatus===401)interrupted='Session expired; please sign in again.';
    else if(result.httpStatus===503)interrupted='Database or provider stage unavailable.';
@@ -1307,18 +1311,27 @@ async function refreshTopFiveDeep(){
   count.success++;
   pickStep('success',picks.length+' verified-chain candidates after updated quote screening.');
   if(!picks.length){interrupted='No eligible tokens to audit; no candidates invented.';return;}
-  const blockedStages=new Set();
+  // Browser-session request budget: maximum 20 token-stage requests and
+  // one provider-limited stage per session. D1 per-token leases remain authoritative.
+  const blockedStages=new Map(),stageCalls={market:0,mint:0,pool:0,route:0};
+  const maxAuditRequests=20;
+  let auditRequests=0;
   for(const [index,token] of picks.entries()){
    for(const [stage,label] of auditStages){
     if(interrupted||goodRefreshCancelled)break;
-    if(blockedStages.has(stage)){
+    if(blockedStages.has(stage)||auditRequests>=maxAuditRequests){
      count.skipped++;
-     goodRefreshStep((index+1)+'/5 · '+token.name+' · '+label)('skipped','Provider rate-limited earlier checks of this type.');
+     goodRefreshStep((index+1)+'/5 · '+token.name+' · '+label)('skipped',
+      blockedStages.get(stage)||'Session request budget reached; no provider call made.');
      continue;
     }
+    auditRequests++;stageCalls[stage]++;
     const result=await execute((index+1)+'/5 · '+token.name+' · '+label,
        '/api/audit',{assetKey:token.key,stage});
-    if(result.status==='RATE_LIMITED'||result.error==='PROVIDER_RATE_LIMIT')blockedStages.add(stage);
+    if(result.status==='RATE_LIMITED'||result.error==='PROVIDER_RATE_LIMIT'){
+     blockedStages.set(stage,(result.source||stage)+' limited; subsequent '+stage+
+      ' checks paused for this refresh session.');
+    }
     if(stage==='route')audited++;
    }
    if(interrupted||goodRefreshCancelled)break;
@@ -1343,6 +1356,9 @@ async function refreshTopFiveDeep(){
   info.textContent='Updated: '+count.success+' · limited: '+count.limited+
    ' · skipped/unavailable: '+count.skipped+' · failed: '+count.failed+
    ' · token audit sequences attempted: '+audited+'. '+
+   ' Audit calls: '+auditRequests+'/'+maxAuditRequests+
+   ' (market '+stageCalls.market+', mint '+stageCalls.mint+', pool '+stageCalls.pool+
+   ', route '+stageCalls.route+'). '+
    (interrupted|| (goodRefreshCancelled?'Stopped after current check.':
     'Research only. No orders, proof of LP lock or guarantee of sellability.'));
  }
