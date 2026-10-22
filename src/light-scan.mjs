@@ -109,7 +109,7 @@ export async function cronScan(env,fetcher=fetch){
         (started_at,completed_at,state,discovered,observed,provider_errors)
         VALUES(?,?,?,0,0,?)`).bind(stamp,iso(),state,JSON.stringify([message])).run();
     }catch(e){console.error('Unable to record scan failure:',String(e).slice(0,150))}
-    if(providerLimited)return 0; // Scheduled independent research stages continue.
+    if(providerLimited)return 0; // No invented observations; independent scheduled phases continue.
     throw error;
   }
 }
