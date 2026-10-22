@@ -37,6 +37,23 @@ class InitializationFixTests(unittest.TestCase):
         self.assertEqual(conn.execute("SELECT count(*) FROM paper_account").fetchone()[0], 1)
         self.assertEqual(conn.execute("SELECT count(*) FROM leases").fetchone()[0], 1)
 
+    def test_complete_statement_handles_semicolons_inside_strings_and_comments(self):
+        cases = [
+            "-- comment with ; punctuation\nCREATE TABLE demo (v TEXT);",
+            "INSERT INTO demo(v) VALUES ('a;b');",
+            "/* block ; comment */ INSERT INTO demo(v) VALUES ('c;d');",
+        ]
+        conn = sqlite3.connect(":memory:")
+        for sql in cases:
+            self.assertTrue(sqlite3.complete_statement(sql))
+            conn.execute(sql)
+        self.assertEqual([row[0] for row in conn.execute("SELECT v FROM demo ORDER BY rowid")], ["a;b", "c;d"])
+
+    def test_draft_changes_are_limited_to_initialization_logic(self):
+        node = next(n for n in ast.parse(SOURCE).body if isinstance(n, ast.FunctionDef) and n.name == "initialization")
+        self.assertIn("sqlite3.complete_statement", ast.get_source_segment(SOURCE, node))
+        self.assertNotIn("executescript", ast.get_source_segment(SOURCE, node))
+
     def test_comment_semicolon_does_not_create_apply_fragment(self):
         self.assertIn("Idempotent; apply", SCHEMA)
         self.assertNotIn("schema.split(';')", SOURCE)
