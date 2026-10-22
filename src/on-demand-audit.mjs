@@ -98,6 +98,7 @@ async function stageMarket(db,asset,at,fetcher){
  await db.batch(updates);
  return publicStatus('UPDATED','market',provider+' exact-token/pool quote refreshed.',{
   source:provider,primaryError:primaryError||null,pool:quote.pool,liquidityUsd:quote.liquidity,
+  providerAttempts:provider==='GeckoTerminal'?2:1,
   priceUsd:quote.price,score:quote.score});
 }
 async function stageMint(db,asset,at,rpc,fetcher){
@@ -169,8 +170,13 @@ async function stagePool(db,asset,at,rpc,fetcher){
 }
 async function stageRoute(db,asset,at,fetcher,jupiterKey){
  if(asset.chain!=='solana')return publicStatus('UNSUPPORTED','route','Robinhood sell-route verifier is not available in this Worker.');
- if(!recent(asset.last_seen,Date.parse(at),20)||!(Number(asset.price)>0))
-  return publicStatus('SKIPPED','route','A fresh market price is needed before the buy/sell route check.');
+ // Reuse a recent exact-contract quote from the persisted asset rather than
+ // re-requesting a rate-limited market provider for every route audit.
+ const quoteAgeMinutes=(Date.parse(at)-Date.parse(asset.last_seen||''))/60000;
+ if(!recent(asset.last_seen,Date.parse(at),20)||!(Number(asset.price)>0)||!asset.pool)
+  return publicStatus('SKIPPED','route','A <=20-minute quote, positive price and identified pool are required.',{
+   quoteAgeMinutes:Number.isFinite(quoteAgeMinutes)?Math.round(quoteAgeMinutes):null,
+   quoteSource:asset.provider||null,reason:'STALE_OR_UNIDENTIFIED_MARKET_QUOTE'});
  if(!['MINT_CONTROLS_REVOKED','PARTIAL_ONCHAIN_REVIEW','TOKEN_2022_METADATA_ONLY'].includes(asset.risk_status))
   return publicStatus('SKIPPED','route','Mint review not cleared; do not infer that a quote proves a safe exit.');
  let decimals;try{decimals=JSON.parse(asset.risk_note||'{}').decimals}catch{}
@@ -185,7 +191,9 @@ async function stageRoute(db,asset,at,fetcher,jupiterKey){
  return publicStatus(result.label==='BOTH_DIRECTIONS_QUOTED'?'UPDATED':'UNAVAILABLE','route',
    'Read-only Jupiter buy/sell route evidence saved. Quotes are not executed sales.',{
    source:'Jupiter',verdict:result.label||'NO_QUOTE',
-   estimatedLossPct:result.estimatedRoundTripLossPct??null});
+   estimatedLossPct:result.estimatedRoundTripLossPct??null,
+   quoteSource:asset.provider||null,quoteAgeMinutes:Math.round(quoteAgeMinutes),
+   reusedFreshQuote:true});
 }
 export async function runTokenAuditStage(env,{assetKey,stage,now=new Date().toISOString(),
  fetcher=fetch}={}){
