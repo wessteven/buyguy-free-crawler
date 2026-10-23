@@ -20,7 +20,7 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
  const rows=obs.map(o=>{
   const key=typeof o.asset_key==='string'?o.asset_key:'';
   const pool=typeof o.pool==='string'&&o.pool.trim()?o.pool:null;
-  const validKey=/^(solana:[1-9A-HJ-NP-Za-km-z]{32,44}|robinhood:0x[0-9a-fA-F]{40})$/.test(key);\n  const first=validKey&&!seen.has(key);if(validKey){if(!first)counts.repeats++;seen.add(key);}
+  const validKey=/^(solana|robinhood):[^:]+$/.test(key);\n  const first=validKey&&!seen.has(key);if(validKey){if(!first)counts.repeats++;seen.add(key);}
   if(validKey&&key.startsWith('solana:'))mints.add(key);
   const pair=JSON.stringify([key,pool]),samePool=seenPairs.has(pair);
   if(validKey&&pool&&samePool)counts.repeatSamePool++;if(validKey&&pool)seenPairs.add(pair);
