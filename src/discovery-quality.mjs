@@ -35,8 +35,8 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
   // Exact unique run timestamp + expected format are strong *inference*, not a
   // stored ingestion-path field. Never infer from provider or ten-minute slot.
   const eligible=run&&['SUCCESS','PARTIAL'].includes(run.state)&&numeric(run.observed)>0;
-  const style=/^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z$/.test(o.seen_at||'')?'lightweight':
-   /^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ$/.test(o.seen_at||'')?'broader':null;
+  const style=/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(o.seen_at||'')?'lightweight':
+   /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(o.seen_at||'')?'broader':null;
   const marker=eligible?signature(run.provider_errors):null;
   const path=eligible&&style&&(!marker||marker===style)?style:
    eligible&&!style&&marker?marker:'unknown';
