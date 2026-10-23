@@ -1,6 +1,9 @@
 name: GOGET One-Shot Public Source Evidence
 # Research-branch creation trigger only; no schedule, secrets, D1, transactions or deployment.
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/one-shot-public-source-evidence.yml'
   push:
     branches:
       - research/free-crypto-intelligence-audit-20261024
