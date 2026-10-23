@@ -56,8 +56,15 @@ export function goPlusEvidence(payload,asset){
   if(value!==undefined&&value!==null&&['string','number','boolean'].includes(typeof value))
    fields[key]=String(value).slice(0,100);
  }
- return {status:Object.keys(fields).length?'MATCHED':'MATCHED_NO_RECOGNIZED_FIELDS',
-  fields,independentContractVerification:false,safetyCertified:false};
+ const essential=asset.chain==='solana'?
+  ['mint_authority','freeze_authority','closable','metadata_mutable','balance_mutable','transfer_fee','transfer_hook']:
+  ['is_honeypot','cannot_sell_all','is_mintable','is_open_source','is_proxy','is_blacklisted','transfer_pausable'];
+ const observed=essential.filter(key=>Object.hasOwn(fields,key)),missing=essential.filter(key=>!Object.hasOwn(fields,key));
+ const status=observed.length===0?'PARTIAL_RISK_FIELDS':
+  observed.length<essential.length?'PARTIAL_RISK_FIELDS':'MATCHED';
+ return {status,fields,coverage:{essentialPresent:observed.length,
+  essentialPossible:essential.length,missingEssential:missing},
+  independentContractVerification:false,safetyCertified:false};
 }
 
 export async function probeFreeSources(input,fetcher=fetch){
