@@ -7,7 +7,7 @@ function signature(raw){
  const s=values.filter(x=>typeof x==='string').join('|');
  const light=/GeckoTerminal cooldown |DEX Screener cooldown |DISCOVERY_PROVIDERS_COOLDOWN|DEX Screener (?:profiles|quotes) HTTP 429/.test(s);
  const broad=/GeckoTerminal new pools:|\/token-(?:boosts|profiles)\/|\/community-takeovers\//.test(s);
- return light!==broad?(light?'lightweight':'broader'):null;
+ return light&&broad?'conflict':light?'lightweight':broad?'broader':null;
 }
 export async function discoveryQuality(db,{now=Date.now()}={}){
  // Both ORDER BY clauses use integer PKs. Assets join uses asset_key primary key.
@@ -39,7 +39,7 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
    /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(o.seen_at||'')?'broader':null;
   const marker=eligible?signature(run.provider_errors):null;
   const path=eligible&&style&&(!marker||marker===style)?style:
-   eligible&&!style&&marker?marker:'unknown';
+   eligible&&!style&&['lightweight','broader'].includes(marker)?marker:'unknown';
   counts[path]++;
   const when=Date.parse(o.seen_at||'');
   return {assetKey:key,pool,provider:o.provider||null,seenAt:o.seen_at||null,
