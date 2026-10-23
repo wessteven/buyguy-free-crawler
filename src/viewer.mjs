@@ -1,3 +1,4 @@
+import {discoveryQuality} from './discovery-quality.mjs';
 import {getPaperSnapshot} from './paper-ops.mjs';
 import {scheduledResearch} from './scheduled-research.mjs';
 import {issueSession,validSession,readSessionCookie,sessionCookie,clearSessionCookie} from './auth-session.mjs';
@@ -164,7 +165,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 | the   BUYGUY GOGET         |
 +----------------------------+</pre><p class="hint">[ RH + SOL ] // RESEARCH // PAPER EXPERIMENT // NO REAL TRADES</p>
 <div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p><p id="d1ResetClock" role="timer" aria-live="off" style="display:none;font-weight:bold;color:#8ae6a6"></p></div>
-<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div>
+<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div><section aria-label="Discovery quality"><h2>Discovery quality (read-only)</h2><button type="button" id="qualityLoad">Load bounded report</button><p class="hint">On demand only; latest 120 observations. Attribution and quote freshness are not independently verified.</p><div id="qualityReport" role="status" aria-live="polite"></div></section>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
 <button class="bg-tab" id="tab-good" role="tab" type="button" data-tab="good" aria-controls="panel-good" aria-selected="true" tabindex="0">WHAT'S GOOD?</button>
 <button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="false" tabindex="-1">TOKEN DATA</button>
@@ -1450,6 +1451,21 @@ async function submitWatch(event){
  finally{button.disabled=false;}
 }
 document.getElementById('watchForm').addEventListener('submit',submitWatch);
+document.getElementById('qualityLoad').addEventListener('click',async()=>{
+ const target=document.getElementById('qualityReport');
+ target.textContent='Loading read-only sample…';
+ try{
+  const response=await fetch('/api/discovery-quality',{credentials:'same-origin',cache:'no-store'});
+  if(!response.ok){target.textContent='Report unavailable (HTTP '+response.status+').';return;}
+  const data=await response.json(),c=data.counts;
+  target.textContent='Sample '+data.sampleSize+' | Unique mints '+c.uniqueMints+' | Repeat rows '+c.repeats+' | Score 60+ and liquidity $50k+ '+c.highScoreLiquid+' | Zero-buy rows '+c.zeroBuyRows+'. All ingestion paths, buyer independence and quote freshness unverified.';
+  const table=document.createElement('table'),head=document.createElement('tr');
+  for(const label of ['Exact mint','Pool','Provider','Observed UTC','Liquidity USD','Score','Buys (5m)','Attribution']){const th=document.createElement('th');th.textContent=label;head.append(th);}
+  table.append(head);
+  for(const row of data.rows){const tr=document.createElement('tr');for(const val of [row.assetKey,row.pool,row.provider,row.seenAt,row.liquidity,row.score,row.buysM5,row.path]){const td=document.createElement('td');td.textContent=String(val??'—');tr.append(td);}table.append(tr);}
+  target.append(table);
+ }catch{target.textContent='Report unavailable.';}
+});
 initTabs();
 // Reopen automatically when a valid remembered session cookie is present.
 refresh();
@@ -1483,14 +1499,18 @@ if(path==='/api/logout'){
  output.headers.set('set-cookie',clearSessionCookie());
  return output;
 }
-if(path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock'&&path!=='/api/top5-refresh')return json({error:'not_found'},404);
-if(((path==='/api/status'||path==='/api/scan-clock')&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&request.method!=='POST'))
+if(path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock'&&path!=='/api/top5-refresh'&&path!=='/api/discovery-quality')return json({error:'not_found'},404);
+if(((path==='/api/status'||path==='/api/scan-clock'||path==='/api/discovery-quality')&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&request.method!=='POST'))
  return json({error:'method_not_allowed'},405);
 const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
 const cookie=readSessionCookie(request.headers.get('cookie'));
 const authorized=auth(bearer,env.ADMIN_TOKEN||'')||await validSession(env.ADMIN_TOKEN||'',cookie);
 if(!authorized)return json({error:'unauthorized'},401);
 if(!env.DB)return json({error:'database_not_configured'},503);
+if(path==='/api/discovery-quality'){
+ try{return json(await discoveryQuality(env.DB))}
+ catch(e){return json({error:d1ReadQuota(e)?'D1_READ_QUOTA':'quality_report_unavailable'},503)}
+}
 if(path==='/api/scan-clock'){
  try{
    const latest=await env.DB.prepare('SELECT started_at,state FROM runs ORDER BY id DESC LIMIT 1').first();
