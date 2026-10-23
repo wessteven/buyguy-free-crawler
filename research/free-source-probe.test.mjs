@@ -38,10 +38,11 @@ test('GoPlus mismatched address and partial code cannot certify risk',()=>{
  assert.equal(goPlusEvidence({code:2,result:{[mint]:{}}},sol).status,'INCOMPLETE_OR_INVALID_RESPONSE');
 });
 test('GoPlus matching Solana fields remain unverified independent evidence',()=>{
- const r=goPlusEvidence({code:1,result:{[mint]:{is_mintable:'0',mint_authority:'0',holders:[1,2]}}},sol);
- assert.equal(r.status,'PARTIAL_RISK_FIELDS');assert.equal(r.fields.is_mintable,'0');
- assert.equal(r.coverage.essentialPresent,1);
- assert.ok(r.coverage.missingEssential.includes('freeze_authority'));
+ const r=goPlusEvidence({code:1,result:{[mint]:{mintable:{status:'0'},freezable:{status:'1'},holders:[1,2]}}},sol);
+ assert.equal(r.status,'PARTIAL_RISK_FIELDS');assert.equal(r.fields.mintable,'0');
+ assert.equal(r.fields.freezable,'1');
+ assert.equal(r.coverage.essentialPresent,2);
+ assert.ok(r.coverage.missingEssential.includes('closable'));
  assert.equal(r.safetyCertified,false);assert.equal(r.fields.holders,undefined);
 });
 test('Robinhood contract normalized to chain 4663, two bounded read-only calls',async()=>{
@@ -83,6 +84,29 @@ test('Holder count alone cannot imply any Solana contract risk verification',()=
  const r=goPlusEvidence({code:1,result:{[mint]:{holder_count:'4100'}}},sol);
  assert.equal(r.status,'PARTIAL_RISK_FIELDS');
  assert.equal(r.coverage.essentialPresent,0);
- assert.equal(r.coverage.missingEssential.length,7);
+ assert.equal(r.coverage.missingEssential.length,8);
  assert.equal(r.fields.holder_count,'4100');
+});
+
+test('Official nested Solana risk flags decode without exposing authorities',()=>{
+ const record={mintable:{status:'0',authority:[{address:mint}]},
+  freezable:{status:1},closable:{status:'0'},metadata_mutable:{status:'1'},
+  transfer_fee_upgradable:{status:'0'},default_account_state_upgradable:{status:'0'},
+  balance_mutable_authority:{status:'0'},transfer_hook_upgradable:{status:0},
+  non_transferable:'0',holders:[{token_account:mint}]};
+ const r=goPlusEvidence({code:1,result:{[mint]:record}},sol);
+ assert.equal(r.status,'MATCHED');
+ assert.equal(r.coverage.essentialPresent,8);
+ assert.equal(r.fields.freezable,'1');
+ assert.equal(r.fields.non_transferable,'0');
+ assert.ok(!('authority' in r.fields));
+ assert.ok(!('holders' in r.fields));
+ assert.equal(r.safetyCertified,false);
+});
+test('Nested Solana risk fields missing status remain unknown',()=>{
+ const r=goPlusEvidence({code:1,result:{[mint]:{mintable:{authority:[]},freezable:{status:''}}}},sol);
+ assert.equal(r.status,'PARTIAL_RISK_FIELDS');
+ assert.equal(r.coverage.essentialPresent,0);
+ assert.ok(!('mintable' in r.fields));
+ assert.ok(!('freezable' in r.fields));
 });
