@@ -4,11 +4,6 @@ on:
   pull_request:
     paths:
       - '.github/workflows/one-shot-public-source-evidence.yml'
-  push:
-    branches:
-      - research/free-crypto-intelligence-audit-20261024
-    paths:
-      - '.github/workflows/one-shot-public-source-evidence.yml'
 permissions:
   contents: read
 jobs:
@@ -26,10 +21,10 @@ jobs:
           import {probeFreeSources} from './research/free-source-probe.mjs';
           const cases=[
             {label:'INJOH',chain:'robinhood',
-             address:'0x2cc0fac44b8252f6b10208b091aff2c94b4da77d'},
+             address:'0x2cc0fac44b8252f6b10208b091aff2c94b4da77d',
+             pool:'0xB09fa4f04032b9d9e690ac4a1d29523b5f9A72DC'},
             {label:'Aura Final Boss Kimchi (Meteora)',chain:'solana',
-             address:'Am8iBffqgaedfdK5XhtorbcRrKzwH9nyL3ySikQfpump',
-             pool:'9LhZzwwRhkXwdtdSgCNeNTbzjMV8Xpq3KgvUVeqDUFvg'},
+             address:'Am8iBffqgaedfdK5XhtorbcRrKzwH9nyL3ySikQfpump'},
           ];
           for(const asset of cases){
             const result=await probeFreeSources(asset);
