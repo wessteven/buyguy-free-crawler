@@ -1,0 +1,25 @@
+name: GOGET Research Source Probe Tests
+on:
+  pull_request:
+    paths:
+      - 'research/free-source-probe.mjs'
+      - 'research/free-source-probe.test.mjs'
+      - 'tests/test_free_source_probe.py'
+      - 'docs/FREE_CRYPTO_SOURCE_AUDIT.md'
+      - '.github/workflows/research-source-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-research-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check optional research adapter syntax
+        run: node --check research/free-source-probe.mjs
+      - name: Run deterministic no-network evidence tests
+        run: node --test research/free-source-probe.test.mjs
