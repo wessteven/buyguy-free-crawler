@@ -165,7 +165,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 | the   BUYGUY GOGET         |
 +----------------------------+</pre><p class="hint">[ RH + SOL ] // RESEARCH // PAPER EXPERIMENT // NO REAL TRADES</p>
 <div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p><p id="d1ResetClock" role="timer" aria-live="off" style="display:none;font-weight:bold;color:#8ae6a6"></p></div>
-<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div><section aria-label="Discovery quality"><h2>Discovery quality (read-only)</h2><button type="button" id="qualityLoad">Load bounded report</button><p class="hint">On demand only; latest 120 observations. Attribution and quote freshness are not independently verified.</p><div id="qualityReport" role="status" aria-live="polite"></div></section>
+<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
 <button class="bg-tab" id="tab-good" role="tab" type="button" data-tab="good" aria-controls="panel-good" aria-selected="true" tabindex="0">WHAT'S GOOD?</button>
 <button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="false" tabindex="-1">TOKEN DATA</button>
@@ -174,6 +174,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <button class="bg-tab" id="tab-archive" role="tab" type="button" data-tab="archive" aria-controls="panel-archive" aria-selected="false" tabindex="-1">📚 Archive</button>
 <button class="bg-tab" id="tab-wallet" role="tab" type="button" data-tab="wallet" aria-controls="panel-wallet" aria-selected="false" tabindex="-1">Wallet</button>
 <button class="bg-tab" id="tab-runs" role="tab" type="button" data-tab="runs" aria-controls="panel-runs" aria-selected="false" tabindex="-1">Recent Runs</button>
+<button class="bg-tab" id="tab-quality" role="tab" type="button" data-tab="quality" aria-controls="panel-quality" aria-selected="false" tabindex="-1">Discovery Quality</button>
 <button class="bg-tab" id="tab-outcomes" role="tab" type="button" data-tab="outcomes" aria-controls="panel-outcomes" aria-selected="false" tabindex="-1">Outcomes</button>
 <button class="bg-tab" id="tab-address" role="tab" type="button" data-tab="address" aria-controls="panel-address" aria-selected="false" tabindex="-1">+ Address</button>
 </nav>
@@ -215,6 +216,14 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <p id="trashSummary" class="hint"></p></section></div>
 <div class="tab-panel" id="panel-wallet" role="tabpanel" aria-labelledby="tab-wallet" hidden><section><h2>Paper wallet</h2><div id="wallet"></div></section></div>
 <div class="tab-panel" id="panel-runs" role="tabpanel" aria-labelledby="tab-runs" hidden><section><h2>Recent runs</h2><div id="runs"></div></section></div>
+<div class="tab-panel" id="panel-quality" role="tabpanel" aria-labelledby="tab-quality" hidden>
+<section aria-label="Discovery quality"><h2>DISCOVERY QUALITY // READ ONLY</h2>
+<p class="hint">Bounded sample: latest 120 recorded observations and 45 runs, showing up to 40 rows. Read only on demand — no crawler or price provider calls. Path inference is not proof, and observation age does not verify quote freshness.</p>
+<button id="qualityLoad" type="button">GO · LOAD QUALITY REPORT</button>
+<p id="qualitySummary" role="status" aria-live="polite">Not loaded — no D1 reads spent.</p>
+<div id="qualityReport" aria-label="Discovery quality observations"></div>
+<p class="hint">Recorded pool strings are not chain-certified. The counts of 5m buys/sells are transactions, not independently verified buyers. UNKNOWN paths remain unknown.</p>
+</section></div>
 <div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden>
 <section><h2>OUR SCORE LEARNING JOURNAL</h2>
 <p class="hint">Immutable hourly Top 5 snapshots plus three rotating lower-ranked comparison tokens. Same-pool price observations after 15m, 1h, 6h and 24h; NOT executable trade P&amp;L. Missing observations and pool changes are not counted as wins or losses.</p>
@@ -327,7 +336,7 @@ let assetRows=[];
 // New default landing page; keep users' new choice across reloads, but migrate
 // old v1 research-panel preference to the clearer WHAT'S GOOD? home.
 const tabKey='buyguy.activeTab.v2';
-const dashboardTabs=['good','research','hot','not','archive','wallet','runs','outcomes','address'];
+const dashboardTabs=['good','research','hot','not','archive','wallet','runs','quality','outcomes','address'];
 let activeTab=dashboardTabs.includes(storedValue(tabKey))?storedValue(tabKey):'good';
 function activateTab(tab,{focus=false}={}){
  if(!dashboardTabs.includes(tab))return false;
@@ -1452,19 +1461,41 @@ async function submitWatch(event){
 }
 document.getElementById('watchForm').addEventListener('submit',submitWatch);
 document.getElementById('qualityLoad').addEventListener('click',async()=>{
- const target=document.getElementById('qualityReport');
- target.textContent='Loading read-only sample…';
+ const button=document.getElementById('qualityLoad'),target=document.getElementById('qualityReport');
+ const summary=document.getElementById('qualitySummary');
+ if(d1QuotaBlocked){summary.textContent='Daily D1 read quota blocked. Retry after reset.';return;}
+ button.disabled=true;summary.textContent='Loading bounded observations…';target.textContent='';
  try{
   const response=await fetch('/api/discovery-quality',{credentials:'same-origin',cache:'no-store'});
-  if(!response.ok){target.textContent='Report unavailable (HTTP '+response.status+').';return;}
-  const data=await response.json(),c=data.counts;
-  target.textContent='Sample '+data.sampleSize+' | Unique mints '+c.uniqueMints+' | Repeat rows '+c.repeats+' | Score 60+ and liquidity $50k+ '+c.highScoreLiquid+' | Zero-buy rows '+c.zeroBuyRows+'. All ingestion paths, buyer independence and quote freshness unverified.';
-  const table=document.createElement('table'),head=document.createElement('tr');
-  for(const label of ['Exact mint','Pool','Provider','Observed UTC','Liquidity USD','Score','Buys (5m)','Attribution']){const th=document.createElement('th');th.textContent=label;head.append(th);}
-  table.append(head);
-  for(const row of data.rows){const tr=document.createElement('tr');for(const val of [row.assetKey,row.pool,row.provider,row.seenAt,row.liquidity,row.score,row.buysM5,row.path]){const td=document.createElement('td');td.textContent=String(val??'—');tr.append(td);}table.append(tr);}
-  target.append(table);
- }catch{target.textContent='Report unavailable.';}
+  const data=await response.json();
+  if(!response.ok){
+   if(data.error==='D1_READ_QUOTA')setD1QuotaBlocked(true);
+   summary.textContent=data.error==='D1_READ_QUOTA'?'D1 quota exhausted — no report.':
+    response.status===401?'Session expired — sign in again.':'Report unavailable (HTTP '+response.status+').';
+   return;
+  }
+  const c=data.counts;
+  summary.textContent='SAMPLE '+data.sampleSize+'/'+data.sampledObservationLimit+
+   ' | LIGHTWEIGHT (inferred) '+c.lightweight+' | BROADER (inferred) '+c.broader+
+   ' | UNKNOWN '+c.unknown+' | Unique Solana mints '+c.uniqueMints+
+   ' | Unique assets '+c.uniqueAssets+' | Repeat observations '+c.repeats+
+   ' | Same-pool repeats '+c.repeatSamePool+' | Multiple recorded pools '+c.multiPoolAssets+
+   ' | Score 60+ / liquidity $50k+ '+c.highScoreLiquid+
+   ' | Zero-buy rows '+c.zeroBuyRows+' | Verified buyer rows 0 (not available).';
+  target.innerHTML=table(['Exact mint or contract','Recorded pool','Provider','Observed UTC',
+   'Recording age','Liquidity USD','Score','5m buy tx','5m sell tx','Repetition',
+   'Ingestion path','Quote freshness','Unique buyer proof'],(data.rows||[]).map(r=>[
+    r.assetKey,r.pool,r.provider,r.seenAt,
+    r.observationAgeMinutes===null?'Unknown':r.observationAgeMinutes+' min (recorded)',
+    r.liquidity,r.score,r.buysM5,r.sellsM5,
+    r.uniqueInSample?'First in sample':r.repeatedSamePoolInSample?'Repeat · same pool':'Repeat · other pool',
+    r.path==='unknown'?'UNKNOWN':r.path.toUpperCase()+' · inferred',
+    'UNVERIFIED','UNVERIFIED · tx count']));
+  const note=document.createElement('p');note.className='hint';
+  note.textContent=(data.limitations||[]).join(' ');
+  target.append(note);
+ }catch{summary.textContent='Report unavailable — no observations inferred.';}
+ finally{button.disabled=false;}
 });
 initTabs();
 // Reopen automatically when a valid remembered session cookie is present.

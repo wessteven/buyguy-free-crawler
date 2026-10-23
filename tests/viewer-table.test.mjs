@@ -256,7 +256,7 @@ test('Malicious saved layout and token symbol are sanitized',async()=>{
 
 test('Navigation order is TOKEN DATA, HOT, NOT, wallet, recent runs, outcomes, address',async()=>{
  const {html,evalJS,ui}=await tableSandbox();
- const names=['tab-good','tab-research','tab-hot','tab-not','tab-archive','tab-wallet','tab-runs','tab-outcomes','tab-address'];
+ const names=['tab-good','tab-research','tab-hot','tab-not','tab-archive','tab-wallet','tab-runs','tab-quality','tab-outcomes','tab-address'];
  for(let i=1;i<names.length;i++)assert.ok(html.indexOf('id="'+names[i-1]+'"')<html.indexOf('id="'+names[i]+'"'));
  assert.equal(evalJS('activeTab'),'good');
  assert.equal(ui.get('panel-good').hidden,false);
