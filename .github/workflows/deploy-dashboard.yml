@@ -9,6 +9,8 @@ on:
       - 'tests/history-read-budget.test.mjs'
       - 'src/viewer.mjs'
       - 'src/discovery-quality.mjs'
+      - 'src/clean-slate.mjs'
+      - 'tests/clean-slate.test.mjs'
       - 'tests/discovery-quality.test.mjs'
       - 'src/on-demand-audit.mjs'
       - 'src/watchlist.mjs'

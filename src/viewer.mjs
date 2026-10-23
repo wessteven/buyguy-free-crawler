@@ -1,4 +1,5 @@
 import {discoveryQuality} from './discovery-quality.mjs';
+import {CLEAN_SLATE_AT,CLEAN_SLATE_ACTIVE_WHERE} from './clean-slate.mjs';
 import {getPaperSnapshot} from './paper-ops.mjs';
 import {scheduledResearch} from './scheduled-research.mjs';
 import {issueSession,validSession,readSessionCookie,sessionCookie,clearSessionCookie} from './auth-session.mjs';
@@ -165,7 +166,7 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 | the   BUYGUY GOGET         |
 +----------------------------+</pre><p class="hint">[ RH + SOL ] // RESEARCH // PAPER EXPERIMENT // NO REAL TRADES</p>
 <div id="login"><label for="pass">Dashboard password</label><div class="login-actions"><input type="password" id="pass" placeholder="Dashboard password" autocomplete="current-password"><button id="enter" type="button">Open</button></div><label class="remember-choice" for="remember"><input id="remember" type="checkbox"> Remember me on this device (30 days)</label><p class="hint login-note">Your password is never saved in the page or browser storage. Uncheck on shared devices.</p><p id="msg" role="status" aria-live="polite"></p><p id="d1ResetClock" role="timer" aria-live="off" style="display:none;font-weight:bold;color:#8ae6a6"></p></div>
-<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div>
+<div id="board"><div class="login-actions"><button id="refresh" type="button">Refresh data</button><button id="logout" type="button">Sign out</button><span id="scanClock" role="status" aria-live="off" aria-label="Estimated time until next ten-minute scan">NEXT SCAN --:--</span></div><div id="overview"></div><p id="slateNotice" class="hint">CLEAN SLATE · Active discovery requires a recorded quote since ${CLEAN_SLATE_AT} UTC. Earlier research, journal, archived tokens, pinned addresses and paper positions are preserved. Previously seen tokens can requalify with a new quote.</p>
 <nav class="bg-tablist" role="tablist" aria-label="BuyGuy dashboard sections">
 <button class="bg-tab" id="tab-good" role="tab" type="button" data-tab="good" aria-controls="panel-good" aria-selected="true" tabindex="0">WHAT'S GOOD?</button>
 <button class="bg-tab" id="tab-research" role="tab" type="button" data-tab="research" aria-controls="panel-research" aria-selected="false" tabindex="-1">TOKEN DATA</button>
@@ -1601,7 +1602,7 @@ list('SELECT * FROM runs ORDER BY id DESC LIMIT 12'),
 // research_events history for every asset in the active dashboard.
 list("SELECT a.rowid AS discovery_number,a.*,e.note AS socials_json FROM assets a "+
  "LEFT JOIN research_events e ON e.id=(SELECT id FROM research_events WHERE asset_key=a.asset_key AND kind='TOKEN_SOCIALS' ORDER BY id DESC LIMIT 1) "+
- "WHERE a.status IN ('ALIVE','STATIC') OR (a.pinned=1 AND a.status='DEAD') OR EXISTS (SELECT 1 FROM paper_positions p WHERE p.asset_key=a.asset_key AND p.status='OPEN') "+
+ "WHERE "+CLEAN_SLATE_ACTIVE_WHERE+" "+
  "ORDER BY a.pinned DESC,a.score DESC LIMIT 500"),
 list("SELECT * FROM paper_account WHERE account='buyguy-v3'"),
 list("SELECT * FROM predictions ORDER BY id DESC LIMIT 30"),
@@ -1646,7 +1647,7 @@ try{
    WHERE s.id IN (SELECT id FROM score_snapshots ORDER BY captured_at DESC LIMIT 20)
    ORDER BY s.captured_at DESC,s.id DESC,h.horizon_min`).all()).results||[];
 }catch(e){scoreJournalStatus=/no such table/i.test(String(e))?'SCHEMA_PENDING':'UNAVAILABLE';}
-return json({runs,assets:evaluated,archive,archiveStats:archiveCounts[0]||{dead:0,trash:0},coverage:countCoverage(assets,now),wallet:wallet[0]||null,predictions,paper,routes,pinned,scoreJournal,scoreJournalStatus});
+return json({cleanSlate:{activeSince:CLEAN_SLATE_AT,scope:'active_discovery_view_only',historyPreserved:true},runs,assets:evaluated,archive,archiveStats:archiveCounts[0]||{dead:0,trash:0},coverage:countCoverage(assets,now),wallet:wallet[0]||null,predictions,paper,routes,pinned,scoreJournal,scoreJournalStatus});
 }catch(e){
  const msg=String(e?.message||e);
  if(/daily row read limit|exceeded D1.*row read/i.test(msg))
