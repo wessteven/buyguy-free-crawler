@@ -103,8 +103,8 @@ test('quality API handles absent D1 rows and generic D1 errors without leaking i
  {...base,DB:{prepare(){return {all:async()=>({})}}}});
  assert.equal(missing.status,200);
  assert.equal((await missing.json()).counts.uniqueAssets,0);
- const failure=await worker.fetch(new Request('https://go.test/api/discovery-quality',{headers:auth}),
- {...base,DB:{prepare(){throw new Error('sensitive internal database details')}}}});
+ const failingDB={prepare(){throw new Error('sensitive internal database details');}};
+ const failure=await worker.fetch(new Request('https://go.test/api/discovery-quality',{headers:auth}),{...base,DB:failingDB});
  assert.equal(failure.status,503);
  assert.deepEqual(await failure.json(),{error:'quality_report_unavailable'});
 });
