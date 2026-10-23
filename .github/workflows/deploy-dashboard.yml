@@ -1,4 +1,5 @@
 name: Deploy BuyGuy Free Dashboard
+# Release includes bounded, authenticated discovery-quality diagnostics.
 # Deployment requires SQL, protocol-specific vault, canonical migration, historical-TX and dashboard regression tests to pass before release.
 # Provider-cooldown release: no D1 migration, no scanner cadence change, no paper-trading change.
 on:
