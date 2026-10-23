@@ -81,3 +81,30 @@ test('quality API is authenticated GET, read quota is signaled, and GO control p
  assert.match(html,/GO · LOAD QUALITY REPORT/);assert.match(html,/id="goodRefreshButton"/);
  assert.match(html,/Quote freshness|quote freshness/i);
 });
+
+test('missing identity and pool never become attributed or inflate repeat counts',async()=>{
+ const at='2026-10-23T10:00:00.123Z';
+ const records=[{asset_key:null,pool:null,seen_at:at,buys_m5:null},
+ {asset_key:'',pool:'pool',seen_at:at},
+ {asset_key:'solana:MintA',pool:null,seen_at:at},
+ {asset_key:'solana:MintA',pool:'pool',seen_at:at}];
+ const runs=[{started_at:at,state:'SUCCESS',observed:4,provider_errors:'[]'}];
+ const report=await discoveryQuality(mock(records,runs));
+ assert.equal(report.counts.uniqueAssets,1);
+ assert.equal(report.counts.repeats,1);
+ assert.equal(report.counts.repeatSamePool,0);
+ assert.deepEqual(report.rows.map(x=>x.path),['unknown','unknown','unknown','lightweight']);
+ assert.equal(report.rows[0].poolIdentity,'unknown');
+});
+test('quality API handles absent D1 rows and generic D1 errors without leaking internals',async()=>{
+ const auth={authorization:'Bearer test-dashboard-password'};
+ const base={ADMIN_TOKEN:'test-dashboard-password'};
+ const missing=await worker.fetch(new Request('https://go.test/api/discovery-quality',{headers:auth}),
+ {...base,DB:{prepare(){return {all:async()=>({})}}}});
+ assert.equal(missing.status,200);
+ assert.equal((await missing.json()).counts.uniqueAssets,0);
+ const failure=await worker.fetch(new Request('https://go.test/api/discovery-quality',{headers:auth}),
+ {...base,DB:{prepare(){throw new Error('sensitive internal database details')}}}});
+ assert.equal(failure.status,503);
+ assert.deepEqual(await failure.json(),{error:'quality_report_unavailable'});
+});
