@@ -8,6 +8,8 @@ on:
       - '.github/workflows/deploy-dashboard.yml'
       - 'tests/history-read-budget.test.mjs'
       - 'src/viewer.mjs'
+      - 'src/discovery-quality.mjs'
+      - 'tests/discovery-quality.test.mjs'
       - 'src/on-demand-audit.mjs'
       - 'src/watchlist.mjs'
       - 'src/auth-session.mjs'
