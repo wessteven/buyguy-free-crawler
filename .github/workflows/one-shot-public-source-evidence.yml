@@ -1,0 +1,40 @@
+name: GOGET One-Shot Public Source Evidence
+# Research-branch creation trigger only; no schedule, secrets, D1, transactions or deployment.
+on:
+  push:
+    branches:
+      - research/free-crypto-intelligence-audit-20261024
+    paths:
+      - '.github/workflows/one-shot-public-source-evidence.yml'
+permissions:
+  contents: read
+jobs:
+  one-shot-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Four bounded public HTTP attempts (no retries)
+        run: |
+          node --input-type=module <<'JS'
+          import {probeFreeSources} from './research/free-source-probe.mjs';
+          const cases=[
+            {label:'INJOH',chain:'robinhood',
+             address:'0x2cc0fac44b8252f6b10208b091aff2c94b4da77d'},
+            {label:'Aura Final Boss Kimchi (Meteora)',chain:'solana',
+             address:'Am8iBffqgaedfdK5XhtorbcRrKzwH9nyL3ySikQfpump',
+             pool:'9LhZzwwRhkXwdtdSgCNeNTbzjMV8Xpq3KgvUVeqDUFvg'},
+          ];
+          for(const asset of cases){
+            const result=await probeFreeSources(asset);
+            console.log('PROBE_RESULT '+JSON.stringify({label:asset.label,
+              chain:result.asset.chain,contract:result.asset.address,
+              suppliedExactPool:result.asset.pool||null,
+              observedAt:result.observedAt,market:result.market,risk:result.risk,
+              requestsAttempted:result.requestsAttempted,
+              caveat:'Research evidence only; provider quote time and unique buyers unverified.'}));
+          }
+          JS
