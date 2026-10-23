@@ -30,8 +30,16 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
   if(numeric(o.buys_m5)===0)counts.zeroBuyRows++;
   const matched=byTime.get(o.seen_at)||[];
   const run=matched.length===1?matched[0]:null;
-  const path=run&&['SUCCESS','PARTIAL'].includes(run.state)&&numeric(run.observed)>0?
-   signature(run.provider_errors)||'unknown':'unknown';
+  // Cloudflare lightweight writer: Date.toISOString() -> millisecond timestamp.
+  // Python broader writer: now(timespec='seconds') -> no fractional component.
+  // Exact unique run timestamp + expected format are strong *inference*, not a
+  // stored ingestion-path field. Never infer from provider or ten-minute slot.
+  const eligible=run&&['SUCCESS','PARTIAL'].includes(run.state)&&numeric(run.observed)>0;
+  const style=/^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z$/.test(o.seen_at||'')?'lightweight':
+   /^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\dZ$/.test(o.seen_at||'')?'broader':null;
+  const marker=eligible?signature(run.provider_errors):null;
+  const path=eligible&&style&&(!marker||marker===style)?style:
+   eligible&&!style&&marker?marker:'unknown';
   counts[path]++;
   const when=Date.parse(o.seen_at||'');
   return {assetKey:key,pool,provider:o.provider||null,seenAt:o.seen_at||null,
@@ -40,7 +48,8 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
    firstSeen:o.first_seen||null,poolCreated:o.pool_created||null,
    uniqueInSample:first,repeatedSamePoolInSample:samePool,
    poolIdentity:pool?'recorded_unverified':'unknown',
-   path,pathConfidence:path==='unknown'?'unverified':'inferred_run_marker_not_confirmed',
+   path,pathConfidence:path==='unknown'?'unverified':
+    style===path?'inferred_writer_timestamp_and_unique_run':'inferred_run_error_marker',
    observationAgeMinutes:Number.isFinite(when)&&when<=now?Math.round((now-when)/60000):null,
    quoteFreshness:'unverified',buyerEvidence:'transaction_counts_only',
    verifiedIndependentBuyers:null};
@@ -50,7 +59,7 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
  return {sampleSize:rows.length,sampledObservationLimit:DISCOVERY_OBSERVATION_LIMIT,
   sampledRunLimit:DISCOVERY_RUN_LIMIT,displayLimit:DISCOVERY_DISPLAY_LIMIT,counts,
   rows:rows.slice(0,DISCOVERY_DISPLAY_LIMIT),limitations:[
-   'Attribution requires a uniquely matched run with a writer-specific error marker; even then inference is not row-level proof. Other paths remain UNKNOWN.',
+   'Attribution uses an exact unique run timestamp plus the current writers\' timestamp formats (lightweight: millisecond ISO, broader: second ISO), optionally a consistent writer-specific error marker. It is inference, not independent proof of row provenance. Conflicts remain UNKNOWN.',
    'Latest 120 observation rows and 45 runs only; uniqueness and repeated pools are sample statistics, not lifetime totals.',
    'Pool addresses are stored identifiers, not independently chain-certified pools.',
    'Observation age is recording age; provider quote freshness is unverified.',

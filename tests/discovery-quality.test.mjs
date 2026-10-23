@@ -11,14 +11,14 @@ function mock(observations,runs){
 }
 test('quality: identity, repeats, pool switches, age and inference are honest',async()=>{
  const records=[
-  {id:5,asset_key:'solana:MintA',pool:'poolB',seen_at:stamp,provider:'DEX Screener',score:73,liquidity:60000,buys_m5:8,sells_m5:2},
+  {id:5,asset_key:'solana:MintA',pool:'poolB',seen_at:'2026-10-23T10:00:00.123Z',provider:'DEX Screener',score:73,liquidity:60000,buys_m5:8,sells_m5:2},
   {id:4,asset_key:'solana:MintA',pool:'poolA',seen_at:'2026-10-23T09:00:00Z',score:64,liquidity:80000,buys_m5:6,sells_m5:1},
   {id:3,asset_key:'solana:MintA',pool:'poolA',seen_at:'2026-10-23T08:00:00Z',score:40,liquidity:2000,buys_m5:0,sells_m5:0},
   {id:2,asset_key:'solana:MintB',pool:'poolC',seen_at:'2026-10-23T07:00:00Z',score:30,liquidity:3000,buys_m5:2,sells_m5:3},
   {id:1,asset_key:'robinhood:0xdead',pool:'poolD',seen_at:'2026-10-23T06:00:00Z',score:10,liquidity:1000,buys_m5:null}
  ];
  const runs=[
-  {started_at:stamp,state:'PARTIAL',observed:3,provider_errors:'["GeckoTerminal cooldown 300s"]'},
+  {started_at:'2026-10-23T10:00:00.123Z',state:'PARTIAL',observed:3,provider_errors:'["GeckoTerminal cooldown 300s"]'},
   {started_at:'2026-10-23T09:00:00Z',state:'PARTIAL',observed:4,provider_errors:'["/token-boosts/latest/v1: HTTP 429"]'},
   {started_at:'2026-10-23T08:00:00Z',state:'SUCCESS',observed:5,provider_errors:'[]'}
  ];
@@ -28,7 +28,8 @@ test('quality: identity, repeats, pool switches, age and inference are honest',a
  assert.equal(r.counts.repeats,2);assert.equal(r.counts.repeatSamePool,1);
  assert.equal(r.counts.multiPoolAssets,1);assert.equal(r.counts.highScoreLiquid,2);
  assert.equal(r.counts.zeroBuyRows,1);
- assert.deepEqual(r.rows.map(x=>x.path),['lightweight','broader','unknown','unknown','unknown']);
+ assert.deepEqual(r.rows.map(x=>x.path),['lightweight','broader','broader','unknown','unknown']);
+ assert.equal(r.rows[0].pathConfidence,'inferred_writer_timestamp_and_unique_run');
  assert.equal(r.rows[0].observationAgeMinutes,20);
  assert.equal(r.rows[0].verifiedIndependentBuyers,null);
  assert.equal(r.rows[0].quoteFreshness,'unverified');
@@ -39,11 +40,21 @@ test('quality: identity, repeats, pool switches, age and inference are honest',a
 test('unknown remains unknown for colliding run timestamps, invalid markers and failed runs',async()=>{
  const o=[{asset_key:'solana:M',seen_at:stamp,pool:'X'}];
  const marker={started_at:stamp,state:'SUCCESS',observed:1,provider_errors:'["GeckoTerminal cooldown 100s"]'};
- const scenarios=[[{...marker,provider_errors:'[]'}],
+ const scenarios=[[],
   [{...marker,state:'ERROR'}],
   [{...marker,provider_errors:'["GeckoTerminal cooldown 100s","/token-boosts/latest/v1"]'}],
   [marker,marker]];
  for(const rs of scenarios)assert.equal((await discoveryQuality(mock(o,rs))).rows[0].path,'unknown');
+});
+test('writer format attribution never relies on provider branding or cron modulo',async()=>{
+ const light='2026-10-23T10:00:00.471Z',broad='2026-10-23T09:59:56Z';
+ const obs=[{asset_key:'solana:A',pool:'P1',seen_at:light,provider:'DEX Screener'},
+   {asset_key:'solana:B',pool:'P2',seen_at:broad,provider:'GeckoTerminal'}];
+ const runs=[{started_at:light,state:'SUCCESS',observed:1,provider_errors:'[]'},
+   {started_at:broad,state:'SUCCESS',observed:1,provider_errors:'[]'}];
+ const x=await discoveryQuality(mock(obs,runs));
+ assert.deepEqual(x.rows.map(y=>y.path),['lightweight','broader']);
+ assert.equal(x.counts.unknown,0);
 });
 test('unchanged schema accepts fixed LIMIT PK-ordered queries in SQLite',()=>{
  const source=readFileSync('src/discovery-quality.mjs','utf8');
