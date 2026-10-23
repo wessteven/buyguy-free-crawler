@@ -39,7 +39,9 @@ test('GoPlus mismatched address and partial code cannot certify risk',()=>{
 });
 test('GoPlus matching Solana fields remain unverified independent evidence',()=>{
  const r=goPlusEvidence({code:1,result:{[mint]:{is_mintable:'0',mint_authority:'0',holders:[1,2]}}},sol);
- assert.equal(r.status,'MATCHED');assert.equal(r.fields.is_mintable,'0');
+ assert.equal(r.status,'PARTIAL_RISK_FIELDS');assert.equal(r.fields.is_mintable,'0');
+ assert.equal(r.coverage.essentialPresent,1);
+ assert.ok(r.coverage.missingEssential.includes('freeze_authority'));
  assert.equal(r.safetyCertified,false);assert.equal(r.fields.holders,undefined);
 });
 test('Robinhood contract normalized to chain 4663, two bounded read-only calls',async()=>{
@@ -50,7 +52,7 @@ test('Robinhood contract normalized to chain 4663, two bounded read-only calls',
    priceUsd:'0.01',liquidity:{usd:12000}}]);};
  const result=await probeFreeSources({chain:'robinhood',address:evm.toUpperCase().replace('0X','0x')},mock);
  assert.equal(urls.length,2);assert.match(urls[1],/token_security\/4663/);
- assert.equal(result.market.status,'MATCHED');assert.equal(result.risk.status,'MATCHED');
+ assert.equal(result.market.status,'MATCHED');assert.equal(result.risk.status,'PARTIAL_RISK_FIELDS');
  assert.equal(result.market.exactPool,false);assert.equal(result.researchOnly,true);
 });
 test('Provider errors are explicit, not safe or zero risk',async()=>{
@@ -65,4 +67,22 @@ test('Malformed provider payloads are not silently accepted',async()=>{
  const result=await probeFreeSources(sol,mock);
  assert.equal(result.market.status,'INVALID_RESPONSE');
  assert.equal(result.risk.status,'INCOMPLETE_OR_INVALID_RESPONSE');
+});
+
+test('Complete Robinhood GoPlus flags can be matched without certifying safety',()=>{
+ const fields={is_honeypot:'0',cannot_sell_all:'0',is_mintable:'0',
+  is_open_source:'1',is_proxy:'0',is_blacklisted:'0',transfer_pausable:'0'};
+ const r=goPlusEvidence({code:1,result:{[evm]:fields}},
+  {chain:'robinhood',address:evm});
+ assert.equal(r.status,'MATCHED');
+ assert.equal(r.coverage.essentialPresent,7);
+ assert.equal(r.coverage.missingEssential.length,0);
+ assert.equal(r.safetyCertified,false);
+});
+test('Holder count alone cannot imply any Solana contract risk verification',()=>{
+ const r=goPlusEvidence({code:1,result:{[mint]:{holder_count:'4100'}}},sol);
+ assert.equal(r.status,'PARTIAL_RISK_FIELDS');
+ assert.equal(r.coverage.essentialPresent,0);
+ assert.equal(r.coverage.missingEssential.length,7);
+ assert.equal(r.fields.holder_count,'4100');
 });
