@@ -5,6 +5,9 @@ import {fileURLToPath} from 'node:url';
 
 const SOL=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const EVM=/^0x[0-9a-fA-F]{40}$/;
+const SOL_NESTED_RISKS=['mintable','freezable','closable','metadata_mutable',
+ 'transfer_fee_upgradable','default_account_state_upgradable',
+ 'balance_mutable_authority','transfer_hook_upgradable'];
 const RISK_KEYS=['is_honeypot','cannot_sell_all','is_mintable','mint_authority',
  'freeze_authority','is_open_source','is_proxy','hidden_owner',
  'owner_change_balance','is_blacklisted','transfer_pausable',
@@ -56,8 +59,19 @@ export function goPlusEvidence(payload,asset){
   if(value!==undefined&&value!==null&&['string','number','boolean'].includes(typeof value))
    fields[key]=String(value).slice(0,100);
  }
- const essential=asset.chain==='solana'?
-  ['mint_authority','freeze_authority','closable','metadata_mutable','balance_mutable','transfer_fee','transfer_hook']:
+ if(asset.chain==='solana'){
+  // Official GoPlus Solana API encodes capability flags as nested {status,...} objects.
+  // Preserve only documented 0/1 status; do not expose wallet/authority details.
+  for(const key of SOL_NESTED_RISKS){
+   const nested=record[key];
+   if(nested&&typeof nested==='object'&&!Array.isArray(nested)&&
+      (nested.status==='0'||nested.status==='1'||nested.status===0||nested.status===1))
+    fields[key]=String(nested.status);
+  }
+  const nt=record.non_transferable;
+  if(nt==='0'||nt==='1'||nt===0||nt===1)fields.non_transferable=String(nt);
+ }
+ const essential=asset.chain==='solana'?SOL_NESTED_RISKS:
   ['is_honeypot','cannot_sell_all','is_mintable','is_open_source','is_proxy','is_blacklisted','transfer_pausable'];
  const observed=essential.filter(key=>Object.hasOwn(fields,key)),missing=essential.filter(key=>!Object.hasOwn(fields,key));
  const status=observed.length===0?'PARTIAL_RISK_FIELDS':
