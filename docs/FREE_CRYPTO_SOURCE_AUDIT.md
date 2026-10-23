@@ -68,3 +68,13 @@ Interpretation: these provider flags did not identify the tracked hazards at the
 
 ## Verified CI
 The research-only Node 22 GitHub Actions run [39964114276](https://github.com/wessteven/buyguy-free-crawler/actions/runs/39964114276) finished **13 tests passed, zero failed** after Solana nested decoding. The branch comparison contains only five new research/CI/doc files, no Worker, scheduler, schema or paper-trading edits. Do not merge or deploy as part of this audit.
+
+## Independent Robinhood contract cross-check (authenticated Blockscout PRO)
+
+The user's private Blockscout PRO Reader was **independently authenticated** in this session at 2026-10-23T13:50:24Z using a successful Robinhood Chain research call and a deliberately rejected invalid-key control; **the shared allowance was not used**. Credentials and raw authentication material were not retained.
+
+[INJOH contract on Blockscout](https://robinhoodchain.blockscout.com/address/0x2cC0FAC44B8252f6B10208B091aFf2c94B4da77D?tab=contract): Blockscout PRO reports name `PonsLauncherToken`, Solidity v0.8.30, fully verified, non-proxy, with 18 decimals and one-billion whole INJOH in total supply. Public constructor args set `maxWalletBps=500`, `maxTxBps=550` and `restrictionBlocks=2`; the verified source explains these 5%/5.5% limits apply to **canonical pool buys only during the initial launch window**, not perpetual limits on ordinary transfers. Its constructor calls `_mint(msg.sender,supply_)`; the inspected main contract declares no public/external mint function. These narrow findings are consistent with GoPlus `is_mintable=0`, `is_proxy=0` and `is_open_source=1`. Blockscout does **not** report the contract as formally certified/audited.
+
+PRO's token holder count was **6014**, versus GoPlus **6015**, fetched within minutes. That one-holder discrepancy is evidence of separate indexing/capture points, not proof either is wrong; preserve source and observation times instead of silently preferring one.
+
+This cross-check supports useful independent contract evidence but **does not certify** the pool's available exit depth, beneficial ownership, other linked Sinjoh/PONS contracts, governance outside the token, off-chain data feeds or the wallet-home valuation discrepancy. Keep all trading disabled and existing gates unchanged.
