@@ -20,10 +20,10 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
  const rows=obs.map(o=>{
   const key=typeof o.asset_key==='string'?o.asset_key:'';
   const pool=typeof o.pool==='string'&&o.pool.trim()?o.pool:null;
-  const first=!seen.has(key);if(!first)counts.repeats++;seen.add(key);
-  if(key.startsWith('solana:')&&key.length>7)mints.add(key);
+  const validKey=/^(solana:[1-9A-HJ-NP-Za-km-z]{32,44}|robinhood:0x[0-9a-fA-F]{40})$/.test(key);\n  const first=validKey&&!seen.has(key);if(validKey){if(!first)counts.repeats++;seen.add(key);}
+  if(validKey&&key.startsWith('solana:'))mints.add(key);
   const pair=JSON.stringify([key,pool]),samePool=seenPairs.has(pair);
-  if(samePool)counts.repeatSamePool++;seenPairs.add(pair);
+  if(validKey&&pool&&samePool)counts.repeatSamePool++;if(validKey&&pool)seenPairs.add(pair);
   if(!allPools.has(key))allPools.set(key,new Set());
   if(pool)allPools.get(key).add(pool);
   if(numeric(o.score)>=60&&numeric(o.liquidity)>=50000)counts.highScoreLiquid++;
@@ -34,7 +34,7 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
   // Python broader writer: now(timespec='seconds') -> no fractional component.
   // Exact unique run timestamp + expected format are strong *inference*, not a
   // stored ingestion-path field. Never infer from provider or ten-minute slot.
-  const eligible=run&&['SUCCESS','PARTIAL'].includes(run.state)&&numeric(run.observed)>0;
+  const eligible=validKey&&pool&&run&&['SUCCESS','PARTIAL'].includes(run.state)&&numeric(run.observed)>0;
   const style=/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(o.seen_at||'')?'lightweight':
    /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(o.seen_at||'')?'broader':null;
   const marker=eligible?signature(run.provider_errors):null;
@@ -47,7 +47,7 @@ export async function discoveryQuality(db,{now=Date.now()}={}){
    buysM5:numeric(o.buys_m5),sellsM5:numeric(o.sells_m5),
    firstSeen:o.first_seen||null,poolCreated:o.pool_created||null,
    uniqueInSample:first,repeatedSamePoolInSample:samePool,
-   poolIdentity:pool?'recorded_unverified':'unknown',
+   poolIdentity:validKey&&pool?'recorded_unverified':'unknown',
    path,pathConfidence:path==='unknown'?'unverified':
     style===path?'inferred_writer_timestamp_and_unique_run':'inferred_run_error_marker',
    observationAgeMinutes:Number.isFinite(when)&&when<=now?Math.round((now-when)/60000):null,
