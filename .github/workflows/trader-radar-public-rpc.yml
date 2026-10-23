@@ -1,0 +1,23 @@
+name: GOGET Trader Radar Public RPC Verification
+on:
+  pull_request:
+    paths:
+      - 'scripts/trader-radar-public-raw-probe.mjs'
+      - 'src/trader-radar-raw-audit.mjs'
+      - 'tests/trader-radar-raw-audit.test.mjs'
+      - '.github/workflows/trader-radar-public-rpc.yml'
+permissions:
+  contents: read
+jobs:
+  verify_raw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify raw transaction audit tests
+        run: node --test tests/trader-radar-raw-audit.test.mjs
+      - name: Probe seven PHP and one XTV transaction against public Solana RPC
+        run: node scripts/trader-radar-public-raw-probe.mjs

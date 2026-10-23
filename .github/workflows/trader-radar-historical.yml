@@ -1,0 +1,49 @@
+name: GOGET Manual Trader Radar Historical Replay
+on:
+  workflow_dispatch:
+    inputs:
+      wallet_count:
+        description: 'Dated candidate wallets'
+        type: choice
+        options:
+          - '2'
+          - '4'
+        default: '2'
+      tx_limit:
+        description: 'Maximum transaction samples per wallet'
+        type: choice
+        options:
+          - '8'
+          - '4'
+          - '12'
+        default: '8'
+      page_limit:
+        description: 'Max signature pages per wallet'
+        type: choice
+        options:
+          - '1'
+          - '2'
+        default: '1'
+permissions:
+  contents: read
+concurrency:
+  group: goget-manual-trader-historical-replay
+  cancel-in-progress: false
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run bounded historical reconstruction tests
+        run: node --test tests/trader-radar*.test.mjs
+      - name: Bounded historical Helius reader (no trades or database writes)
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          WALLET_COUNT: ${{ inputs.wallet_count }}
+          TX_LIMIT: ${{ inputs.tx_limit }}
+          PAGE_LIMIT: ${{ inputs.page_limit }}
+        run: node scripts/trader-radar-historical-research.mjs

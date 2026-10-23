@@ -1,0 +1,23 @@
+name: GOGET Manual Trader Radar Research
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-manual-trader-radar
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run offline Trader Radar unit tests
+        run: node --test tests/trader-radar*.test.mjs
+      - name: Bounded read-only wallet activity check
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: node scripts/trader-radar-research.mjs
