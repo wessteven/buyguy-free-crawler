@@ -1,4 +1,54 @@
-# WHAT'S GOOD Pocket Radar Android v0.6
+
+## Permanent signing: update in place from v0.7 onward
+
+**Why the one-time switch?** Prior GitHub Actions APKs are Android debug builds
+with temporary randomly generated signing certificates. Android forbids
+in-place updates across different signing keys, even when package IDs match.
+Those ephemeral private keys were not retained. As a result, switching from
+v0.6 (or earlier debug build) to the first **stable-signed** v0.7 requires
+uninstalling the old debug install once.
+
+**After the first stable-signed APK is installed**, future releases can use
+Android's normal **Update** path. Keep all of the following constant:
+
+- Android applicationId: `dev.whatsgood.pocketradar`
+- Signing keystore / alias (`pocket-radar`) / private certificate
+- Increase `versionCode` for each release (v0.7 uses versionCode 7).
+- Keep the widget receiver `dev.whatsgood.pocketradar.RadarWidget` for continuity.
+
+**One-time owner setup (Windows laptop, Java 17 JDK):**
+
+1. Open `android/pocket-radar/SETUP_SIGNING_WINDOWS.ps1` on a trusted Windows PC.
+   It creates a password-protected, long-lived PKCS12 signing key in
+   `Documents/PocketRadarSigning/pocket-radar-release.p12` and copies its Base64
+   encoding to your clipboard. Run with PowerShell (requires local JDK keytool).
+2. In `https://github.com/wessteven/buyguy-free-crawler/settings/secrets/actions`,
+   create two **repository secrets**:
+   - `POCKET_RADAR_KEYSTORE_BASE64`: paste the copied base64 bytes.
+   - `POCKET_RADAR_SIGNING_PASSWORD`: the strong keytool password.
+3. Securely back up the private .p12 file and password OFFLINE. Anyone with
+   both could impersonate the app publisher; losing them would break updates.
+   Never commit, upload them to the repo, send them in chat or include in logs.
+4. The separate `Pocket Radar Signed Update APK` GitHub Actions workflow
+   produces `pocket-radar-v07-SIGNED-UPDATE` when the two secrets are present.
+   The workflow verifies APK signature and package ID. A run with missing
+   secrets produces no signed-release artifact. The ordinary
+   `Pocket Radar Android APK` debug artifact is **NOT** update compatible.
+5. Install the first v0.7 SIGNED UPDATE APK after removing the old debug build
+   for the **last time**. Subsequent signed releases (v0.8, v0.9...) install
+   in place from the same signing key with higher versionCode, normally
+   retaining the widget, app settings and saved data.
+
+Android/CI tool compilation alone does not prove an on-device successful
+update. Confirm v0.8 installs atop v0.7 without an uninstall before treating
+this workflow as fully field-tested.
+
+The signed-release workflow is separate, uses GitHub Actions secrets, and
+cannot be activated until the repository owner creates the secrets. The
+connected GitHub tool cannot administer secrets. The key material must never
+appear in a public repo or an unprotected artifact.
+
+# WHAT'S GOOD Pocket Radar Android v0.7
 
 A **read-only Android home-screen widget** with a public Solana trending-pool ticker.
 It is **not** the authenticated GOGET shortlist, buy/sell signals, real-time tick data,
