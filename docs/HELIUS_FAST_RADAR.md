@@ -1,7 +1,8 @@
 # Direct Helius radar — initial live proof
 
-25 October 2026. Initial four-cycle test PASSED. One-hour soak RUNNING at the time
-this note was written; its result must be read from the workflow, not assumed.
+25 October 2026. Initial four-cycle test PASSED. One-hour soak subsequently PASSED: 121/121 cycles, zero gaps, 3600.136 seconds,
+122 RPC calls, 546 D1 rows read, 600 written. Production integration subsequently
+passed a separate live check; see HELIUS_PRODUCTION_RADAR.md.
 
 Workflow: https://github.com/wessteven/buyguy-free-crawler/actions/runs/40156994049
 Evidence: ../research/helius_fast_initial_proof_2026-10-25.json
@@ -68,8 +69,9 @@ trial, not every thirty seconds. A production scheduler should cache the registr
 and bound reselection frequency.
 
 This experiment runs in GitHub Actions to establish data correctness and cost.
-It is NOT yet integrated into the live Cloudflare fast-radar panel. That panel's
-older market-provider experiment remains stopped. Do not interpret this trial as
+The initial experiment itself was not dashboard integration. The module is now
+integrated and separately verified in Cloudflare; the old market-provider
+experiment is replaced by direct Helius mode. Do not interpret this trial as
 permanent production collection. After the hour passes, reuse the tested module
 in the existing Cloudflare Durable Object, add the fresh USD reference, measure
 end-to-end lag and recoverable connection gaps, then consider streaming.
