@@ -22,3 +22,5 @@ new_sqlite_classes = ["FastRadar"]
 
 [vars]
 FAST_RADAR_ENABLED = "true"
+
+FAST_RADAR_SOURCE = "helius"

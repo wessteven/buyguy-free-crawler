@@ -1,3 +1,4 @@
+import {discoverRegistry,readPumpSnapshots,solUsdReference} from './helius-fast-quotes.mjs';
 // Isolated 30-second market-data lane. No ranking, trading or discovery writes.
 import {CLEAN_SLATE_AT} from './clean-slate.mjs';
 export const INTERVAL_MS=30000;
@@ -62,7 +63,7 @@ export class FastRadar {
    if(path==='/stop'){this.data.enabled=false;await this.state.storage.deleteAlarm();await this.save();await this.publishProof();return json({enabled:false})}
    if(path!=='/start')return json({error:'not_found'},404);
    if(this.env.FAST_RADAR_ENABLED!=='true')return json({error:'FAST_RADAR_NOT_ENABLED'},409);
-   this.data.enabled=true;this.data.trial_started_at=Date.now();this.data.proof_ticks=[];await this.save();await this.state.storage.setAlarm(Date.now()+1);
+   this.data.enabled=true;this.data.mode=this.env.FAST_RADAR_SOURCE||'market';this.data.quotes=[];this.data.registry=null;this.data.current_slot=0;this.data.trial_started_at=Date.now();this.data.proof_ticks=[];await this.save();await this.state.storage.setAlarm(Date.now()+1);
    return json({enabled:true,target_interval_seconds:30});
   });
  }
@@ -88,7 +89,50 @@ export class FastRadar {
    this.data.providers[name]={next_at:Math.max(this.data.providers[name]?.next_at||0,now+60000),failures:(state.failures||0)+1,status:'UNAVAILABLE'};return null;
   }
  }
+ async heliusTick(now){
+  const d=this.data,day=new Date(now).toISOString().slice(0,10);
+  if(d.day!==day){d.day=day;d.writes=0;d.daily_rpc_calls=0}
+  d.metrics ||= {rpc_calls:0,response_bytes:0};
+  d.last_tick=new Date(now).toISOString();d.updated_quotes=0;
+  if((d.daily_rpc_calls||0)>=3000){d.error='DAILY_RPC_BUDGET';return}
+  if((d.helius_next_at||0)>now){d.error='HELIUS_COOLDOWN';return}
+  const before=d.metrics.rpc_calls;
+  try{
+   if(!d.registry||now-(d.registry_at||0)>=3600000){
+    const result=await this.env.DB.prepare(`SELECT asset_key,chain,address,symbol,pool FROM assets WHERE chain='solana'
+     AND status IN ('ALIVE','STATIC') AND last_seen>=? AND pool IS NOT NULL ORDER BY score DESC,asset_key LIMIT 40`).bind(CLEAN_SLATE_AT).all();
+    const selected=await discoverRegistry(this.env,result.results||[],{metrics:d.metrics});
+    d.registry=selected.registry;d.unsupported=selected.rejected;d.registry_at=now;
+    d.targets=d.registry;d.selection_rows_read=result.meta?.rows_read??null;
+   }
+   if(!d.registry.length){d.error='NO_SUPPORTED_POOLS';return}
+   const frame=await readPumpSnapshots(this.env,d.registry,{minSlot:d.current_slot||0,metrics:d.metrics});
+   if(frame.slot<=(d.current_slot||0)){d.error='SLOT_NOT_ADVANCED';return}
+   d.current_slot=frame.slot;d.rejected=frame.rejected;
+   // One independent USD reference shared by all five pools. Native prices survive reference outages.
+   const reference=await solUsdReference();d.usd_reference=reference;
+   const fresh=frame.quotes.map(q=>({...q,provider:'Helius',source_at:null,
+    price_usd:reference?q.price_sol*reference.price:null,usd_source_at:reference?.source_at||null}));
+   const wanted=new Set(d.registry.map(t=>t.pool));d.quotes=d.quotes.filter(q=>wanted.has(q.pool));
+   for(const q of fresh){d.quotes=d.quotes.filter(old=>old.pool!==q.pool);d.quotes.push(q)}
+   d.updated_quotes=fresh.length;d.error=frame.rejected.length?'PARTIAL_POOL_COVERAGE':null;
+   const minute=new Date(now).toISOString().slice(0,16);
+   if(fresh.length&&d.sampleMinute!==minute&&d.writes+15<=DAILY_WRITE_BUDGET&&d.samples_reserved+5<=200000){
+    d.writes+=15;d.samples_reserved+=5;d.sampleMinute=minute;await this.save();
+    const result=await this.env.DB.batch(fresh.map(q=>this.env.DB.prepare(`INSERT OR IGNORE INTO chain_radar_samples
+     (chain,pool,minute,asset_key,slot,received_at,price_sol,base_reserve_raw,quote_reserve_raw,decoder) VALUES(?,?,?,?,?,?,?,?,?,?)`)
+     .bind('solana',q.pool,minute+':00.000Z',q.asset_key,q.slot,q.received_at,q.price_sol,q.base_reserve_raw,q.quote_reserve_raw,q.decoder)));
+    d.last_sample_rows_written=result.reduce((n,r)=>n+(r.meta?.rows_written||0),0);
+   }
+   d.history_paused=d.writes+15>DAILY_WRITE_BUDGET||d.samples_reserved+5>200000;
+  }catch(e){
+   d.error=/^RPC_[A-Z_0-9-]+$/.test(e.message)?e.message:'HELIUS_SNAPSHOT_UNAVAILABLE';
+   d.helius_next_at=now+(e.message==='RPC_HTTP_429'?1800000:30000);
+   if(e.message==='RPC_HTTP_401'||e.message==='RPC_HTTP_403')d.enabled=false;
+  }finally{d.daily_rpc_calls=(d.daily_rpc_calls||0)+d.metrics.rpc_calls-before}
+ }
  async tick(now=Date.now()){
+  if(this.env.FAST_RADAR_SOURCE==='helius')return this.heliusTick(now);
   const d=this.data,stamp=new Date(now).toISOString(),day=stamp.slice(0,10);
   if(d.day!==day){d.day=day;d.writes=0}
   if(!d.targets_at||now-d.targets_at>=300000){
@@ -155,14 +199,14 @@ export class FastRadar {
   await this.state.blockConcurrencyWhile(async()=>{
    if(!this.data.enabled||this.env.FAST_RADAR_ENABLED!=='true')return;
    const started=Date.now();
-   if(this.data.trial_started_at&&started-this.data.trial_started_at>=600000){
+   if(this.env.FAST_RADAR_SOURCE!=='helius'&&this.data.trial_started_at&&started-this.data.trial_started_at>=600000){
     this.data.enabled=false;this.data.error='TRIAL_COMPLETE';await this.save();await this.publishProof();return;
    }
    try{await this.tick(started)}catch{this.data.error='FAST_RADAR_DATA_UNAVAILABLE'}
    finally{
-    this.data.proof_ticks=[...(this.data.proof_ticks||[]),{tick:new Date(started).toISOString(),updated_quotes:this.data.updated_quotes||0,error:this.data.error}].slice(-6);
+    this.data.proof_ticks=[...(this.data.proof_ticks||[]),{tick:new Date(started).toISOString(),updated_quotes:this.data.updated_quotes||0,slot:this.data.current_slot||null,error:this.data.error}].slice(-6);
     await this.save();
-    await this.publishProof();
+    if(started-(this.data.trial_started_at||0)<600000)await this.publishProof();
     if(this.data.enabled)await this.state.storage.setAlarm(Math.max(started+INTERVAL_MS,Date.now()+1000))}
   });
  }

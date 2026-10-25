@@ -1518,7 +1518,7 @@ async function pollFastRadar(action){
   for(const q of data.quotes||[]){
    const row=document.createElement('p');
    const age=Math.max(0,Math.floor((Date.now()-Date.parse(q.received_at))/1000));
-   row.textContent=(q.symbol||q.address)+' · $'+q.price+' · '+q.provider+' · received '+age+'s ago'+(age>60?' · STALE':'')+' · source age unknown · '+q.pool;
+   row.textContent=(q.symbol||q.address)+' · '+(q.price_sol!==undefined?(q.price_usd!==null?'$'+q.price_usd+' · ':'USD unavailable · ')+q.price_sol+' SOL/token':'$'+q.price)+' · '+q.provider+' · received '+age+'s ago'+(age>60?' · STALE':'')+(q.slot?' · confirmed slot '+q.slot+' · indicative reserves':' · source age unknown')+' · '+q.pool;
    target.append(row);
   }
  }catch{document.getElementById('fastStatus').textContent='Unavailable · cached quotes may be stale';}
@@ -1700,7 +1700,7 @@ return json({cleanSlate:{activeSince:CLEAN_SLATE_AT,scope:'active_discovery_view
     const radar=env.FAST_RADAR.get(env.FAST_RADAR.idFromName('goget-fast-radar-v1'));
     const snapshot=await (await radar.fetch('https://internal/snapshot')).json();
     // Bootstrap only once; never restart an explicitly stopped/completed trial.
-    if(!snapshot.trial_started_at)await radar.fetch('https://internal/start',{method:'POST'});
+    if(!snapshot.trial_started_at||(env.FAST_RADAR_SOURCE==='helius'&&snapshot.mode!=='helius'))await radar.fetch('https://internal/start',{method:'POST'});
    }catch{console.warn('Fast radar bootstrap unavailable')}
   }
   await scheduledResearch(env);

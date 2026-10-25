@@ -54,9 +54,11 @@ try:
                 if item.get('tick'): ticks[item['tick']]=item
         else:
             snapshot=api('/api/fast-radar')
+        if '--helius' in sys.argv and snapshot.get('mode')!='helius':
+            time.sleep(10);continue
         snapshots.append(snapshot)
         providers=snapshot.get('providers',{})
-        if len(ticks)>=3 and not snapshot.get('quotes') and all(providers.get(p,{}).get('next_at',0)>int(time.time()*1000) for p in ['dex','gecko']):
+        if snapshot.get('mode')!='helius' and len(ticks)>=3 and not snapshot.get('quotes') and all(providers.get(p,{}).get('next_at',0)>int(time.time()*1000) for p in ['dex','gecko']):
             print(json.dumps({'proof':'FEED_BLOCKED','last_tick':snapshot.get('last_tick'),'providers':providers,'proof_ticks':snapshot.get('proof_ticks'),'sample_rows_written':snapshot.get('last_sample_rows_written')}))
             raise RuntimeError('Both quote providers are in verified cooldown; scheduler-only evidence')
         tick=snapshot.get('last_tick')
@@ -65,7 +67,7 @@ try:
         quotes=snapshot.get('quotes',[])
         for q in quotes:
             key=(q['chain'],q['pool'],q['asset_key'])
-            if key not in targets or not q['price']>0 or not q['liquidity']>0:
+            if key not in targets or not (q.get('price_sol',q.get('price',0))>0) or (q.get('price_sol') is None and not q.get('liquidity',0)>0):
                 raise RuntimeError('Quote identity/value check failed')
             if q.get('source_at') is not None or q.get('unique_buyers') is not None:
                 raise RuntimeError('Unsupported freshness/buyer evidence')
@@ -82,7 +84,7 @@ try:
     if any(gap<20 or gap>45 for gap in gaps): raise RuntimeError('Alarm cadence outside 20–45s proof window')
     rows=0; reads=0; providers=set()
     for chain,pool,key in receipts:
-        result=query('SELECT minute,received_at,provider,price FROM radar_samples WHERE chain=? AND pool=? AND minute>=? ORDER BY minute LIMIT 5', [chain,pool,started[:16]+':00.000Z'])
+        result=query("SELECT minute,received_at,'Helius' AS provider,price_sol AS price FROM chain_radar_samples WHERE chain=? AND pool=? AND minute>=? ORDER BY minute LIMIT 5" if '--helius' in sys.argv else 'SELECT minute,received_at,provider,price FROM radar_samples WHERE chain=? AND pool=? AND minute>=? ORDER BY minute LIMIT 5', [chain,pool,started[:16]+':00.000Z'])
         found=result.get('results',[])
         if not found: raise RuntimeError('No persisted minute sample for a verified pool')
         if len({r['minute'] for r in found})!=len(found): raise RuntimeError('Duplicate minute samples')

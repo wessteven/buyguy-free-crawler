@@ -1,7 +1,5 @@
 name: Helius direct pool live trial
 on:
-  push:
-    paths: ['src/helius-fast-quotes.mjs', 'scripts/helius-fast-trial.mjs', '.github/workflows/helius-fast-trial.yml', 'tests/helius-fast-quotes.test.mjs']
   workflow_dispatch:
 permissions:
   contents: read

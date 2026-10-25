@@ -74,3 +74,12 @@ export async function readPumpSnapshots(env,registry,{fetcher=fetch,minSlot=0,me
  for(const target of registry){try{quotes.push(calculateSnapshot(target,state))}catch(e){rejected.push({pool:target.pool,reason:e.message})}}
  return {slot:state.slot,received_at:state.received_at,quotes,rejected};
 }
+export function parseSolUsdTrades(trades,now=Date.now()){
+ if(!Array.isArray(trades))return null;
+ const t=trades[0],at=Number(t?.timestampms||Number(t?.timestamp)*1000),price=Number(t?.price);
+ if(!Number.isFinite(at)||now-at<0||now-at>60000||!Number.isFinite(price)||price<=0)return null;
+ return {price,source:'Gemini SOLUSD last trade',source_at:new Date(at).toISOString(),received_at:new Date(now).toISOString()};
+}
+export async function solUsdReference(fetcher=fetch){
+ try{const r=await fetcher('https://api.gemini.com/v1/trades/solusd?limit_trades=1',{signal:AbortSignal.timeout(5000)});if(!r.ok)return null;return parseSolUsdTrades(await r.json())}catch{return null}
+}

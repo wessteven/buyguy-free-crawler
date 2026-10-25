@@ -62,3 +62,26 @@ test('unsupported candidates remain explicit and never get reserve prices',async
  const r=await discoverRegistry({HELIUS_RPC_URL:'https://mainnet.helius-rpc.com/?api-key=secret'},[target],{fetcher:async()=>Response.json({result:{context:{slot:100},value:[{owner:SPL_TOKEN}]}})});
  assert.equal(r.registry.length,0);assert.equal(r.rejected[0].reason,'UNSUPPORTED_PROTOCOL');
 });
+
+import {parseSolUsdTrades} from '../src/helius-fast-quotes.mjs';
+import {FastRadar} from '../src/fast-radar.mjs';
+test('USD conversion accepts only positive SOL trades within sixty seconds',()=>{
+ const now=Date.now();assert.equal(parseSolUsdTrades([{price:'150',timestampms:now-1000}],now).price,150);
+ for(const trade of [{price:'150',timestampms:now-61000},{price:'150',timestampms:now+1},{price:'0',timestampms:now},{price:'bad',timestampms:now}])assert.equal(parseSolUsdTrades([trade],now),null);
+});
+test('Cloudflare direct mode batches verified state, attaches fresh USD and stores minute evidence',async()=>{
+ const {state:snapshot}=fixture();let n=0;const original=globalThis.fetch;
+ const db={prepare(){return {bind(){return this},async all(){return {results:[target],meta:{rows_read:1}}}}},async batch(){return [{meta:{rows_written:2}}]}};
+ const state={storage:{get:async()=>null,put:async()=>{}},blockConcurrencyWhile:f=>f()};
+ globalThis.fetch=async(url,options)=>{
+  if(url.includes('gemini'))return Response.json([{price:'150',timestampms:Date.now()-1000}]);
+  const p=JSON.parse(options.body);n++;
+  return Response.json({result:{context:{slot:100+n},value:p.params[0].map(k=>snapshot.accounts.get(k))}});
+ };
+ try{
+  const radar=new FastRadar(state,{DB:db,FAST_RADAR_SOURCE:'helius',HELIUS_RPC_URL:'https://mainnet.helius-rpc.com/?api-key=secret'});await Promise.resolve();
+  await radar.tick(Date.now());assert.equal(n,2);assert.equal(radar.data.updated_quotes,1);assert.equal(radar.data.quotes[0].price_usd,1.5);assert.equal(radar.data.current_slot,102);
+  await radar.tick(Date.now()+30000);assert.equal(n,3);assert.equal(radar.data.current_slot,103);
+  radar.data.daily_rpc_calls=3000;await radar.tick(Date.now()+60000);assert.equal(n,3);assert.equal(radar.data.error,'DAILY_RPC_BUDGET');
+ }finally{globalThis.fetch=original}
+});
