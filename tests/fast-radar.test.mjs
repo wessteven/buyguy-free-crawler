@@ -75,3 +75,8 @@ test('activation is opt-in; stop removes alarm; alarm failure keeps cached snaps
  await h.radar.alarm();assert.ok(h.stats().alarms>=2);
  await h.radar.fetch(new Request('https://internal/stop',{method:'POST'}));assert.equal(h.radar.data.enabled,false);
 });
+test('ten-minute live trial automatically stops without fetching providers',async()=>{
+ let calls=0;const h=harness(async()=>{calls++;return Response.json([pair])});await Promise.resolve();
+ h.radar.data.enabled=true;h.radar.data.trial_started_at=Date.now()-600001;
+ await h.radar.alarm();assert.equal(h.radar.data.enabled,false);assert.equal(h.radar.data.error,'TRIAL_COMPLETE');assert.equal(calls,0);
+});

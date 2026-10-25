@@ -57,7 +57,7 @@ export class FastRadar {
    if(path==='/stop'){this.data.enabled=false;await this.state.storage.deleteAlarm();await this.save();return json({enabled:false})}
    if(path!=='/start')return json({error:'not_found'},404);
    if(this.env.FAST_RADAR_ENABLED!=='true')return json({error:'FAST_RADAR_NOT_ENABLED'},409);
-   this.data.enabled=true;await this.save();await this.state.storage.setAlarm(Date.now()+1);
+   this.data.enabled=true;this.data.trial_started_at=Date.now();this.data.proof_ticks=[];await this.save();await this.state.storage.setAlarm(Date.now()+1);
    return json({enabled:true,target_interval_seconds:30});
   });
  }
@@ -136,8 +136,17 @@ export class FastRadar {
   await this.state.blockConcurrencyWhile(async()=>{
    if(!this.data.enabled||this.env.FAST_RADAR_ENABLED!=='true')return;
    const started=Date.now();
+   if(this.data.trial_started_at&&started-this.data.trial_started_at>=600000){
+    this.data.enabled=false;this.data.error='TRIAL_COMPLETE';await this.save();return;
+   }
    try{await this.tick(started)}catch{this.data.error='FAST_RADAR_DATA_UNAVAILABLE'}
-   finally{await this.save();if(this.data.enabled)await this.state.storage.setAlarm(Math.max(started+INTERVAL_MS,Date.now()+1000))}
+   finally{
+    this.data.proof_ticks=[...(this.data.proof_ticks||[]),{tick:new Date(started).toISOString(),updated_quotes:this.data.updated_quotes||0,error:this.data.error}].slice(-6);
+    await this.save();
+    try{await this.env.DB.prepare(`INSERT INTO leases(name,expires_at,token) VALUES(?,?,?)
+     ON CONFLICT(name) DO UPDATE SET expires_at=excluded.expires_at,token=excluded.token`)
+     .bind('fast-radar:trial-proof',started+600000,JSON.stringify(this.data)).run()}catch{}
+    if(this.data.enabled)await this.state.storage.setAlarm(Math.max(started+INTERVAL_MS,Date.now()+1000))}
   });
  }
 }

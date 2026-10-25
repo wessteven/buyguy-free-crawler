@@ -40,11 +40,21 @@ if '--schema-only' in sys.argv:
 
 started=datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
 try:
-    result=api('/api/fast-radar/start','POST')
-    if result.get('enabled') is not True: raise RuntimeError('Fast radar activation failed')
+    via_d1='--via-d1' in sys.argv
+    if not via_d1:
+        result=api('/api/fast-radar/start','POST')
+        if result.get('enabled') is not True: raise RuntimeError('Fast radar activation failed')
     ticks={}; receipts={}; snapshots=[]
-    for attempt in range(15):
-        snapshot=api('/api/fast-radar'); snapshots.append(snapshot)
+    for attempt in range(36):
+        if via_d1:
+            result=query('SELECT token FROM leases WHERE name=?',['fast-radar:trial-proof'])
+            rows=result.get('results',[])
+            snapshot=json.loads(rows[0]['token']) if rows else {}
+            for item in snapshot.get('proof_ticks',[]):
+                if item.get('tick'): ticks[item['tick']]=item
+        else:
+            snapshot=api('/api/fast-radar')
+        snapshots.append(snapshot)
         tick=snapshot.get('last_tick')
         targets={(t['chain'],t['pool'],t['asset_key']) for t in snapshot.get('targets',[])}
         if len(targets)>5: raise RuntimeError('Target budget exceeded')
@@ -60,7 +70,7 @@ try:
             ticks[tick]=snapshot
             print(json.dumps({'tick':tick,'targets':len(targets),'quotes':len(quotes),'updated_quotes':snapshot.get('updated_quotes'),'providers':snapshot.get('providers'),'history_paused':snapshot.get('history_paused'),'error':snapshot.get('error')}))
         if len(ticks)>=4 and len(receipts)==5 and all(len(v)>=3 for v in receipts.values()): break
-        if attempt<14: time.sleep(10)
+        if attempt<35: time.sleep(10)
     if len(ticks)<3 or len(receipts)!=5 or not all(len(v)>=3 for v in receipts.values()):
         raise RuntimeError('Five-pool consecutive-quote proof not met')
     times=sorted(datetime.fromisoformat(t.replace('Z','+00:00')).timestamp() for t in ticks)
@@ -77,8 +87,9 @@ try:
     final=snapshots[-1]
     print(json.dumps({'proof':'PASS','pools':5,'consecutive_ticks':len(ticks),'gap_seconds':gaps,'sample_rows':rows,'verification_rows_read':reads,'last_sample_rows_written':final.get('last_sample_rows_written'),'reserved_daily_writes':final.get('writes'),'providers':sorted(providers),'source_freshness':'UNKNOWN','execution_fills':'NOT_VERIFIED'}))
 except Exception as exc:
-    try: api('/api/fast-radar/stop','POST')
-    except Exception: pass
+    if '--via-d1' not in sys.argv:
+        try: api('/api/fast-radar/stop','POST')
+        except Exception: pass
     # Never print request objects, headers, environment or sensitive URL payloads.
-    print('Fast radar proof FAILED; stop requested:',type(exc).__name__,str(exc)[:160])
+    print('Fast radar proof FAILED; trial has a ten-minute automatic stop:',type(exc).__name__,str(exc)[:160])
     sys.exit(1)

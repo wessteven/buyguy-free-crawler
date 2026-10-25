@@ -1695,6 +1695,14 @@ return json({cleanSlate:{activeSince:CLEAN_SLATE_AT,scope:'active_discovery_view
  return json({error:'D1_QUERY_FAILED',message:'Research database temporarily unavailable.'},503);
 }
 },async scheduled(controller,env,ctx){
+  if(env.FAST_RADAR_ENABLED==='true'&&env.FAST_RADAR){
+   try{
+    const radar=env.FAST_RADAR.get(env.FAST_RADAR.idFromName('goget-fast-radar-v1'));
+    const snapshot=await (await radar.fetch('https://internal/snapshot')).json();
+    // Bootstrap only once; never restart an explicitly stopped/completed trial.
+    if(!snapshot.trial_started_at)await radar.fetch('https://internal/start',{method:'POST'});
+   }catch{console.warn('Fast radar bootstrap unavailable')}
+  }
   await scheduledResearch(env);
 }
 };
