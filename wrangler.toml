@@ -10,3 +10,15 @@ database_id = "REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID"
 # Cloudflare Workers Free: one lightweight, independent ten-minute Cron Trigger.
 [triggers]
 crons = ["*/10 * * * *"]
+
+# Five-pool trial: SQLite Durable Objects work on Workers Free.
+[[durable_objects.bindings]]
+name = "FAST_RADAR"
+class_name = "FastRadar"
+
+[[migrations]]
+tag = "fast-radar-v1"
+new_sqlite_classes = ["FastRadar"]
+
+[vars]
+FAST_RADAR_ENABLED = "true"

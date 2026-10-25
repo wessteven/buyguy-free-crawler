@@ -1,3 +1,4 @@
+export {FastRadar} from './fast-radar.mjs';
 import {discoveryQuality} from './discovery-quality.mjs';
 import {CLEAN_SLATE_AT,CLEAN_SLATE_ACTIVE_WHERE} from './clean-slate.mjs';
 import {getPaperSnapshot} from './paper-ops.mjs';
@@ -191,6 +192,10 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <p class="hint" id="goodRefreshInfo">Refreshes discovery, up to 25 tracked quotes, then market, contract, pool and route evidence for the ranked top five. Limits and missing data are reported, not guessed.</p>
 <ol id="goodRefreshSteps" aria-label="Detailed refresh steps" aria-live="polite"></ol>
 </details>
+<details><summary>FAST RADAR · 30-second target</summary>
+<p class="hint">Separate exact-pool quotes; rankings and deep checks keep their own cadence. Receipt age is not source age.</p>
+<button id="fastStart" type="button">Start fast radar</button><button id="fastStop" type="button">Stop</button>
+<p id="fastStatus" class="hint" role="status">Not configured</p><div id="fastQuotes"></div></details>
 <div id="goodCards" class="good-list" aria-live="polite" aria-label="Five strongest currently qualified crypto research candidates"></div>
 <p id="goodFootnote" class="hint">Evidence is indicative; prices and buying activity can be spoofed. Never assume an LP lock or executable exit.</p>
 <button type="button" id="goodResearch" aria-label="Open full sortable token research">Full research + all tokens ↗</button>
@@ -1498,6 +1503,30 @@ document.getElementById('qualityLoad').addEventListener('click',async()=>{
  }catch{summary.textContent='Report unavailable — no observations inferred.';}
  finally{button.disabled=false;}
 });
+let fastPolling=false;
+async function pollFastRadar(action){
+ if(fastPolling||document.hidden)return;fastPolling=true;
+ try{
+  const response=await fetch('/api/fast-radar'+(action?'/'+action:''),{method:action?'POST':'GET',credentials:'same-origin',cache:'no-store'});
+  const data=await response.json();
+  const status=document.getElementById('fastStatus');
+  status.textContent=data.error|| (data.configured===false?'Not configured · activation pending':data.enabled?'Running · 30-second target · quotes are indicative':'Stopped');
+  if(action)return;
+  if(data.error)status.textContent+=' · cached quotes may be stale';
+  if(data.history_paused)status.textContent+=' · history paused at daily write budget';
+  const target=document.getElementById('fastQuotes');target.replaceChildren();
+  for(const q of data.quotes||[]){
+   const row=document.createElement('p');
+   const age=Math.max(0,Math.floor((Date.now()-Date.parse(q.received_at))/1000));
+   row.textContent=(q.symbol||q.address)+' · $'+q.price+' · '+q.provider+' · received '+age+'s ago'+(age>60?' · STALE':'')+' · source age unknown · '+q.pool;
+   target.append(row);
+  }
+ }catch{document.getElementById('fastStatus').textContent='Unavailable · cached quotes may be stale';}
+ finally{fastPolling=false;}
+}
+document.getElementById('fastStart').addEventListener('click',()=>pollFastRadar('start'));
+document.getElementById('fastStop').addEventListener('click',()=>pollFastRadar('stop'));
+if(typeof setInterval==='function')setInterval(()=>pollFastRadar(),30000);
 initTabs();
 // Reopen automatically when a valid remembered session cookie is present.
 refresh();
@@ -1509,6 +1538,9 @@ export default {async fetch(request,env){const path=new URL(request.url).pathnam
 if(path==='/health')return json({server:'online',scan_status:'not_verified'});
 if(path==='/'||path==='/dashboard')return new Response(page,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 const origin=request.headers.get('origin');
+const fastPath=['/api/fast-radar','/api/fast-radar/start','/api/fast-radar/stop'].includes(path);
+if(fastPath&&origin&&origin!==new URL(request.url).origin)return json({error:'forbidden'},403);
+if(fastPath&&(request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site')return json({error:'forbidden'},403);
 if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&origin&&origin!==new URL(request.url).origin)
   return json({error:'forbidden'},403);
 if(path==='/api/login'){
@@ -1531,13 +1563,21 @@ if(path==='/api/logout'){
  output.headers.set('set-cookie',clearSessionCookie());
  return output;
 }
-if(path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock'&&path!=='/api/top5-refresh'&&path!=='/api/discovery-quality')return json({error:'not_found'},404);
+if(!fastPath&&path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock'&&path!=='/api/top5-refresh'&&path!=='/api/discovery-quality')return json({error:'not_found'},404);
 if(((path==='/api/status'||path==='/api/scan-clock'||path==='/api/discovery-quality')&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&request.method!=='POST'))
  return json({error:'method_not_allowed'},405);
 const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
 const cookie=readSessionCookie(request.headers.get('cookie'));
 const authorized=auth(bearer,env.ADMIN_TOKEN||'')||await validSession(env.ADMIN_TOKEN||'',cookie);
 if(!authorized)return json({error:'unauthorized'},401);
+if(fastPath){
+ const action=path.split('/')[3];
+ if(request.method!==(action?'POST':'GET'))return json({error:'method_not_allowed'},405);
+ if(!env.FAST_RADAR)return json({enabled:false,configured:false,target_interval_seconds:30,quotes:[]});
+ try{return await env.FAST_RADAR.get(env.FAST_RADAR.idFromName('goget-fast-radar-v1'))
+  .fetch('https://internal/'+(action||'snapshot'),{method:request.method})}
+ catch{return json({error:'fast_radar_unavailable'},503)}
+}
 if(!env.DB)return json({error:'database_not_configured'},503);
 if(path==='/api/discovery-quality'){
  try{return json(await discoveryQuality(env.DB))}
