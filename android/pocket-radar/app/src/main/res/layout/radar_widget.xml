@@ -20,7 +20,7 @@
     <TextView android:id="@+id/row2" style="@style/RadarRow"/>
     <TextView android:id="@+id/row3" style="@style/RadarRow"/>
     <TextView android:id="@+id/row4" style="@style/RadarRow"/>
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" android:text="Trending pools • not GOGET-confirmed"
+    <TextView android:id="@+id/footer" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" android:text="Public pool data • not GOGET-confirmed"
         android:textColor="#789281" android:textSize="9sp"/>
 </LinearLayout>
