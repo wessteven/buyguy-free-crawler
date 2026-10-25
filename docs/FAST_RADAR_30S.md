@@ -1,17 +1,17 @@
 # GOGET fast radar: 30-second target
 
-Status: implementation tested locally and in GitHub CI. The existing unrestricted
-deployment workflow also deployed the dashboard panel from this feature branch;
-its authenticated D1 and reachability checks passed. Fast-radar binding, sample
-schema and alarms remain unconfigured/inactive. This change restricts future
-automatic deployments to main. No 30-second production cycles are verified.
+Status: deployed on Workers Free and tested in production on 2026-10-25.
+The scheduler produced ~30-second intervals; the live feed proof FAILED because
+both quote providers were in HTTP-429 cooldown. See
+[the measured proof report](FAST_RADAR_PROOF_2026-10-25.md).
+The five-pool experiment has a ten-minute automatic stop.
 
 ## Architecture and integration choices
 
 Keep existing ten-minute discovery, hard refresh, OUR SCORE, clean-slate cutoff,
 30-minute provider cooldown, history and paper trading intact. Add an isolated
 Durable Object, exported by the existing dashboard Worker, with a 30-second alarm.
-It refreshes five current ALIVE/STATIC exact pools; reselects targets every five
+It targets five current ALIVE/STATIC exact pools; reselects targets every five
 minutes. This is a hot-pool quote lane, not a claim of whole-universe 30s discovery.
 An alarm aims for start-to-start 30 seconds; slow requests or platform scheduling
 can cause delays. There is no guaranteed 30-second upstream freshness.
@@ -30,8 +30,10 @@ Provider juggling means capability-aware budgets, caching, cooldowns and backoff
 not proxy/key/account rotation or bypassing quotas. Both fast-lane providers have
 persisted singleton cooldowns; the fast lane also reads existing discovery cooldown
 leases and publishes HTTP-429 cooldowns back to those leases. This does not yet
-centralize budgets of all older crawler/deep-audit implementations. A full shared
-provider broker is a follow-up before expanding the hot set.
+centralize budgets of all older crawler/deep-audit implementations. DEX profiles and token quotes have separate documented rate buckets; a legacy
+profile cooldown is distinguished only with an exact timestamp-matched run error.
+Unknown scope stays blocked; quote 429s have their own persisted lease.
+A full shared provider broker is a follow-up before expanding the hot set.
 
 TradingView official MCP is useful interactively but beta data is delayed and
 unattended cloud clients are outside its supported beta scope. CCXT is valuable
@@ -43,7 +45,9 @@ packages are required for this fast lane.
 ## Efficient D1 accumulation
 
 Latest quotes, provider health/cooldowns, target list, sample budgets and scheduler
-state live in one Durable Object. D1 receives only one sampled quote per exact
+state live in one Durable Object. During the ten-minute trial, a singleton
+fast-radar:trial-proof lease records bounded diagnostics for authenticated D1
+verification. This adds ~40 index-inclusive row writes per full trial. D1 receives only one sampled quote per exact
 (chain,pool,minute), with asset identity, provider, receipt time, nullable source
 time, price, liquidity, market cap and FDV separately, five-minute volume and
 buy/sell transaction counts. Unique buyers remain NULL, never inferred from buys.
@@ -92,38 +96,24 @@ Sources checked 2026-10-25:
 - https://docs.dexscreener.com/api/reference
 - https://www.tradingview.com/support/solutions/43000795700-mcp-server-faq/
 
-## Activation/runbook
+## Deployment and trial controls
 
-No billing upgrade is made by this branch. No production D1 migration or fast
-alarm activation happens automatically. The panel is deployed; merge the branch
-only after CI. Activation remains a separate configuration and validation step.
-Then use existing scoped Cloudflare deployment credentials (never expose secrets):
+Bindings and SQLite DO migration are now in wrangler.toml. Deployment runs
+regression tests, applies the additive radar_samples table, deploys the Worker,
+and attempts the market-feed proof. Deployments are restricted to main.
 
-1. Apply sql/fast-radar.sql to the SAME D1 database bound to the dashboard Worker.
-2. Add this binding/migration to wrangler.toml (SQLite Durable Objects), preserving
-   existing D1 binding and cron. Confirm account plan/DO availability first:
+The existing ten-minute cron bootstraps the experiment once. It does not restart
+completed or explicitly stopped trials. The authenticated Start button begins a
+new ten-minute experiment; Stop deletes the alarm and preserves history. Provider
+cooldowns survive stop/restart and are never reset to force requests through.
 
-```toml
-[[durable_objects.bindings]]
-name = "FAST_RADAR"
-class_name = "FastRadar"
+Because Cloudflare bot protection blocks the GitHub runner's public-URL requests,
+the proof reads internal alarm records through authenticated D1. It does not
+weaken protection or claim user-browser access is verified. The read-only
+Fast radar live status GitHub workflow can report the last bounded trial state.
 
-[[migrations]]
-tag = "fast-radar-v1"
-new_sqlite_classes = ["FastRadar"]
-
-[vars]
-FAST_RADAR_ENABLED = "true"
-```
-
-3. Deploy after tests pass. Log in and click Start fast radar. Read the snapshot
-   and verify at least three successive cycles with exact mint/pool identities,
-   advancing receipt times, provider health, D1 sample counts and actual writes.
-4. Simulate/test a provider 429 and stale quote, verify cooldown and visible ages.
-5. Measure 24h quote receipt p50/p95, gaps, upstream staleness if knowable, D1
-   rows read/written, DO costs and provider use before raising five to ten pools.
-
-Stop: POST /api/fast-radar/stop (or panel Stop). It deletes the next alarm and
-preserves history. Set FAST_RADAR_ENABLED=false and redeploy for persistent kill
-switch. Keep the DO migration in configuration; do not delete or reset its state.
-No schema migration, cron change or auto-trading change is needed to stop.
+No billing upgrade was made. Do not widen the five-pool trial or enable permanent
+polling until repeated real quotes, source age where available, D1 write cost and
+provider budgets have been demonstrated. The observed external HTTP 429s are
+not fixed by buying Workers Paid. Disable FAST_RADAR_ENABLED and redeploy for the
+persistent kill switch; keep the DO migration and stored history intact.
