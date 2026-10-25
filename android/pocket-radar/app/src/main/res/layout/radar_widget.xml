@@ -8,6 +8,10 @@
             android:layout_weight="1" android:layout_height="wrap_content"
             android:text="◉ WHAT'S GOOD" android:textColor="#77F7A4"
             android:textSize="15sp" android:textStyle="bold"/>
+        <TextView android:id="@+id/mode" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="≡ TREND"
+            android:paddingLeft="4dp" android:paddingRight="4dp"
+            android:textColor="#77F7A4" android:textSize="10sp"/>
         <TextView android:id="@+id/refresh" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:text=" ↻ REFRESH "
             android:textColor="#F0FFF3" android:textSize="11sp"/>
