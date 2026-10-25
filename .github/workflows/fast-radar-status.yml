@@ -1,0 +1,35 @@
+name: Fast radar live status
+on:
+  push:
+    paths: ['.github/workflows/fast-radar-status.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read bounded live trial evidence
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from urllib.request import Request,urlopen
+          url='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CF_ACCOUNT_ID']+'/d1/database/'+os.environ['CF_DATABASE_ID']+'/query'
+          def query(sql,params=[]):
+            body=json.dumps({'sql':sql,'params':params}).encode()
+            headers={'authorization':'Bearer '+os.environ['CF_D1_API_TOKEN'],'content-type':'application/json'}
+            with urlopen(Request(url,data=body,headers=headers),timeout=25) as r:data=json.load(r)
+            if not data.get('success'):raise SystemExit('D1 status unavailable')
+            return data['result'][0]
+          result=query('SELECT token FROM leases WHERE name=?',['fast-radar:trial-proof'])
+          rows=result.get('results',[])
+          if rows:
+            d=json.loads(rows[0]['token'])
+            print(json.dumps({k:d.get(k) for k in ['enabled','trial_started_at','last_tick','error','updated_quotes','providers','proof_ticks','targets','quotes','writes','last_sample_rows_written']}))
+          else:print('No trial heartbeat persisted')
+          print('Newest runs:',json.dumps(query('SELECT started_at,state,provider_errors FROM runs ORDER BY id DESC LIMIT 3').get('results',[])))
+          PY
