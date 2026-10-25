@@ -44,7 +44,7 @@ try:
     if not via_d1:
         result=api('/api/fast-radar/start','POST')
         if result.get('enabled') is not True: raise RuntimeError('Fast radar activation failed')
-    ticks={}; receipts={}; snapshots=[]
+    ticks={}; receipts={}; snapshots=[]; previous_targets=None
     for attempt in range(36):
         if via_d1:
             result=query('SELECT token FROM leases WHERE name=?',['fast-radar:trial-proof'])
@@ -64,6 +64,9 @@ try:
             raise RuntimeError('Both quote providers are in verified cooldown; scheduler-only evidence')
         tick=snapshot.get('last_tick')
         targets={(t['chain'],t['pool'],t['asset_key']) for t in snapshot.get('targets',[])}
+        if previous_targets is not None and targets!=previous_targets:
+            ticks.clear();receipts.clear()
+        previous_targets=targets
         if len(targets)>5: raise RuntimeError('Target budget exceeded')
         quotes=snapshot.get('quotes',[])
         for q in quotes:
