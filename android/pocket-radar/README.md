@@ -1,4 +1,4 @@
-# WHAT'S GOOD Pocket Radar Android v0.3
+# WHAT'S GOOD Pocket Radar Android v0.4
 
 A **read-only Android home-screen widget** with a public Solana trending-pool ticker.
 It is **not** the authenticated GOGET shortlist, buy/sell signals, real-time tick data,
@@ -35,3 +35,7 @@ anonymous unauthenticated endpoint. Render quote timestamps independently
 from local fetch time. Add tests before production use.
 
 On feed failure, the widget keeps the last successful quote, visibly marks stale data and shows sanitized provider errors. On an initial failure it does **not** pretend the market has no pools. A provider fallback based on boosted listings is prominently labeled marketing-based. This build has no change to the underlying GOGET scanner.
+
+### Connection doctor
+
+The app includes a user-triggered network self-test for INTERNET permission, active validated network type, neutral public DNS, both provider domains, and the existing GOGET dashboard domain. It never overrides Private DNS/VPN or sends personal data. A provider DNS error is not a signal that no pools exist. If all domains fail, check internet/Private DNS; if only provider domains fail, investigate DNS filtering. No automatic connection changes.
