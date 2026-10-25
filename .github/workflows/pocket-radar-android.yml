@@ -36,10 +36,21 @@ jobs:
       - name: Assemble debug APK
         working-directory: android/pocket-radar
         run: gradle --no-daemon :app:assembleDebug
+      - name: Smoke-test release signing (throwaway key; never distribute)
+        working-directory: android/pocket-radar
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -noprompt -alias pocket-radar -keyalg RSA -keysize 3072 -validity 12000 -storetype PKCS12 -keystore "$RUNNER_TEMP/throwaway.p12" -storepass TEST_ONLY_REMOVE_ME -dname "CN=Temporary CI Test"
+          export POCKET_RADAR_KEYSTORE_PATH="$RUNNER_TEMP/throwaway.p12"
+          export POCKET_RADAR_SIGNING_PASSWORD="TEST_ONLY_REMOVE_ME"
+          gradle --no-daemon :app:assembleRelease
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          rm -f "$RUNNER_TEMP/throwaway.p12" app/build/outputs/apk/release/app-release.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: pocket-radar-v06-debug-apk
+          name: pocket-radar-v07-DEBUG-NOT-AN-UPDATE
           path: android/pocket-radar/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
