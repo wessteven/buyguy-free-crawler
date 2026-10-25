@@ -38,6 +38,26 @@ public final class MainActivity extends Activity {
         add(body,"◉ WHAT'S GOOD",27,0xFF7CF7A1,true);
         add(body,"POCKET RADAR · SOLANA",12,0xFFB0CBB7,false);
         status=add(body,"Fetching public market data…",13,0xFFB0CBB7,false);
+        Button doctor=new Button(this);doctor.setText("TEST INTERNET / DNS");
+        TextView diagnostic=add(body,"Connection test available. Tap TEST INTERNET / DNS to compare providers with an ordinary public domain.",13,0xFFB0CBB7,false);
+        doctor.setOnClickListener(v->{
+            doctor.setEnabled(false);
+            diagnostic.setText("Checking network and DNS...");
+            io.execute(()->{
+                String report=ConnectionDoctor.diagnose(getApplicationContext());
+                runOnUiThread(()->{
+                    if(!isFinishing()&&!isDestroyed()){
+                        diagnostic.setText(report);
+                        doctor.setEnabled(true);
+                    }
+                });
+            });
+        });
+        body.addView(doctor);
+        Button chrome=new Button(this);chrome.setText("TEST GECKO URL IN BROWSER");
+        chrome.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
+            Uri.parse("https://api.geckoterminal.com/api/v2/networks/solana/trending_pools"))));
+        body.addView(chrome);
         Button refresh=new Button(this);refresh.setText("↻ REFRESH NOW");
         refresh.setOnClickListener(v->fetch());body.addView(refresh);
         for(int i=0;i<rows.length;i++){
