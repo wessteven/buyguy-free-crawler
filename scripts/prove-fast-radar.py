@@ -55,6 +55,10 @@ try:
         else:
             snapshot=api('/api/fast-radar')
         snapshots.append(snapshot)
+        providers=snapshot.get('providers',{})
+        if len(ticks)>=3 and not snapshot.get('quotes') and all(providers.get(p,{}).get('next_at',0)>int(time.time()*1000) for p in ['dex','gecko']):
+            print(json.dumps({'proof':'FEED_BLOCKED','last_tick':snapshot.get('last_tick'),'providers':providers,'proof_ticks':snapshot.get('proof_ticks'),'sample_rows_written':snapshot.get('last_sample_rows_written')}))
+            raise RuntimeError('Both quote providers are in verified cooldown; scheduler-only evidence')
         tick=snapshot.get('last_tick')
         targets={(t['chain'],t['pool'],t['asset_key']) for t in snapshot.get('targets',[])}
         if len(targets)>5: raise RuntimeError('Target budget exceeded')

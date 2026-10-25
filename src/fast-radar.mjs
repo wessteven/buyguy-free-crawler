@@ -49,12 +49,17 @@ export class FastRadar {
   state.blockConcurrencyWhile(async()=>{this.data={...this.data,...await state.storage.get('radar')}});
  }
  async save(){await this.state.storage.put('radar',this.data)}
+ async publishProof(){
+  try{await this.env.DB.prepare(`INSERT INTO leases(name,expires_at,token) VALUES(?,?,?)
+   ON CONFLICT(name) DO UPDATE SET expires_at=excluded.expires_at,token=excluded.token`)
+   .bind('fast-radar:trial-proof',Date.now()+600000,JSON.stringify(this.data)).run()}catch{}
+ }
  async fetch(request){
   const path=new URL(request.url).pathname;
   if(path==='/snapshot')return json({...this.data,target_interval_seconds:30,server_now:new Date().toISOString()});
   if(request.method!=='POST')return json({error:'method_not_allowed'},405);
   return this.state.blockConcurrencyWhile(async()=>{
-   if(path==='/stop'){this.data.enabled=false;await this.state.storage.deleteAlarm();await this.save();return json({enabled:false})}
+   if(path==='/stop'){this.data.enabled=false;await this.state.storage.deleteAlarm();await this.save();await this.publishProof();return json({enabled:false})}
    if(path!=='/start')return json({error:'not_found'},404);
    if(this.env.FAST_RADAR_ENABLED!=='true')return json({error:'FAST_RADAR_NOT_ENABLED'},409);
    this.data.enabled=true;this.data.trial_started_at=Date.now();this.data.proof_ticks=[];await this.save();await this.state.storage.setAlarm(Date.now()+1);
@@ -151,15 +156,13 @@ export class FastRadar {
    if(!this.data.enabled||this.env.FAST_RADAR_ENABLED!=='true')return;
    const started=Date.now();
    if(this.data.trial_started_at&&started-this.data.trial_started_at>=600000){
-    this.data.enabled=false;this.data.error='TRIAL_COMPLETE';await this.save();return;
+    this.data.enabled=false;this.data.error='TRIAL_COMPLETE';await this.save();await this.publishProof();return;
    }
    try{await this.tick(started)}catch{this.data.error='FAST_RADAR_DATA_UNAVAILABLE'}
    finally{
     this.data.proof_ticks=[...(this.data.proof_ticks||[]),{tick:new Date(started).toISOString(),updated_quotes:this.data.updated_quotes||0,error:this.data.error}].slice(-6);
     await this.save();
-    try{await this.env.DB.prepare(`INSERT INTO leases(name,expires_at,token) VALUES(?,?,?)
-     ON CONFLICT(name) DO UPDATE SET expires_at=excluded.expires_at,token=excluded.token`)
-     .bind('fast-radar:trial-proof',started+600000,JSON.stringify(this.data)).run()}catch{}
+    await this.publishProof();
     if(this.data.enabled)await this.state.storage.setAlarm(Math.max(started+INTERVAL_MS,Date.now()+1000))}
   });
  }
