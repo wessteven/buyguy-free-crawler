@@ -40,6 +40,16 @@ public final class MainActivity extends Activity {
         status=add(body,"Fetching public market data…",13,0xFFB0CBB7,false);
         Button refresh=new Button(this);refresh.setText("↻ REFRESH NOW");
         refresh.setOnClickListener(v->fetch());body.addView(refresh);
+        for(int i=0;i<rows.length;i++){
+            rows[i]=add(body,"—",16,0xFFECFFF1,true);
+            rows[i].setPadding(dp(8),dp(14),dp(8),dp(14));
+            rows[i].setBackgroundColor(0xFF14261A);
+            LinearLayout.LayoutParams lp=(LinearLayout.LayoutParams)rows[i].getLayoutParams();
+            lp.bottomMargin=dp(5);rows[i].setLayoutParams(lp);
+        }
+        Button dashboard=new Button(this);dashboard.setText("OPEN GOGET / WHAT'S GOOD");
+        dashboard.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
+            Uri.parse(RadarRepository.DASHBOARD))));body.addView(dashboard);
         Button doctor=new Button(this);doctor.setText("TEST INTERNET / DNS");
         TextView diagnostic=add(body,"Connection test available. Tap TEST INTERNET / DNS to compare providers with an ordinary public domain.",13,0xFFB0CBB7,false);
         doctor.setOnClickListener(v->{
@@ -60,16 +70,7 @@ public final class MainActivity extends Activity {
         chrome.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
             Uri.parse("https://api.geckoterminal.com/api/v2/networks/solana/trending_pools"))));
         body.addView(chrome);
-        for(int i=0;i<rows.length;i++){
-            rows[i]=add(body,"—",16,0xFFECFFF1,true);
-            rows[i].setPadding(dp(8),dp(14),dp(8),dp(14));
-            rows[i].setBackgroundColor(0xFF14261A);
-            LinearLayout.LayoutParams lp=(LinearLayout.LayoutParams)rows[i].getLayoutParams();
-            lp.bottomMargin=dp(5);rows[i].setLayoutParams(lp);
-        }
-        Button dashboard=new Button(this);dashboard.setText("OPEN GOGET / WHAT'S GOOD");
-        dashboard.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
-            Uri.parse(RadarRepository.DASHBOARD))));body.addView(dashboard);
+
         add(body,"5m/1h are provider price changes; MC is market cap when available (otherwise FDV is clearly labeled). L/LP is pool liquidity, NOT guaranteed sell depth. Distinct mint addresses are deduplicated; similarly named assets retain identity suffixes. Gecko trending first, Dex promoted fallback. No trading.",13,0xFFABB8AC,false);
         add(body,"Foreground display checks every 30s; network fetch no more than once/minute. Home widget shows 3 coins when small, up to 5 if enlarged; resize then refresh. Android schedules background updates. Fetch time is NOT provider quote time.",12,0xFF829B88,false);
         show(RadarRepository.cached(this));
