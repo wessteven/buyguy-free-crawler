@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-18",
+  "sourceUrl": "https://fomoapi.io/traders",
+  "sourceDescription": "Unofficial FOMOAPI trader-profile snapshots dated 2026-10-18; associations and reported PnL are third-party claims, not audited performance.",
+  "traders": [
+    {"handle":"ExactTallTakin","solanaWallet":"AGdtsMmphhymH5wYW3dWKSkAxpLYRrNDCTFAfuq8ii9v","reportedPnlUsd":782000,"reportedPnlWindow":"30d","profileUrl":"https://fomoapi.io/traders/exacttalltakin"},
+    {"handle":"bystevenr","solanaWallet":"AH75Bn6QHSt5K2Ad4p1otns3JTwpSJWZTwiwKWNhmnKx","reportedPnlUsd":486000,"reportedPnlWindow":"30d","profileUrl":"https://fomoapi.io/traders/bystevenr"},
+    {"handle":"end837","solanaWallet":"5DBkonys2H4qHr5x9CCeXPLSWEFbnnLFP1RdfxjJgzvy","reportedPnlUsd":463000,"reportedPnlWindow":"30d","profileUrl":"https://fomoapi.io/traders/end837"},
+    {"handle":"bigbabba","solanaWallet":"mDR91ufq4S2uSHa9E2PYL7xg4LwcQXaQFP7YK864a1z","reportedPnlUsd":1490000,"reportedPnlWindow":"all_time","profileUrl":"https://fomoapi.io/traders/bigbabba"}
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "observedOn": "2026-10-21",
+  "observationMethod": "Connected Helius Solana Reader; most recent 50 enhanced transactions for each of four unofficial FOMO-associated wallets",
+  "definition": "An opposing USDC/USDT-to-token net transfer is a low-confidence buy/sell-like movement, not a verified execution or cost basis. Scope limited to observed sample, with uneven calendar coverage.",
+  "sampledTransactions": 200,
+  "totalProvisionalTwoLegFlows": 125,
+  "sampleByWallet": [
+    {
+      "handleClaim": "ExactTallTakin",
+      "wallet": "AGdtsMmphhymH5wYW3dWKSkAxpLYRrNDCTFAfuq8ii9v",
+      "transactions": 50,
+      "tokenMovementTransactions": 46,
+      "parsedSwapLabels": 5,
+      "provisionalTwoLegFlows": 15
+    },
+    {
+      "handleClaim": "bystevenr",
+      "wallet": "AH75Bn6QHSt5K2Ad4p1otns3JTwpSJWZTwiwKWNhmnKx",
+      "transactions": 50,
+      "tokenMovementTransactions": 48,
+      "parsedSwapLabels": 6,
+      "provisionalTwoLegFlows": 27
+    },
+    {
+      "handleClaim": "end837",
+      "wallet": "5DBkonys2H4qHr5x9CCeXPLSWEFbnnLFP1RdfxjJgzvy",
+      "transactions": 50,
+      "tokenMovementTransactions": 50,
+      "parsedSwapLabels": 11,
+      "provisionalTwoLegFlows": 36
+    },
+    {
+      "handleClaim": "bigbabba",
+      "wallet": "mDR91ufq4S2uSHa9E2PYL7xg4LwcQXaQFP7YK864a1z",
+      "transactions": 50,
+      "tokenMovementTransactions": 50,
+      "parsedSwapLabels": 18,
+      "provisionalTwoLegFlows": 47
+    }
+  ],
+  "tokenOverlap": [
+    {
+      "mint": "6s2umN1sqM8mS8ERRmt9cqcFwAoWu5ofma7DN3KfFiue",
+      "metadataName": "Trump Index",
+      "metadataSymbol": "TRUMP3",
+      "walletHandleClaims": [
+        "ExactTallTakin",
+        "bigbabba"
+      ],
+      "provisionalBuys": 0,
+      "provisionalSells": 5,
+      "netUsdcLikeQuoteUnits": -34.3,
+      "firstObserved": "2026-10-20T23:59:19Z",
+      "lastObserved": "2026-10-21T03:47:53Z",
+      "remark": "Overlap is net SELL-like; not a simultaneous accumulation cluster"
+    }
+  ],
+  "separateActivity": [
+    {
+      "mint": "Cbkg5w7V7W2J2sUmecnyN825CbvwvXwasfhduVtNpump",
+      "metadataName": "PHP-UP-2026",
+      "symbol": "PHP",
+      "handleClaim": "bystevenr",
+      "direction": "BUY_LIKE",
+      "oneExample": {
+        "signature": "3wrQhLnuUFE1DjLD5AEcX9sGVKN4dntG3iTmBzm5gbvkKNjxKYBS7UKdXQLbPeKWoyrSGfcLm3JGHGezP9iUroWE",
+        "at": "2026-10-21T05:22:48Z",
+        "usdcDebitUnits": 100,
+        "tokenCreditUnits": 1064431.063751
+      }
+    },
+    {
+      "mint": "6MBf1XdZNSAaDKcxxbnCAngRUxBmwbHS5Ybe2rLRpump",
+      "metadataName": "frameXTV",
+      "symbol": "XTV",
+      "handleClaim": "bigbabba",
+      "direction": "BUY_LIKE",
+      "oneExample": {
+        "signature": "2BqKYNqHnDpgzM4cmdtV6BpX5T6cgoCDegysrhvwYb7jNmbxsyVitj1eWQrqYmCVEQFYB6p7e2A9Bkeq7SbpiFPx",
+        "at": "2026-10-21T02:03:39Z",
+        "usdcDebitUnits": 50,
+        "tokenCreditUnits": 157429.423304
+      }
+    }
+  ],
+  "integrity": {
+    "fomoIdentityVerified": false,
+    "tradeExecutionVerified": false,
+    "beneficialOwnerIndependenceVerified": false,
+    "completeHistoricalCostBasisVerified": false,
+    "realizedTradingPnlCalculated": false,
+    "multiWalletBuyConvergenceQualified": false,
+    "priceOutcomesReconstructed": false,
+    "productionModified": false
+  },
+  "sourceNotes": "Metadata names/symbols came from Helius DAS get_asset, not provenance or safety certification. Recent enhanced transactions may omit native-SOL routing legs, LP actions or off-chain venues. Treat sampled overlap as insufficient to infer behavior outside sample.",
+  "nextSteps": [
+    "Inspect raw JSON-RPC full transaction metadata for selected signatures",
+    "Independently verify wallet ownership and transfer-based basis",
+    "Replay timestamped pools and quote snapshots for out-of-sample trading-signal evaluation"
+  ]
+}

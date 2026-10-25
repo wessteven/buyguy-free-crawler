@@ -1,0 +1,131 @@
+{
+  "journalId": "GOGET-TRADER-RADAR-2026-10-21-RAW-BASIS-04",
+  "observedAt": "2026-10-21",
+  "scope": "read-only research; no change to D1, production scans, or paper trading",
+  "sourceCategories": {
+    "primary": "Connected Helius enhanced parsed Solana address transaction records (100 latest per selected wallet)",
+    "raw": "Public Solana RPC independent getTransaction probes prepared but no successful raw response yet at journal creation",
+    "market": "GeckoTerminal pool webpage, Dexonomics and third-party safety screen; exact one-minute historical OHLCV unavailable in this environment"
+  },
+  "walletClaims": {
+    "php": {
+      "claimedHandle": "bystevenr",
+      "wallet": "AH75Bn6QHSt5K2Ad4p1otns3JTwpSJWZTwiwKWNhmnKx",
+      "identityProven": false,
+      "mint": "Cbkg5w7V7W2J2sUmecnyN825CbvwvXwasfhduVtNpump",
+      "name": "PHP-UP-2026",
+      "symbol": "PHP",
+      "poolCandidate": "YQ4NNeQxHAtdcB8ohx21eJ9U8eTzxNRvGNHkRaA4Pnw",
+      "sample": {
+        "transactions": 100,
+        "firstAt": "2026-10-20T14:08:33Z",
+        "lastAt": "2026-10-21T06:15:30Z"
+      },
+      "provisionalUsdcReceipts": 1922.833193,
+      "provisionalUsdcSpent": 2133.630774,
+      "countedAcquisitionLikeFlows": 5,
+      "countedDisposalLikeFlows": 2,
+      "acquisitionEvents": [
+        {
+          "at": "2026-10-21T05:14:39Z",
+          "signature": "2EtnvPtjXEikXyRftJxZMdCuq32mEYPHzmurqfhDH1sSbKS4hBYQqWdzskkXXvLthyUESG8zvzhhNmyNCLEy7aM5",
+          "tokenUnits": 21212018.686656,
+          "usdcUnits": 1000
+        },
+        {
+          "at": "2026-10-21T05:14:40Z",
+          "signature": "5AfFprZpcEpM7kVG1LqjraXw8t825jYvdVwVTRnFEXHaVJupExdX6Not8a6wMtUd1Ho2BY2PbaK4fijGJUwk96LT",
+          "tokenUnits": 7003515.071684,
+          "usdcUnits": 493.633809
+        },
+        {
+          "at": "2026-10-21T05:16:00Z",
+          "signature": "3Kvw5v3EpamLGuhmkFXk9uvos3wyKXznEdW2BJxvGpz1onkhiLaAGkGBGrcCyDi6nazj7UX3d1tZEnWeALmadXdw",
+          "tokenUnits": 6292209.185032,
+          "usdcUnits": 500
+        },
+        {
+          "at": "2026-10-21T05:18:36Z",
+          "signature": "5d3xDHwHMmrbXJifSMdHxoB9jyV6jF7QGBDv8jcCEh8mK5ooTcEmYaCf83vcmJJAw7o6fGHbwdbCzK38XBSZYU6d",
+          "tokenUnits": 443022.655669,
+          "usdcUnits": 39.996965
+        },
+        {
+          "at": "2026-10-21T05:22:48Z",
+          "signature": "3wrQhLnuUFE1DjLD5AEcX9sGVKN4dntG3iTmBzm5gbvkKNjxKYBS7UKdXQLbPeKWoyrSGfcLm3JGHGezP9iUroWE",
+          "tokenUnits": 1064431.063751,
+          "usdcUnits": 100
+        }
+      ],
+      "disposalEvents": [
+        {
+          "at": "2026-10-21T06:06:39Z",
+          "signature": "2ShoNPRFNwjtTGhuC29LyPqRZjRF16RurPVg5Adhw2VFZZ7d5dLX6nsJDuJDhT3AZDvkQzmbzPjnke3VyQWArvRL",
+          "tokenUnits": 3601519.666279,
+          "usdcUnits": 1066.445685
+        },
+        {
+          "at": "2026-10-21T06:15:30Z",
+          "signature": "3wXzfGwwDdEcrjzVt4zFEgoFDEuNhgsTY8xJY4dKMtvidw2jj1Def2FCKj6xk3ktK9Ygv99LgsFf6iAsz3KGNkC1",
+          "tokenUnits": 3241367.699651,
+          "usdcUnits": 856.387508
+        }
+      ],
+      "arithmeticScenario": {
+        "method": "FIFO over only the seven observed two-sided flows; assumes all are independent actual executions and all starting PHP inventory came from these events; ignores network fee and any unknown prior transfers",
+        "hypotheticalGrossMatchedQuoteSpreadUsdc": 1600.238372,
+        "hypotheticalRemainingPhpUnits": 29172309.296862,
+        "qualifyingRealizedPnlUsdc": null,
+        "confidence": "NOT_VERIFIED_DO_NOT_USE_AS_TRADER_SCORE"
+      },
+      "unresolved": [
+        "Raw RPC signer and SPL balance delta validation",
+        "Token creation and full wallet history proof",
+        "Potential transfer-funded inventory before sample",
+        "Gas/priority fee conversion from SOL to USD",
+        "DEX route fill and liquidity evidence",
+        "Time-aligned OHLCV and exit depth"
+      ]
+    },
+    "xtv": {
+      "claimedHandle": "bigbabba",
+      "wallet": "mDR91ufq4S2uSHa9E2PYL7xg4LwcQXaQFP7YK864a1z",
+      "mint": "6MBf1XdZNSAaDKcxxbnCAngRUxBmwbHS5Ybe2rLRpump",
+      "sample": {
+        "transactions": 100,
+        "firstAt": "2026-10-20T00:49:25Z",
+        "lastAt": "2026-10-21T02:16:41Z"
+      },
+      "buyLikeFlows": 6,
+      "sellLikeFlows": 0,
+      "usdcOutflowUnits": 2086,
+      "realizedOutcome": null
+    }
+  },
+  "marketSources": [
+    {
+      "url": "https://www.geckoterminal.com/solana/pools/YQ4NNeQxHAtdcB8ohx21eJ9U8eTzxNRvGNHkRaA4Pnw",
+      "evidence": "Exact PHP/SOL PumpSwap pool page and quoted pool snapshots; not executable historical minute data"
+    },
+    {
+      "url": "https://dexonomics.io/solana/php/YQ4NNeQxHAtdcB8ohx21eJ9U8eTzxNRvGNHkRaA4Pnw",
+      "evidence": "PHP pool creation dated Oct 21 2026, not a verified exact historical executable quote"
+    },
+    {
+      "url": "https://www.pumppill.org/token/Cbkg5w7V7W2J2sUmecnyN825CbvwvXwasfhduVtNpump",
+      "evidence": "Third-party linked launch wallets and creator-history warnings, unverified independently"
+    },
+    {
+      "url": "https://api.geckoterminal.com/docs/index.html",
+      "evidence": "Public pool OHLCV API documented; inaccessible via current research environment"
+    }
+  ],
+  "matchedControls": {
+    "contemporaneousTokenUniverseVerified": false,
+    "historicalPoolOHLCVCandlesRetrieved": 0,
+    "contemporaneousMatchedControlPairs": 0,
+    "reportableForwardReturns": 0,
+    "alphaEstablished": false
+  },
+  "overallConclusion": "No independently certified trader identity, realized profit, raw execution, matched return or multi-wallet buy convergence. Partial portfolio cashflow is not PnL."
+}
