@@ -49,7 +49,7 @@ public final class RadarWidget extends AppWidgetProvider {
             v.setOnClickPendingIntent(R.id.header,home);
             for(int i=0;i<ROWS.length;i++){
                 if(i>=snapshot.coins.size()){
-                    v.setTextViewText(ROWS[i],i==0?"No pools pass reserve filter":"");
+                    v.setTextViewText(ROWS[i],i==0?(snapshot.error!=null?"Feed problem: "+snapshot.details():"No qualifying market pools"):"");
                     v.setTextColor(ROWS[i],Color.rgb(166,180,168));
                     v.setOnClickPendingIntent(ROWS[i],home);
                     continue;
