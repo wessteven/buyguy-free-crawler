@@ -5,6 +5,7 @@ import json, os, sys, time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 BASE='https://buyguy-free-radar.wessteven.workers.dev'
 def api(path, method='GET', authenticated=True):
@@ -17,15 +18,22 @@ def query(sql, params=None):
     account=os.environ['CF_ACCOUNT_ID']; database=os.environ['CF_DATABASE_ID']
     url=f'https://api.cloudflare.com/client/v4/accounts/{account}/d1/database/{database}/query'
     headers={'authorization':'Bearer '+os.environ['CF_D1_API_TOKEN'],'content-type':'application/json'}
-    with urlopen(Request(url, data=json.dumps({'sql':sql,'params':params or []}).encode(), headers=headers),timeout=30) as r:
-        data=json.load(r)
+    try:
+        with urlopen(Request(url, data=json.dumps({'sql':sql,'params':params or []}).encode(), headers=headers),timeout=30) as r:
+            data=json.load(r)
+    except HTTPError as exc:
+        try:
+            payload=json.loads(exc.read(8192))
+            errors=[{'code':e.get('code'),'message':str(e.get('message',''))[:180]} for e in payload.get('errors',[])]
+        except Exception: errors=[]
+        raise RuntimeError('D1 HTTP '+str(exc.code)+' '+json.dumps(errors)) from None
     if not data.get('success') or not data.get('result') or not data['result'][0].get('success'):
         raise RuntimeError('D1 query failed')
     return data['result'][0]
 
 if '--schema-only' in sys.argv:
     # One known SQL statement, not a generic semicolon splitter.
-    sql=Path('sql/fast-radar.sql').read_text()
+    sql='\n'.join(line for line in Path('sql/fast-radar.sql').read_text().splitlines() if not line.lstrip().startswith('--')).strip()
     query(sql)
     print('Additive radar_samples schema ready; existing tables untouched')
     sys.exit(0)
