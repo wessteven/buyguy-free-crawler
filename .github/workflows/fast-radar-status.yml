@@ -29,13 +29,13 @@ jobs:
           rows=result.get('results',[])
           # Verify the recorded automatic stop without invoking public endpoints.
           for attempt in range(16):
-            if rows and json.loads(rows[0]['token']).get('enabled') is False:break
+            if rows and (json.loads(rows[0]['token']).get('mode')=='helius' or json.loads(rows[0]['token']).get('enabled') is False):break
             if attempt==15:break
             time.sleep(15)
             rows=query('SELECT token FROM leases WHERE name=?',['fast-radar:trial-proof']).get('results',[])
           if rows:
             d=json.loads(rows[0]['token'])
-            print(json.dumps({k:d.get(k) for k in ['enabled','trial_started_at','last_tick','error','updated_quotes','providers','proof_ticks','targets','quotes','writes','last_sample_rows_written']}))
+            print(json.dumps({k:d.get(k) for k in ['mode','enabled','trial_started_at','last_tick','error','updated_quotes','current_slot','usd_reference','metrics','daily_rpc_calls','selection_rows_read','history_paused','providers','proof_ticks','targets','quotes','writes','last_sample_rows_written']}))
           else:print('No trial heartbeat persisted')
           print('Newest runs:',json.dumps(query('SELECT started_at,state,provider_errors FROM runs ORDER BY id DESC LIMIT 3').get('results',[])))
           PY
