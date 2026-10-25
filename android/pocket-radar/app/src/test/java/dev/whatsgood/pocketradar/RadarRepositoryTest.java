@@ -131,4 +131,68 @@ public class RadarRepositoryTest {
         return new JSONObject().put("attributes",attr);
     }
 
+    @Test public void chaseModeUsesPoolAgeReportedTradeCountsAndVerifiedArithmetic() {
+        long now=1_800_000_000_000L;
+        RadarRepository.Coin good=new RadarRepository.Coin("EARLY","mint:early",
+            0.01,8,12,80000,200000,200000,"https://www.geckoterminal.com/solana/pools/test",
+            24,10,now-2*3600_000L);
+        RadarRepository.Coin less=new RadarRepository.Coin("SECOND","mint:second",
+            0.02,5,7,81000,200000,200000,"https://www.geckoterminal.com/solana/pools/other",
+            13,6,now-4*3600_000L);
+        assertTrue(ChaseRanker.qualifies(good,now));
+        assertTrue(ChaseRanker.qualifies(less,now));
+        List<RadarRepository.Coin> selected=RadarRepository.select(
+            java.util.Arrays.asList(less,good),RadarRepository.CHASE,now);
+        assertEquals(2,selected.size());
+        assertEquals("EARLY",selected.get(0).name);
+        assertTrue(selected.get(0).widgetLine(RadarRepository.CHASE).contains("buys/sells 24/10"));
+        assertEquals("SECOND",RadarRepository.select(
+            java.util.Arrays.asList(less,good),RadarRepository.TREND,now).get(0).name);
+    }
+    @Test public void chaseRejectsUnknownTradeDataOldPoolsAndParabolicMoves(){
+        long now=1_800_000_000_000L;
+        RadarRepository.Coin missing=new RadarRepository.Coin("NO TX","mint:tx",
+            0.01,8,12,90000,200000,200000,"https://geckoterminal.com", -1,-1,now-3600_000L);
+        RadarRepository.Coin old=new RadarRepository.Coin("OLD","mint:old",
+            0.01,8,12,90000,200000,200000,"https://geckoterminal.com", 20,3,now-100L*3600_000L);
+        RadarRepository.Coin parabolic=new RadarRepository.Coin("HIGH","mint:high",
+            0.01,150,270,90000,200000,200000,"https://geckoterminal.com", 20,3,now-3600_000L);
+        RadarRepository.Coin sellers=new RadarRepository.Coin("SELLERS","mint:sellers",
+            0.01,6,10,90000,200000,200000,"https://geckoterminal.com", 20,50,now-3600_000L);
+        for(RadarRepository.Coin c:java.util.Arrays.asList(missing,old,parabolic,sellers)){
+            assertFalse(c.name,ChaseRanker.qualifies(c,now));
+        }
+        assertTrue(RadarRepository.select(java.util.Arrays.asList(missing,old,parabolic,sellers),
+            RadarRepository.CHASE,now).isEmpty());
+    }
+    @Test public void parseGeckoReadsFiveMinuteTransactionsAndPoolCreation()throws Exception{
+        JSONObject p=geckoPool(PAIR,"EARLY / SOL",80000,"0.002","5.0","12.0","180000");
+        p.getJSONObject("attributes")
+            .put("pool_created_at","2026-10-25T10:30:00Z")
+            .put("transactions",new JSONObject().put("m5",new JSONObject()
+                .put("buys",44).put("sells",12)));
+        List<RadarRepository.Coin> parsed=RadarRepository.parseGecko(
+            new JSONObject().put("data",new JSONArray().put(p)));
+        assertEquals(44,parsed.get(0).buys5);
+        assertEquals(12,parsed.get(0).sells5);
+        assertEquals(java.time.Instant.parse("2026-10-25T10:30:00Z").toEpochMilli(),
+            parsed.get(0).createdAt);
+    }
+    @Test public void unknownPoolAgeOrMalformedDateIsNotInvented(){
+        assertEquals(0,RadarRepository.parsePoolCreatedAt("not a date"));
+        assertEquals("age ?",RadarRepository.ageLabel(0,1_800_000_000_000L));
+        assertEquals("age ?",RadarRepository.ageLabel(1_900_000_000_000L,1_800_000_000_000L));
+        assertEquals("2h",RadarRepository.ageLabel(1_800_000_000_000L-2*3600_000L,1_800_000_000_000L));
+    }
+    @Test public void modeNeverChangesChartLink(){
+        long now=1_800_000_000_000L;
+        String url="https://www.geckoterminal.com/solana/pools/"+PAIR;
+        RadarRepository.Coin coin=new RadarRepository.Coin("HOLD","mint:hold",
+            0.01,5,9,60000,300000,300000,url,15,8,now-3600_000L);
+        assertEquals(url,RadarRepository.select(java.util.Collections.singletonList(coin),
+            RadarRepository.TREND,now).get(0).url);
+        assertEquals(url,RadarRepository.select(java.util.Collections.singletonList(coin),
+            RadarRepository.CHASE,now).get(0).url);
+    }
+
 }
