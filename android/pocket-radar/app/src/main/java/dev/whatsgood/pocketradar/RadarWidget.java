@@ -40,6 +40,7 @@ public final class RadarWidget extends AppWidgetProvider {
         for(int id:ids){
             RemoteViews v=new RemoteViews(c.getPackageName(),R.layout.radar_widget);
             v.setTextViewText(R.id.status,snapshot.status());
+            v.setTextViewText(R.id.footer,"DEX".equals(snapshot.source)?"Boosted tokens (promotion), not GOGET verified":"Gecko trending pools • not GOGET verified");
             Intent refresh=new Intent(c,RadarWidget.class).setAction(ACTION_REFRESH);
             refresh.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
             v.setOnClickPendingIntent(R.id.refresh,PendingIntent.getBroadcast(c,0,refresh,
