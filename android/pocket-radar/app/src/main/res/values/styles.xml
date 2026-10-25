@@ -8,10 +8,10 @@
     <style name="RadarRow">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">6dp</item>
+        <item name="android:layout_marginTop">4dp</item>
         <item name="android:textColor">#E8FFF0</item>
-        <item name="android:textSize">12sp</item>
-        <item name="android:singleLine">true</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:maxLines">2</item>
         <item name="android:ellipsize">end</item>
     </style>
 </resources>
