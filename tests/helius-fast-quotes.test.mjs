@@ -80,8 +80,10 @@ test('Cloudflare direct mode batches verified state, attaches fresh USD and stor
  };
  try{
   const radar=new FastRadar(state,{DB:db,FAST_RADAR_SOURCE:'helius',HELIUS_RPC_URL:'https://mainnet.helius-rpc.com/?api-key=secret'});await Promise.resolve();
-  await radar.tick(Date.now());assert.equal(n,2);assert.equal(radar.data.updated_quotes,1);assert.equal(radar.data.quotes[0].price_usd,1.5);assert.equal(radar.data.current_slot,102);
-  await radar.tick(Date.now()+30000);assert.equal(n,3);assert.equal(radar.data.current_slot,103);
-  radar.data.daily_rpc_calls=3000;await radar.tick(Date.now()+60000);assert.equal(n,3);assert.equal(radar.data.error,'DAILY_RPC_BUDGET');
+  await radar.tick(Date.now());assert.equal(n,3);assert.equal(radar.data.updated_quotes,1);assert.equal(radar.data.quotes[0].price_usd,1.5);assert.equal(radar.data.current_slot,103);
+  await radar.tick(Date.now()+30000);assert.equal(n,4);assert.equal(radar.data.current_slot,104);
+  radar.data.daily_rpc_calls=3000;await radar.tick(Date.now()+60000);assert.equal(n,4);assert.equal(radar.data.error,'DAILY_RPC_BUDGET');
  }finally{globalThis.fetch=original}
 });
+
+test('dust SOL vaults cannot occupy active tracking slots',()=>{const {registry,state}=fixture();state.accounts.get(bv).data.parsed.info.tokenAmount.amount='1';assert.throws(()=>calculateSnapshot(registry,state),/INSUFFICIENT_SOL_RESERVE/);});

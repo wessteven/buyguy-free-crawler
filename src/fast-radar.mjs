@@ -98,11 +98,11 @@ export class FastRadar {
   if((d.helius_next_at||0)>now){d.error='HELIUS_COOLDOWN';return}
   const before=d.metrics.rpc_calls;
   try{
-   if(!d.registry||now-(d.registry_at||0)>=3600000){
+   if(!d.registry||d.registry_version!==2||now-(d.registry_at||0)>=3600000){
     const result=await this.env.DB.prepare(`SELECT asset_key,chain,address,symbol,pool FROM assets WHERE chain='solana'
      AND status IN ('ALIVE','STATIC') AND last_seen>=? AND pool IS NOT NULL ORDER BY score DESC,asset_key LIMIT 40`).bind(CLEAN_SLATE_AT).all();
     const selected=await discoverRegistry(this.env,result.results||[],{metrics:d.metrics});
-    d.registry=selected.registry;d.unsupported=selected.rejected;d.registry_at=now;
+    d.registry=selected.registry;d.registry_version=2;d.unsupported=selected.rejected;d.registry_at=now;
     d.targets=d.registry;d.selection_rows_read=result.meta?.rows_read??null;
    }
    if(!d.registry.length){d.error='NO_SUPPORTED_POOLS';return}

@@ -36,7 +36,13 @@ export async function discoverRegistry(env,targets,{fetcher=fetch,metrics={}}={}
  if(!unique.length)return {registry:[],rejected:[],slot:null};
  const state=await readAccounts(env,unique.map(t=>t.pool),{fetcher,encoding:'base64',metrics});
  const classified=unique.map(t=>makeRegistry(t,state.accounts.get(t.pool)));
- return {registry:classified.filter(t=>t.supported).slice(0,5),rejected:classified.filter(t=>!t.supported),slot:state.slot};
+ const candidates=classified.filter(t=>t.supported).slice(0,20),rejected=classified.filter(t=>!t.supported);
+ if(!candidates.length)return {registry:[],rejected,slot:state.slot};
+ const keys=[...new Set(candidates.flatMap(p=>[p.pool,p.baseMint,p.quoteMint,p.baseVault,p.quoteVault]))];
+ const checked=await readAccounts(env,keys,{fetcher,minSlot:state.slot,metrics});
+ const registry=[];
+ for(const p of candidates){try{calculateSnapshot(p,checked);if(registry.length<5)registry.push(p)}catch(e){rejected.push({...p,supported:false,reason:e.message})}}
+ return {registry,rejected,slot:checked.slot};
 }
 function mintDecimals(account){
  const parsed=account?.data?.parsed;
@@ -55,6 +61,8 @@ export function calculateSnapshot(target,state){
  const bd=mintDecimals(bm),qd=mintDecimals(qm);
  const b=vaultAmount(state.accounts.get(p.baseVault),p.baseMint,p.pool,bd,bm.owner);
  const q=vaultAmount(state.accounts.get(p.quoteVault),p.quoteMint,p.pool,qd,qm.owner);
+ const solRaw=p.baseMint===WSOL?b:q;
+ if(solRaw<1000000000n)fail('INSUFFICIENT_SOL_RESERVE');
  const targetIsBase=target.address===p.baseMint;
  const numerator=targetIsBase?q*10n**BigInt(bd):b*10n**BigInt(qd);
  const denominator=targetIsBase?b*10n**BigInt(qd):q*10n**BigInt(bd);
