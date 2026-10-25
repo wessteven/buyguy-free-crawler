@@ -59,4 +59,76 @@ public class RadarRepositoryTest {
         assertFalse(RadarRepository.eligible(60000,0,50));
         assertFalse(RadarRepository.eligible(49999,0.2,12));
     }
+    @Test public void geckoSameMintAcrossPoolsConsumesOneSlotAndChoosesDeeperPool() throws Exception {
+        String sameMint="So11111111111111111111111111111111111111112";
+        String pool2="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+        JSONObject first=geckoPool(PAIR,"BILLIONS / SOL",65000,"0.0023","24.2","45.8",null)
+            .put("relationships",new JSONObject().put("base_token",new JSONObject()
+                .put("data",new JSONObject().put("id","solana_"+sameMint))));
+        JSONObject second=geckoPool(pool2,"BILLIONS / SOL",88000,"0.0024","-10.9","-15.0","123000")
+            .put("relationships",new JSONObject().put("base_token",new JSONObject()
+                .put("data",new JSONObject().put("id","solana_"+sameMint))));
+        JSONObject feed=new JSONObject().put("data",new JSONArray().put(first).put(second));
+        List<RadarRepository.Coin> found=RadarRepository.parseGecko(feed);
+        assertEquals(1,found.size());
+        assertTrue(found.get(0).url.contains(pool2));
+        assertEquals("mint:"+sameMint,found.get(0).identity);
+        assertEquals(-10.9,found.get(0).m5,0.000001);
+        assertEquals(-15.0,found.get(0).h1,0.000001);
+        assertEquals(123000,found.get(0).marketCap,0.000001);
+    }
+    @Test public void sameTickerDifferentMintsRemainsTwoRowsWithIdentityHints() throws Exception {
+        String mint1="So11111111111111111111111111111111111111112";
+        String mint2="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+        JSONObject first=geckoPool(PAIR,"BILLIONS / SOL",65000,"0.0023","24.2","0.5",null)
+            .put("relationships",new JSONObject().put("base_token",new JSONObject()
+                .put("data",new JSONObject().put("id","solana_"+mint1))));
+        JSONObject second=geckoPool(mint2,"BILLIONS / SOL",88000,"0.0024","-10.9","-15.0",null)
+            .put("relationships",new JSONObject().put("base_token",new JSONObject()
+                .put("data",new JSONObject().put("id","solana_"+mint2))));
+        List<RadarRepository.Coin> found=RadarRepository.parseGecko(
+            new JSONObject().put("data",new JSONArray().put(first).put(second)));
+        assertEquals(2,found.size());
+        assertNotEquals(found.get(0).identity,found.get(1).identity);
+        assertTrue(found.get(0).name.contains("·"));
+        assertTrue(found.get(1).name.contains("·"));
+    }
+    @Test public void unknownMarketCapNotInventedFromFdv() throws Exception {
+        JSONObject p=geckoPool(PAIR,"Sample / SOL",95000,"0.08","4.2",null,null);
+        JSONObject attrs=p.getJSONObject("attributes");
+        attrs.put("fdv_usd","250000");
+        List<RadarRepository.Coin> found=RadarRepository.parseGecko(
+            new JSONObject().put("data",new JSONArray().put(p)));
+        assertEquals(1,found.size());
+        assertTrue(Double.isNaN(found.get(0).marketCap));
+        assertTrue(Double.isNaN(found.get(0).h1));
+        assertTrue(found.get(0).line().contains("MC —  FDV $250k"));
+        assertTrue(found.get(0).line().contains("1h —"));
+    }
+    @Test public void geckoIncludedIdentityOverridesNoncanonicalRelationshipId() throws Exception {
+        JSONObject pool=geckoPool(PAIR,"Thing / SOL",81000,"0.04","9.4","18.0","90000");
+        pool.put("relationships",new JSONObject().put("base_token",
+            new JSONObject().put("data",new JSONObject().put("id","my-token-id"))));
+        JSONObject included=new JSONObject().put("type","token").put("id","my-token-id")
+            .put("attributes",new JSONObject().put("address",MINT));
+        List<RadarRepository.Coin> found=RadarRepository.parseGecko(
+            new JSONObject().put("data",new JSONArray().put(pool))
+                .put("included",new JSONArray().put(included)));
+        assertEquals("mint:"+MINT,found.get(0).identity);
+    }
+    @Test public void displayedPercentageZeroIsNotNegativeZero() {
+        assertEquals("+0.0%",RadarRepository.formatMove(-0.01));
+        assertEquals("—",RadarRepository.formatMove(Double.NaN));
+    }
+    private static JSONObject geckoPool(String address,String name,double reserve,
+        String price,String m5,String h1,String mcap) throws Exception {
+        JSONObject attr=new JSONObject().put("address",address).put("name",name)
+            .put("reserve_in_usd",reserve).put("base_token_price_usd",price);
+        JSONObject changes=new JSONObject().put("m5",m5);
+        if(h1!=null)changes.put("h1",h1);
+        attr.put("price_change_percentage",changes);
+        if(mcap!=null)attr.put("market_cap_usd",mcap);
+        return new JSONObject().put("attributes",attr);
+    }
+
 }
