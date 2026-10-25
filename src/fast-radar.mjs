@@ -72,7 +72,7 @@ export class FastRadar {
      await this.save(); // persist backoff even if the D1 cooldown write fails
      await this.env.DB.prepare(`INSERT INTO leases(name,expires_at,token) VALUES(?,?,?)
       ON CONFLICT(name) DO UPDATE SET expires_at=MAX(leases.expires_at,excluded.expires_at),token=excluded.token`)
-      .bind('discovery-provider:'+name,this.data.providers[name].next_at,'FAST_RADAR_HTTP_429').run();
+      .bind(name==='dex'?'fast-radar:dex-quotes':'discovery-provider:'+name,this.data.providers[name].next_at,'FAST_RADAR_HTTP_429').run();
     }
     return null;
    }
@@ -94,10 +94,24 @@ export class FastRadar {
    d.targets=rows.filter(t=>valid(t.chain,t.address)&&valid(t.chain,t.pool));d.targets_at=now;
   }
   // Respect cooldowns recorded by the existing discovery lane as well.
-  const shared=(await this.env.DB.prepare('SELECT name,expires_at FROM leases WHERE name IN (?,?)')
-   .bind('discovery-provider:dex','discovery-provider:gecko').all()).results||[];
-  for(const row of shared){const name=row.name.split(':')[1];
-   if(Number(row.expires_at)>now)d.providers[name]={...d.providers[name],next_at:Math.max(d.providers[name]?.next_at||0,Number(row.expires_at)),status:'SHARED_COOLDOWN'};
+  const shared=(await this.env.DB.prepare('SELECT name,expires_at,token FROM leases WHERE name IN (?,?,?)')
+   .bind('discovery-provider:dex','discovery-provider:gecko','fast-radar:dex-quotes').all()).results||[];
+  for(const row of shared){
+   const name=row.name==='fast-radar:dex-quotes'?'dex':row.name.split(':')[1];
+   if(Number(row.expires_at)<=now)continue;
+   if(row.name==='discovery-provider:dex'){
+    // DEX documents profiles (60/min) and token quotes (300/min) separately.
+    // Legacy leases omit the endpoint. Only an exact timestamp-matched error
+    // can prove this cooldown is profile-only; unknown scopes remain blocked.
+    const recent=(await this.env.DB.prepare('SELECT started_at,provider_errors FROM runs ORDER BY id DESC LIMIT 32').all()).results||[];
+    const limited=recent.find(r=>Date.parse(r.started_at)===Number(row.expires_at)-1800000);
+    if(limited&&/DEX Screener profiles HTTP 429/.test(limited.provider_errors)&&!/DEX Screener quotes HTTP 429/.test(limited.provider_errors)){
+     d.discovery_profile_cooldown_until=Number(row.expires_at);
+     if(d.providers.dex?.status==='SHARED_COOLDOWN'&&d.providers.dex.next_at===Number(row.expires_at))delete d.providers.dex;
+     continue;
+    }
+   }
+   d.providers[name]={...d.providers[name],next_at:Math.max(d.providers[name]?.next_at||0,Number(row.expires_at)),status:'SHARED_COOLDOWN'};
   }
   const found=[];
   for(const chain of ['solana','robinhood']){

@@ -80,3 +80,18 @@ test('ten-minute live trial automatically stops without fetching providers',asyn
  h.radar.data.enabled=true;h.radar.data.trial_started_at=Date.now()-600001;
  await h.radar.alarm();assert.equal(h.radar.data.enabled,false);assert.equal(h.radar.data.error,'TRIAL_COMPLETE');assert.equal(calls,0);
 });
+test('verified profile-only cooldown does not consume documented token-quote bucket; unknown scope blocks',async()=>{
+ for(const verified of [true,false]){
+  let calls=0;const h=harness(async()=>{calls++;return Response.json([pair])});await Promise.resolve();
+  h.radar.data.providers.dex={next_at:now+1000000,status:'SHARED_COOLDOWN'};
+  const db=h.radar.env.DB,original=db.prepare.bind(db);
+  db.prepare=sql=>{
+   if(sql.includes('FROM leases'))return {bind(){return this},async all(){return {results:[{name:'discovery-provider:dex',expires_at:now+1000000,token:'HTTP_429'}]}}};
+   if(sql.includes('FROM runs'))return {async all(){return {results:verified?[{started_at:new Date(now+1000000-1800000).toISOString(),provider_errors:'DEX Screener profiles HTTP 429'}]:[]}}};
+   return original(sql);
+  };
+  await h.radar.tick(now);
+  if(verified){assert.equal(calls,1);assert.equal(h.radar.data.quotes.length,1)}
+  else{assert.equal(h.radar.data.quotes.length,0);assert.equal(h.radar.data.providers.dex.status,'SHARED_COOLDOWN')}
+ }
+});
