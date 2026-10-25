@@ -4,10 +4,13 @@ name: Deploy BuyGuy Free Dashboard
 # Provider-cooldown release: no D1 migration, no scanner cadence change, no paper-trading change.
 on:
   push:
+    branches: [main]
     paths:
       - '.github/workflows/deploy-dashboard.yml'
       - 'tests/history-read-budget.test.mjs'
       - 'src/viewer.mjs'
+      - 'src/fast-radar.mjs'
+      - 'tests/fast-radar.test.mjs'
       - 'src/discovery-quality.mjs'
       - 'src/clean-slate.mjs'
       - 'tests/clean-slate.test.mjs'

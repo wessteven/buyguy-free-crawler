@@ -1,6 +1,10 @@
 # GOGET fast radar: 30-second target
 
-Status: implementation and offline tests, not activated or production verified.
+Status: implementation tested locally and in GitHub CI. The existing unrestricted
+deployment workflow also deployed the dashboard panel from this feature branch;
+its authenticated D1 and reachability checks passed. Fast-radar binding, sample
+schema and alarms remain unconfigured/inactive. This change restricts future
+automatic deployments to main. No 30-second production cycles are verified.
 
 ## Architecture and integration choices
 
@@ -73,6 +77,8 @@ signal-time snapshots and important events. Do not silently discard existing dat
 - DO storage/alarm operations have their own billing/allowances. Benchmark before
   assuming this is entirely inside the $5 base. D1 limits are account-wide.
 
+SQLite Durable Objects are available on Workers Free as well as Paid, so a small
+trial does not require buying a plan. Free limits fail closed when exhausted.
 Workers Paid starts at US$5/month, not A$5, with usage-based overages. D1 Paid
 includes 25 billion reads/month, 50 million writes/month and 5 GB total storage;
 Free has 5 million reads/day, 100,000 writes/day and 5 GB total storage (with a
@@ -82,13 +88,15 @@ Sources checked 2026-10-25:
 - https://developers.cloudflare.com/workers/platform/pricing/
 - https://developers.cloudflare.com/d1/platform/pricing/
 - https://developers.cloudflare.com/durable-objects/api/alarms/
+- https://developers.cloudflare.com/durable-objects/platform/pricing/
 - https://docs.dexscreener.com/api/reference
 - https://www.tradingview.com/support/solutions/43000795700-mcp-server-faq/
 
 ## Activation/runbook
 
 No billing upgrade is made by this branch. No production D1 migration or fast
-alarm activation happens automatically. Merge/deploy the dashboard only after CI.
+alarm activation happens automatically. The panel is deployed; merge the branch
+only after CI. Activation remains a separate configuration and validation step.
 Then use existing scoped Cloudflare deployment credentials (never expose secrets):
 
 1. Apply sql/fast-radar.sql to the SAME D1 database bound to the dashboard Worker.
