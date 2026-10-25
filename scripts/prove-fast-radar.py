@@ -55,6 +55,7 @@ try:
         else:
             snapshot=api('/api/fast-radar')
         if '--helius' in sys.argv and snapshot.get('mode')!='helius':
+            ticks.clear()
             time.sleep(10);continue
         snapshots.append(snapshot)
         providers=snapshot.get('providers',{})
