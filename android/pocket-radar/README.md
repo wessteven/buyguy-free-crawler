@@ -1,4 +1,4 @@
-# WHAT'S GOOD Pocket Radar Android v0.5
+# WHAT'S GOOD Pocket Radar Android v0.6
 
 A **read-only Android home-screen widget** with a public Solana trending-pool ticker.
 It is **not** the authenticated GOGET shortlist, buy/sell signals, real-time tick data,
@@ -49,3 +49,15 @@ The app includes a user-triggered network self-test for INTERNET permission, act
 - **Health:** Previous provider fallback, error/stale state, no private keys, read-only permission profile and 60-second request floor remain.
 - **Release:** An APK passing JVM parser tests/CI is **not** proof of functional performance on Samsung. Compare the widget and full app on the same timestamp before calling it field-tested.
 - **GOGET:** No production scans, schema, D1, cooldowns, paper trades or trading features changed. No fabricated OUR SCORE from market momentum.
+
+## v0.6 TREND / CHASE (limited public-data screening)
+
+- **TREND** remains the provider's deduplicated ranked sample, limited to five visible tokens. A tap on a token still opens the same exact GeckoTerminal pool chart (DEX fallback charts open at DEX Screener).
+- **CHASE** is a second display mode, switchable in the Android app and directly on the home widget. Switching modes reads local cache only; it does not call providers or affect Cloudflare D1.
+- New feed attributes: reported Gecko `transactions.m5.buys/sells`, `pool_created_at`; fallback DEX `txns.m5.buys/sells` and `pairCreatedAt`.
+- A pool qualifies for CHASE only when pool age is known and 0–72h, 5-minute buys at least 10 and 1.3x sells, +2% through +30% over 5 minutes, optional 1-hour return not below 0% or above 80%, and public reported liquidity >= $50,000.
+- Candidates are ordered by net buys minus sells over 5 minutes, tie-breaking on younger age and then pool liquidity. This is **NOT** a prediction score and is not GOGET OUR SCORE.
+- CHASE may legitimately show zero matches. Missing trade counts or unknown age NEVER qualify. Reported transactions are **not proven unique buyers**; wallets may wash trade. This is the provider's trending sample (at most the first page), **not** an exhaustive new-token search.
+- Up to 20 bounded deduplicated candidate observations are cached per successful public feed fetch, permitting immediate local mode switches while preserving the existing minimum 60-second request spacing.
+- Android widget continues to use its default OS periodic update policy, with manual refresh and immediate mode-toggle UI feedback. This is not continuous 30-second background market data.
+- Trading, wallet signing, notifications, private GOGET authentication, scanner/cron/DB schema, and production GOGET queries are untouched.
