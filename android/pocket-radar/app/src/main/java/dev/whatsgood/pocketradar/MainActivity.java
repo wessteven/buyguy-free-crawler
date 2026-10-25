@@ -50,8 +50,8 @@ public final class MainActivity extends Activity {
         Button dashboard=new Button(this);dashboard.setText("OPEN GOGET / WHAT'S GOOD");
         dashboard.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
             Uri.parse(RadarRepository.DASHBOARD))));body.addView(dashboard);
-        add(body,"This is a public trending-pools ticker, not the private GOGET shortlist. Pools filtered by estimated reserve ≥ $50k; reserve is NOT verified exit liquidity. Tap a coin to see the exact pool chart.",13,0xFFABB8AC,false);
-        add(body,"App checks every 30s while visible; public feed refreshes at most once/minute. Home widget updates on tap or around every 30 minutes subject to Android limits. Read-only: no wallet or trading permissions.",12,0xFF829B88,false);
+        add(body,"GeckoTerminal trending pools first; fallback is DexScreener boost listings (paid promotion, NOT independent discovery). Filters use reported USD liquidity ≥ $50k, not verified exit liquidity. Tap a row for its exact pool. No trading permissions.",13,0xFFABB8AC,false);
+        add(body,"Foreground app checks every 30s, provider requests at most once/min. Widget refresh on tap or Android-managed periodic intervals. A displayed fetch age is NOT proof the underlying quote is equally fresh.",12,0xFF829B88,false);
         show(RadarRepository.cached(this));
     }
     @Override protected void onResume(){super.onResume();active=true;handler.post(timer);}
@@ -70,11 +70,11 @@ public final class MainActivity extends Activity {
         });
     }
     private void show(RadarRepository.Snapshot snap){
-        status.setText(snap.status());
+        status.setText(snap.status()+"\n"+snap.details());
         for(int i=0;i<rows.length;i++){
             TextView row=rows[i];
             if(i>=snap.coins.size()){
-                row.setText(i==0?"No trending pools meet $50k reserve minimum":"");
+                row.setText(i==0?(snap.error!=null?"Feed unavailable: "+snap.details():"No pools currently meet $50k minimum"):"");
                 row.setTextColor(0xFF92AA98);
                 row.setOnClickListener(null);
                 continue;
