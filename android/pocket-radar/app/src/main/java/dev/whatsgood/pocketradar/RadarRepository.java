@@ -43,6 +43,10 @@ final class RadarRepository {
             return name+"  "+formatPrice(usd)+"   5m "+formatMove(m5)+"  1h "+formatMove(h1)+
                 "\n"+capLabel(marketCap,fdv)+"   · LP "+compact(reserve);
         }
+        String widgetLine(){
+            return name+" "+formatPrice(usd)+"  "+formatMove(m5)+"/"+formatMove(h1)+
+                "\n"+capLabel(marketCap,fdv)+" · LP "+compact(reserve);
+        }
     }
 
     static final class Snapshot {
@@ -68,8 +72,8 @@ final class RadarRepository {
             for(int i=0;i<Math.min(MAX_COINS,a.length());i++){
                 JSONObject j=a.getJSONObject(i);
                 out.add(new Coin(j.getString("name"),j.getString("identity"),j.getDouble("usd"),
-                    j.getDouble("m5"),j.getDouble("h1"),j.getDouble("reserve"),
-                    j.getDouble("marketCap"),j.getDouble("fdv"),j.getString("url")));
+                    j.getDouble("m5"),number(j.opt("h1")),j.getDouble("reserve"),
+                    number(j.opt("marketCap")),number(j.opt("fdv")),j.getString("url")));
             }
         }catch(Exception ignored){out.clear();}
         return new Snapshot(out,p.getLong("at",0),p.getString("source",""),
