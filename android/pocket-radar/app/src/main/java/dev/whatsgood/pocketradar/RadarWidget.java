@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 
 public final class RadarWidget extends AppWidgetProvider {
     private static final String ACTION_REFRESH="dev.whatsgood.pocketradar.REFRESH";
+    private static final String ACTION_MODE="dev.whatsgood.pocketradar.MODE";
     private static final int[] ROWS={R.id.row0,R.id.row1,R.id.row2,R.id.row3,R.id.row4};
     private static final ExecutorService IO=Executors.newSingleThreadExecutor();
     @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){
@@ -30,7 +31,14 @@ public final class RadarWidget extends AppWidgetProvider {
     }
     @Override public void onReceive(Context context,Intent intent){
         super.onReceive(context,intent);
-        if(ACTION_REFRESH.equals(intent.getAction())){
+        if(ACTION_MODE.equals(intent.getAction())){
+            PendingResult pending=goAsync();
+            Context app=context.getApplicationContext();
+            IO.execute(()->{
+                try{renderAll(app,RadarRepository.toggleMode(app));}
+                finally{pending.finish();}
+            });
+        }else if(ACTION_REFRESH.equals(intent.getAction())){
             PendingResult pending=goAsync();
             Context app=context.getApplicationContext();
             IO.execute(()->{try{renderAll(app,RadarRepository.refresh(app));}finally{pending.finish();}});
@@ -49,8 +57,16 @@ public final class RadarWidget extends AppWidgetProvider {
             int height=options==null?0:options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,0);
             int visible=height>=235?5:3;
             v.setTextViewText(R.id.status,snapshot.status());
+            v.setTextViewText(R.id.mode,RadarRepository.CHASE.equals(snapshot.mode)?
+                "⚡ CHASE":"≡ TREND");
+            Intent changeMode=new Intent(c,RadarWidget.class).setAction(ACTION_MODE);
+            v.setOnClickPendingIntent(R.id.mode,PendingIntent.getBroadcast(c,1,changeMode,
+                PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT));
             v.setTextViewText(R.id.footer,"DEX".equals(snapshot.source)?
-                "5m/1h moves · BOOSTED ads · not GOGET":"5m/1h moves · MC ≠ FDV · not GOGET");
+                "Promoted fallback · not GOGET validated":
+                (RadarRepository.CHASE.equals(snapshot.mode)?
+                    "CHASE = price + buys/sells + age · NOT buy advice":
+                    "5m/1h moves · MC ≠ FDV · not GOGET"));
             Intent refresh=new Intent(c,RadarWidget.class).setAction(ACTION_REFRESH);
             refresh.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
             v.setOnClickPendingIntent(R.id.refresh,PendingIntent.getBroadcast(c,0,refresh,
@@ -61,13 +77,17 @@ public final class RadarWidget extends AppWidgetProvider {
             for(int i=0;i<ROWS.length;i++){
                 v.setViewVisibility(ROWS[i],i<visible?View.VISIBLE:View.GONE);
                 if(i>=snapshot.coins.size()){
-                    v.setTextViewText(ROWS[i],i==0?(snapshot.error!=null?"Feed problem: "+snapshot.details():"No qualifying market pools"):"");
+                    String empty=RadarRepository.CHASE.equals(snapshot.mode)?
+                    "No early-momentum matches in sample · tap TREND":
+                    "No qualifying trending pools";
+                v.setTextViewText(ROWS[i],i==0?(snapshot.fetchedAt==0&&snapshot.error!=null?
+                    "Feed problem: "+snapshot.details():empty):"");
                     v.setTextColor(ROWS[i],Color.rgb(166,180,168));
                     v.setOnClickPendingIntent(ROWS[i],home);
                     continue;
                 }
                 RadarRepository.Coin coin=snapshot.coins.get(i);
-                v.setTextViewText(ROWS[i],coin.widgetLine());
+                v.setTextViewText(ROWS[i],coin.widgetLine(snapshot.mode));
                 v.setTextColor(ROWS[i],coin.m5>=0?0xFF7CF7A1:0xFFFFA99D);
                 Intent view=new Intent(Intent.ACTION_VIEW,Uri.parse(coin.url));
                 v.setOnClickPendingIntent(ROWS[i],PendingIntent.getActivity(c,100+i,view,
