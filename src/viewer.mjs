@@ -1,5 +1,8 @@
 export {FastRadar} from './fast-radar.mjs';
 import {discoveryQuality} from './discovery-quality.mjs';
+import {issuePocketToken,validPocketToken,POCKET_TOKEN_SECONDS} from './pocket-radar-token.mjs';
+import {pocketFeed} from './pocket-radar-feed.mjs';
+
 import {CLEAN_SLATE_AT,CLEAN_SLATE_ACTIVE_WHERE} from './clean-slate.mjs';
 import {getPaperSnapshot} from './paper-ops.mjs';
 import {scheduledResearch} from './scheduled-research.mjs';
@@ -196,6 +199,13 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <p class="hint">Separate exact-pool quotes; rankings and deep checks keep their own cadence. Receipt age is not source age.</p>
 <button id="fastStart" type="button">Start fast radar</button><button id="fastStop" type="button">Stop</button>
 <p id="fastStatus" class="hint" role="status">Not configured</p><div id="fastQuotes"></div></details>
+<details id="pocketPairBox"><summary>PAIR POCKET RADAR · READ-ONLY GOGET (7 DAYS)</summary>
+<p class="hint">Issue a short-lived device credential for research rankings only. Never paste the dashboard password into an APK. Keep the token private. Rotating the administrator secret revokes all pairs.</p>
+<button type="button" id="pairPocket">Generate 7-day pairing token</button>
+<input type="password" id="pairPocketToken" readonly autocomplete="off" aria-label="Temporary Pocket Radar token" placeholder="Generate a token to reveal" />
+<button type="button" id="copyPocketToken">Copy token</button>
+<p class="hint" id="pairPocketMessage" role="status" aria-live="polite">Token provides read-only research-feed access, not trading or administrator access.</p>
+</details>
 <div id="goodCards" class="good-list" aria-live="polite" aria-label="Five strongest currently qualified crypto research candidates"></div>
 <p id="goodFootnote" class="hint">Evidence is indicative; prices and buying activity can be spoofed. Never assume an LP lock or executable exit.</p>
 <button type="button" id="goodResearch" aria-label="Open full sortable token research">Full research + all tokens ↗</button>
