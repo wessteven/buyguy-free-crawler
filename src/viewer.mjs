@@ -1,5 +1,8 @@
 export {FastRadar} from './fast-radar.mjs';
 import {discoveryQuality} from './discovery-quality.mjs';
+import {issuePocketToken,validPocketToken,POCKET_TOKEN_SECONDS} from './pocket-radar-token.mjs';
+import {pocketFeed} from './pocket-radar-feed.mjs';
+
 import {CLEAN_SLATE_AT,CLEAN_SLATE_ACTIVE_WHERE} from './clean-slate.mjs';
 import {getPaperSnapshot} from './paper-ops.mjs';
 import {scheduledResearch} from './scheduled-research.mjs';
@@ -196,6 +199,13 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <p class="hint">Separate exact-pool quotes; rankings and deep checks keep their own cadence. Receipt age is not source age.</p>
 <button id="fastStart" type="button">Start fast radar</button><button id="fastStop" type="button">Stop</button>
 <p id="fastStatus" class="hint" role="status">Not configured</p><div id="fastQuotes"></div></details>
+<details id="pocketPairBox"><summary>PAIR POCKET RADAR · READ-ONLY GOGET (7 DAYS)</summary>
+<p class="hint">Issue a short-lived device credential for research rankings only. Never paste the dashboard password into an APK. Keep the token private. Rotating the administrator secret revokes all pairs.</p>
+<button type="button" id="pairPocket">Generate 7-day pairing token</button>
+<input type="password" id="pairPocketToken" readonly autocomplete="off" aria-label="Temporary Pocket Radar token" placeholder="Generate a token to reveal" />
+<button type="button" id="copyPocketToken">Copy token</button>
+<p class="hint" id="pairPocketMessage" role="status" aria-live="polite">Token provides read-only research-feed access, not trading or administrator access.</p>
+</details>
 <div id="goodCards" class="good-list" aria-live="polite" aria-label="Five strongest currently qualified crypto research candidates"></div>
 <p id="goodFootnote" class="hint">Evidence is indicative; prices and buying activity can be spoofed. Never assume an LP lock or executable exit.</p>
 <button type="button" id="goodResearch" aria-label="Open full sortable token research">Full research + all tokens ↗</button>
@@ -1527,6 +1537,28 @@ async function pollFastRadar(action){
 document.getElementById('fastStart').addEventListener('click',()=>pollFastRadar('start'));
 document.getElementById('fastStop').addEventListener('click',()=>pollFastRadar('stop'));
 if(typeof setInterval==='function')setInterval(()=>pollFastRadar(),30000);
+// Pairing remains a manual, user-initiated step; never extract browser sessions.
+let pocketPairToken='';
+document.getElementById('pairPocket').addEventListener('click',async()=>{
+ const message=document.getElementById('pairPocketMessage');
+ pocketPairToken='';document.getElementById('pairPocketToken').value='';
+ try{
+  const r=await fetch('/api/pocket-radar/pair',{method:'POST',credentials:'same-origin',
+   cache:'no-store',headers:{'X-Pocket-Pair':'1'}});
+  if(!r.ok)throw Error('Pairing failed (HTTP '+r.status+'). Check dashboard login.');
+  const data=await r.json();
+  if(typeof data.token!=='string'||!data.token.startsWith('pr1.'))throw Error('Malformed token');
+  pocketPairToken=data.token;document.getElementById('pairPocketToken').value=data.token;
+  message.textContent='Expires '+data.expiresAt+'. Copy and paste in Pocket Radar → GOGET Research.';
+ }catch(e){message.textContent=e.message;}
+});
+document.getElementById('copyPocketToken').addEventListener('click',async()=>{
+ const message=document.getElementById('pairPocketMessage');
+ if(!pocketPairToken){message.textContent='Generate a pairing token first.';return;}
+ try{await navigator.clipboard.writeText(pocketPairToken);
+  message.textContent='Copied. Paste into Pocket Radar; protect clipboard contents.';}
+ catch{message.textContent='Clipboard unavailable. Select and copy the token field manually.';}
+});
 initTabs();
 // Reopen automatically when a valid remembered session cookie is present.
 refresh();
@@ -1543,6 +1575,40 @@ if(fastPath&&origin&&origin!==new URL(request.url).origin)return json({error:'fo
 if(fastPath&&(request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site')return json({error:'forbidden'},403);
 if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&origin&&origin!==new URL(request.url).origin)
   return json({error:'forbidden'},403);
+// Pairing issues ONLY limited device credentials after an authenticated dashboard interaction.
+if(path==='/api/pocket-radar/pair'){
+ if(request.method!=='POST')return json({error:'method_not_allowed'},405);
+ if(origin!==new URL(request.url).origin||
+   (request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site'||
+   request.headers.get('x-pocket-pair')!=='1')return json({error:'forbidden'},403);
+ const cookie=readSessionCookie(request.headers.get('cookie'));
+ if(!await validSession(env.ADMIN_TOKEN||'',cookie))return json({error:'unauthorized'},401);
+ try{return json({...await issuePocketToken(env.ADMIN_TOKEN),scope:'pocket_radar_read_only',
+   expiresInSeconds:POCKET_TOKEN_SECONDS});}
+ catch{return json({error:'pair_unavailable'},503)}
+}
+if(path==='/api/pocket-radar/feed'){
+ if(request.method!=='GET')return json({error:'method_not_allowed'},405);
+ const authorization=request.headers.get('authorization')||'';
+ const matched=/^Bearer (pr1\.\S+)$/.exec(authorization);
+ if(!matched||!await validPocketToken(env.ADMIN_TOKEN||'',matched[1]))
+   return json({error:'unauthorized'},401);
+ if(!env.DB)return json({error:'database_not_configured'},503);
+ // Edge-cached shared snapshot: requires credential verification before any cache access.
+ const cache=typeof caches!=='undefined'?caches.default:null;
+ const cacheKey=new Request(new URL('/__internal_pocket_radar_v1_cache',request.url).toString());
+ if(cache){
+  try{const previous=await cache.match(cacheKey);if(previous)return json(await previous.json());}
+  catch{}
+ }
+ try{
+  const report=await pocketFeed(env.DB);
+  if(cache)try{await cache.put(cacheKey,new Response(JSON.stringify(report),
+    {headers:{'cache-control':'public, max-age=300','content-type':'application/json'}}));}
+   catch{}
+  return json(report);
+ }catch(e){return json({error:d1ReadQuota(e)?'D1_READ_QUOTA':'pocket_feed_unavailable'},503)}
+}
 if(path==='/api/login'){
  if(request.method!=='POST')return json({error:'method_not_allowed'},405);
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))

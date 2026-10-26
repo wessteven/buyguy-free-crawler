@@ -1,0 +1,56 @@
+name: Pocket Radar Android APK
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'android/pocket-radar/**'
+      - '.github/workflows/pocket-radar-android.yml'
+  pull_request:
+    paths:
+      - 'android/pocket-radar/**'
+      - '.github/workflows/pocket-radar-android.yml'
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Configure preinstalled Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | sort -V | tail -1)"
+          test -n "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Run parser regression tests
+        working-directory: android/pocket-radar
+        run: gradle --no-daemon :app:testDebugUnitTest
+      - name: Assemble debug APK
+        working-directory: android/pocket-radar
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Smoke-test release signing (throwaway key; never distribute)
+        working-directory: android/pocket-radar
+        run: |
+          set -euo pipefail
+          keytool -genkeypair -noprompt -alias pocket-radar -keyalg RSA -keysize 3072 -validity 12000 -storetype PKCS12 -keystore "$RUNNER_TEMP/throwaway.p12" -storepass TEST_ONLY_REMOVE_ME -dname "CN=Temporary CI Test"
+          export POCKET_RADAR_KEYSTORE_PATH="$RUNNER_TEMP/throwaway.p12"
+          export POCKET_RADAR_SIGNING_PASSWORD="TEST_ONLY_REMOVE_ME"
+          gradle --no-daemon :app:assembleRelease
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          rm -f "$RUNNER_TEMP/throwaway.p12" app/build/outputs/apk/release/app-release.apk
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pocket-radar-v08-DEBUG-NOT-AN-UPDATE
+          path: android/pocket-radar/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,17 @@
+<resources>
+    <style name="PocketRadarTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#0A100D</item>
+        <item name="android:navigationBarColor">#0A100D</item>
+        <item name="android:colorAccent">#77F7A4</item>
+    </style>
+    <style name="RadarRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:textColor">#E8FFF0</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+</resources>
