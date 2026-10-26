@@ -1,4 +1,45 @@
 
+## v0.8 — GOGET research pairing (feature branch; production API not deployed)
+
+The existing signed v0.7 app, permanent Android signing identity, TREND and CHASE
+screens, widget, and pool chart taps are preserved. v0.8 adds a separate
+**GOGET RESEARCH · OUR SCORE** screen without replacing public feeds.
+
+**To pair after the Worker endpoint has been tested and deployed:** open the
+authenticated GOGET dashboard in a browser; under WHAT'S GOOD expand
+**PAIR POCKET RADAR**, generate a **seven-day limited read-only** token and copy
+it. Open the Pocket Radar app > GOGET RESEARCH > PAIR, paste the token. The
+device stores only this limited token in private (non-backed-up) app storage.
+No dashboard password, cookies or administrator API key go into the APK.
+The token is accepted *only* by GET /api/pocket-radar/feed, never write, audit,
+paper trading, wallet or administrative routes. It expires after seven days;
+re-pairing is needed. Clearing GOGET device access removes its local credential
+and research cache without affecting TREND/CHASE.
+
+**Server**: POST /api/pocket-radar/pair requires the existing authenticated,
+same-origin dashboard session and explicit pairing action; GET
+/api/pocket-radar/feed accepts only a purpose-signed token. The endpoint is
+read-only, queries a maximum of 80 recent active Solana assets and 360 recent
+research events, and uses a shared five-minute edge cache after authentication
+where supported. No scanner invocation, database write, cron change, D1
+migration, history reset or paper-trade activity.
+
+**Evidence limitations:** The endpoint ranks the **bounded GOGET research
+sample** with the existing OUR SCORE algorithm, recent observation time and
+seven-check safety assessment. Because the dashboard can examine a larger
+asset/history set, its exact top five can differ from this subset. Missing
+evidence remains unknown. Pool identities are stored, not freshly certified;
+reported buys/sells are trades, not verified distinct wallets. Observation
+times are not independently certified provider quote times. A good score is
+not a trade recommendation. The **home widget remains TREND/CHASE** in v0.8;
+authenticated widget support should follow successful on-phone API testing.
+
+**Deployment blocker:** the feature branch must pass all CI checks and undergo
+a controlled Worker deployment/verification before GOGET ranking fetches work
+in the phone app. A valid signed APK alone does not mean the authenticated
+server endpoint is live. Do not merge/deploy into production without checking
+D1 read budget and verifying the production scanner/cron remain unchanged.
+
 ## Permanent signing: update in place from v0.7 onward
 
 Signing-setup verification is performed by the separate secret-gated GitHub Actions workflow. A green run alone is insufficient: the signed-release APK must be uploaded after keytool confirms the alias/password and apksigner verifies the output. Never paste key material into the repository or logs.
@@ -79,10 +120,10 @@ then long-press home screen > Widgets > WHAT'S GOOD Pocket Radar.
   session extraction, wallet permissions or production D1 reads.
 - No changes to GOGET's existing scanner, cron, cooldown, D1 or paper ledger.
 
-## Next integration (NOT enabled)
+## Further integration (not yet enabled)
 
-Add a bounded, authenticated, rate-limited, server-cached GOGET widget endpoint,
-using an explicit user-issued expiring read-only credential. Never bake
+Extend the **home widget** with the authenticated GOGET research source after
+controlled production endpoint verification; the v0.8 app screen is only the first stage. Never bake
 dashboard cookies/API keys into APK; never expose private shortlist via
 anonymous unauthenticated endpoint. Render quote timestamps independently
 from local fetch time. Add tests before production use.
