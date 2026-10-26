@@ -1,6 +1,9 @@
 
 ## Permanent signing: update in place from v0.7 onward
 
+Signing-setup verification is performed by the separate secret-gated GitHub Actions workflow. A green run alone is insufficient: the signed-release APK must be uploaded after keytool confirms the alias/password and apksigner verifies the output. Never paste key material into the repository or logs.
+
+
 **Why the one-time switch?** Prior GitHub Actions APKs are Android debug builds
 with temporary randomly generated signing certificates. Android forbids
 in-place updates across different signing keys, even when package IDs match.
