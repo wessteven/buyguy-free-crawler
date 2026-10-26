@@ -6,8 +6,8 @@ android {
         applicationId 'dev.whatsgood.pocketradar'
         minSdk 26
         targetSdk 35
-        versionCode 7
-        versionName '0.7.0'
+        versionCode 8
+        versionName '0.8.0'
     }
     // The release keystore is injected by GitHub Actions at build time.
     // Never commit signing keys, passwords, or base64 keystores to this public repo.
