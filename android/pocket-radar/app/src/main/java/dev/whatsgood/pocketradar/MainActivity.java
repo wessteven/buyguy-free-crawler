@@ -58,6 +58,9 @@ public final class MainActivity extends Activity {
         Button dashboard=new Button(this);dashboard.setText("OPEN GOGET / WHAT'S GOOD");
         dashboard.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
             Uri.parse(RadarRepository.DASHBOARD))));body.addView(dashboard);
+        Button goget=new Button(this);goget.setText("★ GOGET RESEARCH · OUR SCORE");
+        goget.setOnClickListener(v->startActivity(new Intent(this,GogetActivity.class)));
+        body.addView(goget);
         Button doctor=new Button(this);doctor.setText("TEST INTERNET / DNS");
         TextView diagnostic=add(body,"Connection test available. Tap TEST INTERNET / DNS to compare providers with an ordinary public domain.",13,0xFFB0CBB7,false);
         doctor.setOnClickListener(v->{
