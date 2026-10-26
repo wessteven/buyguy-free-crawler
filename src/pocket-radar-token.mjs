@@ -6,7 +6,7 @@ const hex=b=>Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');
 const bytes=h=>new Uint8Array(h.match(/../g).map(x=>parseInt(x,16)));
 async function keyFor(secret){
  if(typeof secret!=='string'||!secret)throw Error('Pocket Radar signing key unavailable');
- return crypto.subtle.importKey('raw',utf8.encode('pocket-radar-read-only-v1\\0'+secret),
+ return crypto.subtle.importKey('raw',utf8.encode('pocket-radar-read-only-v1\0'+secret),
    {name:'HMAC',hash:'SHA-256'},false,['sign','verify']);
 }
 export async function issuePocketToken(secret,{now=Date.now()}={}){
@@ -18,7 +18,7 @@ export async function issuePocketToken(secret,{now=Date.now()}={}){
 }
 export async function validPocketToken(secret,token,{now=Date.now()}={}){
  if(typeof token!=='string'||token.length>180||!secret)return false;
- const m=/^pr1\\.(\\d{10})\\.([0-9a-f]{32})\\.([0-9a-f]{64})$/.exec(token);
+ const m=/^pr1\.(\d{10})\.([0-9a-f]{32})\.([0-9a-f]{64})$/.exec(token);
  if(!m)return false;
  const seconds=Math.floor(now/1000),expiry=Number(m[1]);
  if(expiry<=seconds||expiry>seconds+POCKET_TOKEN_SECONDS+60)return false;
