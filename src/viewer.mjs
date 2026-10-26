@@ -1553,6 +1553,40 @@ if(fastPath&&origin&&origin!==new URL(request.url).origin)return json({error:'fo
 if(fastPath&&(request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site')return json({error:'forbidden'},403);
 if((path==='/api/login'||path==='/api/logout'||path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&origin&&origin!==new URL(request.url).origin)
   return json({error:'forbidden'},403);
+// Pairing issues ONLY limited device credentials after an authenticated dashboard interaction.
+if(path==='/api/pocket-radar/pair'){
+ if(request.method!=='POST')return json({error:'method_not_allowed'},405);
+ if(origin!==new URL(request.url).origin||
+   (request.headers.get('sec-fetch-site')||'').toLowerCase()==='cross-site'||
+   request.headers.get('x-pocket-pair')!=='1')return json({error:'forbidden'},403);
+ const cookie=readSessionCookie(request.headers.get('cookie'));
+ if(!await validSession(env.ADMIN_TOKEN||'',cookie))return json({error:'unauthorized'},401);
+ try{return json({...await issuePocketToken(env.ADMIN_TOKEN),scope:'pocket_radar_read_only',
+   expiresInSeconds:POCKET_TOKEN_SECONDS});}
+ catch{return json({error:'pair_unavailable'},503)}
+}
+if(path==='/api/pocket-radar/feed'){
+ if(request.method!=='GET')return json({error:'method_not_allowed'},405);
+ const authorization=request.headers.get('authorization')||'';
+ const matched=/^Bearer (pr1\.\S+)$/.exec(authorization);
+ if(!matched||!await validPocketToken(env.ADMIN_TOKEN||'',matched[1]))
+   return json({error:'unauthorized'},401);
+ if(!env.DB)return json({error:'database_not_configured'},503);
+ // Edge-cached shared snapshot: requires credential verification before any cache access.
+ const cache=typeof caches!=='undefined'?caches.default:null;
+ const cacheKey=new Request(new URL('/__internal_pocket_radar_v1_cache',request.url).toString());
+ if(cache){
+  try{const previous=await cache.match(cacheKey);if(previous)return json(await previous.json());}
+  catch{}
+ }
+ try{
+  const report=await pocketFeed(env.DB);
+  if(cache)try{await cache.put(cacheKey,new Response(JSON.stringify(report),
+    {headers:{'cache-control':'public, max-age=300','content-type':'application/json'}}));}
+   catch{}
+  return json(report);
+ }catch(e){return json({error:d1ReadQuota(e)?'D1_READ_QUOTA':'pocket_feed_unavailable'},503)}
+}
 if(path==='/api/login'){
  if(request.method!=='POST')return json({error:'method_not_allowed'},405);
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
