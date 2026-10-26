@@ -1537,6 +1537,28 @@ async function pollFastRadar(action){
 document.getElementById('fastStart').addEventListener('click',()=>pollFastRadar('start'));
 document.getElementById('fastStop').addEventListener('click',()=>pollFastRadar('stop'));
 if(typeof setInterval==='function')setInterval(()=>pollFastRadar(),30000);
+// Pairing remains a manual, user-initiated step; never extract browser sessions.
+let pocketPairToken='';
+document.getElementById('pairPocket').addEventListener('click',async()=>{
+ const message=document.getElementById('pairPocketMessage');
+ pocketPairToken='';document.getElementById('pairPocketToken').value='';
+ try{
+  const r=await fetch('/api/pocket-radar/pair',{method:'POST',credentials:'same-origin',
+   cache:'no-store',headers:{'X-Pocket-Pair':'1'}});
+  if(!r.ok)throw Error('Pairing failed (HTTP '+r.status+'). Check dashboard login.');
+  const data=await r.json();
+  if(typeof data.token!=='string'||!data.token.startsWith('pr1.'))throw Error('Malformed token');
+  pocketPairToken=data.token;document.getElementById('pairPocketToken').value=data.token;
+  message.textContent='Expires '+data.expiresAt+'. Copy and paste in Pocket Radar → GOGET Research.';
+ }catch(e){message.textContent=e.message;}
+});
+document.getElementById('copyPocketToken').addEventListener('click',async()=>{
+ const message=document.getElementById('pairPocketMessage');
+ if(!pocketPairToken){message.textContent='Generate a pairing token first.';return;}
+ try{await navigator.clipboard.writeText(pocketPairToken);
+  message.textContent='Copied. Paste into Pocket Radar; protect clipboard contents.';}
+ catch{message.textContent='Clipboard unavailable. Select and copy the token field manually.';}
+});
 initTabs();
 // Reopen automatically when a valid remembered session cookie is present.
 refresh();
