@@ -65,6 +65,12 @@ export async function reconcileLaunchlabCheckpoint({
     if(seen.has(s)){result.duplicateSignatures++;continue}
     seen.add(s);result.signaturesFetched++;
     if(s===checkpointSignature){
+     if(checkpointSlot!==null&&row.slot!==checkpointSlot){
+      reason='CHECKPOINT_SLOT_MISMATCH';break;
+     }
+     if(row.err!==null&&row.err!==undefined){
+      reason='CHECKPOINT_FAILED_TRANSACTION';break;
+     }
      result.checkpointOverlapFound=true;
      reason='CHECKPOINT_OVERLAP_VERIFIED';
      break;
