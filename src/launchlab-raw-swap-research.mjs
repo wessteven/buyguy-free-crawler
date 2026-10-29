@@ -58,6 +58,10 @@ export function decodeLaunchlabSwapTransaction({
     !addr.test(keys[0]?.pubkey||'')||keys[0].signer!==true)
   return rejected('FEE_PAYER_SIGNER_UNVERIFIED');
  const feePayer=keys[0].pubkey;
+ if(!keys.every(x=>addr.test(x?.pubkey||''))||
+    new Set(keys.map(x=>x.pubkey)).size!==keys.length)
+  return rejected('INVALID_MESSAGE_ACCOUNT_KEYS');
+ const messageKeys=new Set(keys.map(x=>x.pubkey));
  const signerKeys=new Set(keys.filter(x=>x?.signer===true&&addr.test(x?.pubkey||''))
   .map(x=>x.pubkey));
  const instructions=[
@@ -74,7 +78,7 @@ export function decodeLaunchlabSwapTransaction({
   matching++;
   const accounts=ix.accounts;
   if(bytes.length!==32||!Array.isArray(accounts)||accounts.length<15||
-      !accounts.slice(0,15).every(x=>typeof x==='string'&&addr.test(x))||
+      !accounts.slice(0,15).every(x=>typeof x==='string'&&addr.test(x)&&messageKeys.has(x))||
       accounts[14]!==LAUNCHLAB_PROGRAM||
       !signerKeys.has(accounts[0])||
       ![TOKEN,TOKEN_2022].includes(accounts[11])||
