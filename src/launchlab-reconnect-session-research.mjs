@@ -31,7 +31,7 @@ export function createLaunchlabReconnectSession({
  maxReconnects=2,maxReviews=2,maxNotices=120,maxBuffered=24,
  maxDurationMs=90000,staleAfterMs=15000,
  pageLimit=60,maxPages=2,maxTransactions=6,
- maxLiveLookups=6,maxLiveConcurrent=2
+ maxLiveLookups=6,maxLiveConcurrent=2,maxLookupDurationMs=8000
 }={}){
  if(typeof rpcUrl!=='string'||!rpcUrl.startsWith('https://')||
     typeof wsUrl!=='string'||!wsUrl.startsWith('wss://')||
@@ -54,7 +54,8 @@ export function createLaunchlabReconnectSession({
   maxPages:clamp(maxPages,1,3,2),
   maxTransactions:clamp(maxTransactions,1,6,6),
   maxLiveLookups:clamp(maxLiveLookups,0,6,6),
-  maxLiveConcurrent:clamp(maxLiveConcurrent,1,2,2)
+  maxLiveConcurrent:clamp(maxLiveConcurrent,1,2,2),
+  maxLookupDurationMs:clamp(maxLookupDurationMs,1000,30000,8000)
  };
  const result={
   kind:'LAUNCHLAB_MOCKABLE_RECONNECT_RESEARCH',schemaVersion:1,
@@ -66,6 +67,7 @@ export function createLaunchlabReconnectSession({
   overflowed:0,staleDetected:0,staleReviewResultsIgnored:0,
   liveVerificationBatchCalls:0,liveLookupsStarted:0,liveLookupsFinished:0,
   liveVerifiedBirths:0,liveInconclusive:0,staleLiveVerificationResultsIgnored:0,
+  liveLookupAborts:0,liveLookupTimeouts:0,
   liveVerificationStatus:'NOT_REQUESTED',
   lastBackfillStatus:null,backfillReviews:[],
   pendingLive:[],seenSignatures:[],
@@ -85,15 +87,26 @@ export function createLaunchlabReconnectSession({
  let ws=null,generation=0,subscriptionId=null,startedMono=null,
   lastActivityMono=null,closing=false,gapOpen=false,activeReview=null,
   activeVerification=null;
- const seen=new Set();
+ const seen=new Set(),inFlight=new Set();
  const snapshot=()=>structuredClone(result);
+ const abortRequest=(request,reason)=>{
+  if(request.cancelled)return;
+  request.cancelled=reason;
+  result.liveLookupAborts++;
+  if(reason==='MANUAL_LOOKUP_TIMEOUT')result.liveLookupTimeouts++;
+  request.controller.abort();
+ };
+ const abortInFlight=reason=>{
+  for(const request of inFlight)abortRequest(request,reason);
+ };
  const stamp=()=>{
   const t=now();if(!utc(t))throw Error('UTC_RESEARCH_CLOCK_REQUIRED');
   return t;
  };
  const stop=(reason='MANUALLY_STOPPED')=>{
   if(closing)return snapshot();
-  closing=true;generation++;result.phase='STOPPED';result.status=reason;
+  closing=true;generation++;abortInFlight('SESSION_STOPPED');
+  result.phase='STOPPED';result.status=reason;
   result.endedAt=stamp();
   try{ws?.close()}catch{} // synchronous close events are ignored via generation
   return snapshot();
@@ -103,7 +116,7 @@ export function createLaunchlabReconnectSession({
   result.disconnects++;gapOpen=true;subscriptionId=null;
   result.lastGapOpenedAt=stamp();
   result.status=reason;result.phase='DISCONNECTED';
-  generation++; // invalidate callbacks AND in-flight review results
+  generation++;abortInFlight('STREAM_DISCONNECTED'); // invalidate in-flight work
   try{ws?.close()}catch{}
   if(result.reconnects>=limits.maxReconnects){
    stop('RECONNECT_BUDGET_EXHAUSTED');return;
@@ -240,11 +253,18 @@ export function createLaunchlabReconnectSession({
  };
  const tick=()=>{
   if(closing||result.phase==='IDLE')return snapshot();
-  const elapsed=monotonic()-startedMono;
+  const tickMono=monotonic(),elapsed=tickMono-startedMono;
   if(!Number.isFinite(elapsed)||elapsed<0)return stop('MONOTONIC_CLOCK_INVALID');
   if(elapsed>=limits.maxDurationMs)return stop('SESSION_TIME_BUDGET_EXHAUSTED');
+  // Explicitly driven by tick(); no timers or retry loops. A provider that
+  // ignores AbortSignal still cannot promote a late result to verified birth.
+  for(const request of inFlight){
+   if(Number.isFinite(tickMono-request.startedMono)&&
+      tickMono-request.startedMono>=limits.maxLookupDurationMs)
+    abortRequest(request,'MANUAL_LOOKUP_TIMEOUT');
+  }
   if(result.phase==='BACKFILL')return snapshot(); // bounded reviewer controls RPC
-  const idle=monotonic()-lastActivityMono;
+  const idle=tickMono-lastActivityMono;
   if(Number.isFinite(idle)&&idle>=limits.staleAfterMs){
    result.staleDetected++;disconnect(generation,'STALE_STREAM_TIMEOUT');
   }
@@ -274,19 +294,27 @@ export function createLaunchlabReconnectSession({
     await Promise.all(candidates.slice(i,i+limits.maxLiveConcurrent).map(async entry=>{
      entry.verificationAttempted=true;entry.verificationStatus='LOOKUP_IN_FLIGHT';
      result.liveLookupsStarted++;
+     const request={controller:new AbortController(),startedMono:monotonic(),cancelled:null};
+     inFlight.add(request);
      let finding;
      try{
       finding=await liveVerifier({
        rpcUrl,signature:entry.signature,slot:entry.slot,
        streamReceivedAt:entry.streamReceivedAt,
        streamReceivedMonotonicMs:entry.streamReceivedMonotonicMs,
-       fetcher,now,monotonic
+       fetcher,now,monotonic,signal:request.controller.signal
       });
      }catch{finding={classification:'VERIFIER_EXCEPTION'}}
+     finally{inFlight.delete(request)}
      result.liveLookupsFinished++;
      if(closing||g!==generation){
       result.staleLiveVerificationResultsIgnored++;
       entry.verificationStatus='STALE_RESULT_IGNORED';return;
+     }
+     if(request.cancelled){
+      entry.verificationStatus=request.cancelled==='MANUAL_LOOKUP_TIMEOUT'?
+       'LIVE_LOOKUP_TIMED_OUT':'LIVE_LOOKUP_ABORTED';
+      result.liveInconclusive++;return;
      }
      const verified=finding?.classification==='LAUNCH_INSTRUCTION_VERIFIED';
      const good=!!finding&&finding.signature===entry.signature&&
