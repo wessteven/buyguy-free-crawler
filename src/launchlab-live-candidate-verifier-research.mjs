@@ -45,7 +45,8 @@ export async function verifyLaunchlabLiveCandidate({
  catch{lookupFailed=true}
  const finish=()=>{
   const t=now(),elapsed=monotonic()-streamReceivedMonotonicMs;
-  if(!validUtc(t)||!Number.isFinite(elapsed)||elapsed<0){
+  if(!validUtc(t)||Date.parse(t)<Date.parse(streamReceivedAt)||
+      !Number.isFinite(elapsed)||elapsed<0){
    out.classification='VERIFICATION_CLOCK_INVALID';
    out.evidence='CLOCK_INVALID';
    out.mint=null;out.curve=null;out.quoteMint=null;out.kind=null;
