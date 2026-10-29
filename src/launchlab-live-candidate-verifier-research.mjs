@@ -40,9 +40,12 @@ export async function verifyLaunchlabLiveCandidate({
   independentBuyersVerified:null,marketCapUsd:null,liquidityUsd:null,
   tradabilityVerified:false,buyQualified:false
  };
- let tx,lookupFailed=false;
+ let tx,lookupFailure=null;
  try{tx=await transactionLoader(rpcUrl,signature,fetcher)}
- catch{lookupFailed=true}
+ catch(error){
+  lookupFailure=error?.message==='RPC_HTTP_429'?'RPC_RATE_LIMITED':
+   'RPC_TRANSACTION_LOOKUP_FAILED';
+ }
  const finish=()=>{
   const t=now(),elapsed=monotonic()-streamReceivedMonotonicMs;
   if(!validUtc(t)||Date.parse(t)<Date.parse(streamReceivedAt)||
@@ -55,7 +58,7 @@ export async function verifyLaunchlabLiveCandidate({
   out.verifiedAt=t;out.noticeToVerificationMs=round(elapsed);
   return out;
  };
- if(lookupFailed){out.classification='RPC_TRANSACTION_LOOKUP_FAILED';return finish()}
+ if(lookupFailure){out.classification=lookupFailure;return finish()}
  if(!tx){out.classification='TRANSACTION_UNAVAILABLE';return finish()}
  if(!validSlot(tx.slot)||tx.slot!==slot){
   out.classification='TRANSACTION_SLOT_MISMATCH_OR_UNKNOWN';return finish()
