@@ -69,6 +69,12 @@ test('invalid monotonic clock cannot certify a live birth',async()=>{
  assert.equal(out.mint,null); // invalid timing must not expose a verified birth
  assert.equal(out.noticeToVerificationMs,null);
 });
+test('wall-clock regression invalidates a positive instruction even when monotonic delta is positive',async()=>{
+ const out=await run(withSig(),{now:()=> '2026-10-30T01:59:59.999Z'});
+ assert.equal(out.classification,'VERIFICATION_CLOCK_INVALID');
+ assert.equal(out.mint,null);
+ assert.equal(out.noticeToVerificationMs,null);
+});
 test('reject insecure endpoints and ungrounded event identity without a lookup',async()=>{
  await assert.rejects(()=>verifyLaunchlabLiveCandidate({...base,rpcUrl:'http://unsafe'}),
   /VALID_LIVE_CANDIDATE/);
