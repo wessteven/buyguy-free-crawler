@@ -136,3 +136,53 @@ test('no automatic review or live RPC is launched merely by initial subscription
  assert.equal(m.session.snapshot().liveLookupsStarted,0);
  m.session.stop();
 });
+
+test('pre-aborted gap review makes no historical RPC calls or checkpoint',async()=>{
+ const controller=new AbortController();controller.abort();
+ let calls=0;
+ const out=await reviewLaunchlabReconnectGap({rpcUrl,checkpointSignature:anchor,
+  checkpointSlot,signal:controller.signal,now:()=>iso,
+  fetcher:async()=>{calls++;throw Error('MUST_NOT_CALL')}});
+ assert.equal(calls,0);
+ assert.equal(out.status,'REVIEW_ABORTED');
+ assert.equal(out.transactionLookups,0);
+ assert.equal(out.watermarkCandidate,null);
+});
+test('timeout of real gap-review RPC passes abort signal and blocks live verification',async()=>{
+ let historySignal=null,historyCalls=0;
+ const sockets=[];let ms=0;
+ class Socket{
+  constructor(){this.handlers={};sockets.push(this)}
+  addEventListener(name,cb){this.handlers[name]=cb}
+  emit(name,data={}){this.handlers[name]?.(data)}
+  send(){}
+  close(){this.emit('close')}
+  ack(){this.emit('message',{data:JSON.stringify({jsonrpc:'2.0',id:1,result:77})})}
+ }
+ const session=createLaunchlabReconnectSession({
+  rpcUrl,wsUrl:'wss://ws.example',WebSocketCtor:Socket,
+  fetcher:async(url,options)=>{
+   historyCalls++;historySignal=options.signal;
+   return new Promise(()=>{}); // deliberately noncooperative provider
+  },
+  now:()=>iso,monotonic:()=>ms,
+  checkpointSignature:anchor,checkpointSlot,maxReviewDurationMs:1000,
+  maxDurationMs:10000,maxReconnects:1
+ });
+ session.start();sockets[0].emit('open');sockets[0].ack();
+ sockets[0].close();sockets[1].emit('open');sockets[1].ack();
+ await Promise.resolve();await Promise.resolve();
+ assert.equal(historyCalls,1);
+ assert.equal(historySignal.aborted,false);
+ ms=1000;session.tick();
+ const out=await session.waitForReview();
+ assert.equal(historySignal.aborted,true);
+ assert.equal(historyCalls,1);
+ assert.equal(out.lastBackfillStatus,'REVIEW_ABORTED');
+ assert.equal(out.phase,'GAP_UNRESOLVED');
+ const blocked=await session.verifyPendingLive();
+ assert.equal(blocked.liveVerificationStatus,'BLOCKED_CLOSED_OR_UNRESOLVED_GAP');
+ assert.equal(blocked.liveLookupsStarted,0);
+ assert.equal(blocked.checkpointAdvanceAuthorized,false);
+ session.stop();
+});
