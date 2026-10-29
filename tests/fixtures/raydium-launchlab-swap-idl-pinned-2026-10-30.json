@@ -1,0 +1,67 @@
+{
+  "fixtureType": "PINNED_OFFICIAL_RAYDIUM_IDL_SCHEMA_NOT_LIVE_TRANSACTION",
+  "source": "https://raw.githubusercontent.com/raydium-io/raydium-idl/e7e0c96fe77bcf6a020b84a44c47a722aac8e359/raydium_launchpad/raydium_launchpad.json",
+  "sourceCommit": "e7e0c96fe77bcf6a020b84a44c47a722aac8e359",
+  "idlVersion": "0.2.0",
+  "programId": "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj",
+  "accountOrder": [
+    "payer",
+    "authority",
+    "global_config",
+    "platform_config",
+    "pool_state",
+    "user_base_token",
+    "user_quote_token",
+    "base_vault",
+    "quote_vault",
+    "base_token_mint",
+    "quote_token_mint",
+    "base_token_program",
+    "quote_token_program",
+    "event_authority",
+    "program"
+  ],
+  "discriminators": {
+    "BUY_EXACT_IN": [
+      250,
+      234,
+      13,
+      123,
+      213,
+      156,
+      19,
+      236
+    ],
+    "BUY_EXACT_OUT": [
+      24,
+      211,
+      116,
+      40,
+      105,
+      3,
+      153,
+      56
+    ],
+    "SELL_EXACT_IN": [
+      149,
+      39,
+      222,
+      155,
+      211,
+      124,
+      152,
+      26
+    ],
+    "SELL_EXACT_OUT": [
+      95,
+      200,
+      71,
+      34,
+      8,
+      9,
+      11,
+      166
+    ]
+  },
+  "limitations": "Pins IDL discriminator/account mapping only. Does not independently validate live program upgrade, real trade receipt, balances, reserves, safety, independent buyers or executed amounts."
+}

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "source": "Live mainnet Helius standard logsSubscribe + confirmed getTransaction",
+  "recordedAtUtc": "2026-10-29T10:58:16.193Z",
+  "sourceGitHubAction": {
+    "runId": 40861572445,
+    "artifactId": 12892280279,
+    "name": "GOGET-LAUNCHLAB-LIVE-LATENCY-PROOF"
+  },
+  "chain": "solana",
+  "program": "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj",
+  "status": "TIME_BOUND",
+  "durationMeasuredMs": 60017.85,
+  "subscriptionAcknowledged": true,
+  "subscriptionAcknowledgedAt": "2026-10-29T10:57:16.481Z",
+  "connectionOpenedAt": "2026-10-29T10:57:16.389Z",
+  "endedAt": "2026-10-29T10:58:16.192Z",
+  "notifications": 122,
+  "bytesReceived": 583040,
+  "failedTransactionNotificationsIgnored": 5,
+  "nonCandidateNotices": 121,
+  "launchCandidates": 1,
+  "verifiedBirths": 1,
+  "lookupsStarted": 1,
+  "lookupsFinished": 1,
+  "slotRegressions": 0,
+  "findings": [
+    {
+      "signature": "4qq2M4iqnXEjVfqUbdm6U7ja4WnXnHr6siwyFX5k8JqUhqebZ3mFGi86ym88ccCUD3bLGnEDYmAWFde8U2G14uEf",
+      "slot": 462855617,
+      "mint": "4aLmAx2hKomyZ5nyM3UgcKjPfFX8AMcV2Aev6gkwdm3w",
+      "curve": "635A94ZtEDHz8mvGjBfFnDR2bYk3QfGmFi9WqEWv7idB",
+      "chainBlockTime": "2026-10-29T10:57:42.000Z",
+      "streamReceivedAt": "2026-10-29T10:57:43.086Z",
+      "verifiedAt": "2026-10-29T10:57:43.147Z",
+      "chainBlockToNoticeApproxMs": 1086,
+      "noticeToVerificationMs": 61.17,
+      "feePayerIndependenceVerified": false,
+      "tradabilityVerified": false,
+      "buyQualified": false
+    }
+  ],
+  "laterHeliusAssetObservation": {
+    "source": "Helius DAS getAsset / Helius recent enhanced transactions",
+    "lastIndexedSlot": 462856111,
+    "observedAfterBirth": true,
+    "name": "Tommy Vercetti",
+    "symbol": "TOMMY",
+    "tokenProgram": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    "transferFeeBasisPoints": 100,
+    "transferFeeConfigAuthority": "WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh",
+    "metadataMutable": true,
+    "marketCapUsd": null,
+    "liquidityUsd": null,
+    "caveat": "DAS indexed after creation. These asset facts must not be retroactively considered verified at 10:57:43."
+  },
+  "limitations": [
+    "Single sample, not representative latency distribution",
+    "Block time has second resolution",
+    "WebSocket gaps/backfill unknown",
+    "No external fee billing check",
+    "No Android notification/latency",
+    "No independently confirmed beneficial buyers/liquidity/routes or buy qualification"
+  ],
+  "prodWrites": 0,
+  "trades": 0
+}
