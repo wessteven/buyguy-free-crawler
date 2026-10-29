@@ -1,11 +1,6 @@
 name: GOGET matched-cohort OHLCV research (nonproduction)
+# Explicit opt-in only: PR commits must not repeatedly consume public API quota.
 on:
-  pull_request:
-    paths:
-      - 'scripts/export-cohort-replay.mjs'
-      - 'src/cohort-replay-research.mjs'
-      - 'tests/cohort-replay-research.test.mjs'
-      - '.github/workflows/cohort-replay-research.yml'
   workflow_dispatch:
 permissions:
   contents: read
