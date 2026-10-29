@@ -8,7 +8,7 @@ const sigRE=/^[1-9A-HJ-NP-Za-km-z]{80,90}$/;
 const validSig=s=>typeof s==='string'&&sigRE.test(s);
 const validSlot=s=>Number.isSafeInteger(s)&&s>0;
 const utc=s=>typeof s==='string'&&Number.isFinite(Date.parse(s))&&
- /^\\d{4}-\\d{2}-\\d{2}T/.test(s)&&s.endsWith('Z');
+ /^\d{4}-\d{2}-\d{2}T/.test(s)&&s.endsWith('Z');
 const bounded=(n,max,defaultValue)=>Number.isFinite(n)?
  Math.max(1,Math.min(max,Math.floor(n))):defaultValue;
 
