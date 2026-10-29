@@ -14,7 +14,6 @@ const base58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const signatureRE=/^[1-9A-HJ-NP-Za-km-z]{80,90}$/;
 const numeric=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0;
 const at=t=>new Date(t*1000).toISOString();
-const pair=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
 export function normalizeRecordedSwaps(observations, {source='UNKNOWN'}={}){
  if(!Array.isArray(observations))throw Error('OBSERVATIONS_REQUIRED');
  if(observations.length>5000)throw Error('BOUNDED_RESEARCH_INPUT_REQUIRED');
@@ -71,16 +70,19 @@ export function analyzeMicroAcceleration(observations,windows,{
  // asOf is an *inclusive* event-time cutoff for causal replay, not a receipt claim.
  const cutoff=asOf===null?Infinity:Date.parse(asOf)/1000;
  if(asOf!==null&&!Number.isFinite(cutoff))throw Error('INVALID_CAUSAL_CUTOFF');
+ if(receivedAt!==null&&(!Number.isFinite(Date.parse(receivedAt))||
+    !/Z$/.test(receivedAt)))throw Error('UTC_RECEIPT_REQUIRED');
  const observationsAtCutoff=normalized.events.filter(x=>x.t<=cutoff);
  const earliest=coverage.length?coverage[0].start:0;
  const latest=coverage.length?Math.max(...coverage.map(x=>x.end)):0;
+ if(latest-earliest>86400)throw Error('WINDOW_SPAN_EXCEEDS_RESEARCH_BUDGET');
  const windowsByStart=new Map();
  for(let t=earliest;t<latest;t+=rule.windowSeconds){
   if(t+rule.windowSeconds>cutoff)continue; // no partial bars or future trades
   if(!completeWindow(t,rule.windowSeconds,coverage))continue;
   windowsByStart.set(t,{start:t,end:t+rule.windowSeconds,buys:0,sells:0,
    unknown:0,buyQuoteSol:0,sellQuoteSol:0,feePayers:new Map(),buyFeePayers:new Map(),
-   signatureCount:0,priceFirst:null,priceLast:null});
+   signatureCount:0});
  }
  // Bounded to at most 5k observations and complete archived windows.
  for(const e of observationsAtCutoff){
@@ -132,8 +134,9 @@ export function analyzeMicroAcceleration(observations,windows,{
    source,windowFrom:at(prior.start),windowEnd:at(current.end),
    earliestCausalCalculationAt:at(current.end),
    actualCollectorReceiptAt:receivedAt,
-   liveLatencySeconds:receivedAt===null?null:
+   archiveAgeAtReceiptSeconds:receivedAt===null?null:
     Math.max(0,(Date.parse(receivedAt)/1000-current.end)),
+   liveLatencySeconds:null,
    firstWindowBuys:prior.buys,secondWindowBuys:current.buys,
    buysInLast30s:current.buys,sellsInLast30s:current.sells,
    buyAccelerationRatio:accelRatio,buySellRatio:imbalance,
