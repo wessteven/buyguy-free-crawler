@@ -31,7 +31,8 @@ export function createLaunchlabReconnectSession({
  maxReconnects=2,maxReviews=2,maxNotices=120,maxBuffered=24,
  maxDurationMs=90000,staleAfterMs=15000,
  pageLimit=60,maxPages=2,maxTransactions=6,
- maxLiveLookups=6,maxLiveConcurrent=2,maxLookupDurationMs=8000
+ maxLiveLookups=6,maxLiveConcurrent=2,maxLookupDurationMs=8000,
+ maxReviewDurationMs=12000
 }={}){
  if(typeof rpcUrl!=='string'||!rpcUrl.startsWith('https://')||
     typeof wsUrl!=='string'||!wsUrl.startsWith('wss://')||
@@ -55,7 +56,8 @@ export function createLaunchlabReconnectSession({
   maxTransactions:clamp(maxTransactions,1,6,6),
   maxLiveLookups:clamp(maxLiveLookups,0,6,6),
   maxLiveConcurrent:clamp(maxLiveConcurrent,1,2,2),
-  maxLookupDurationMs:clamp(maxLookupDurationMs,1000,30000,8000)
+  maxLookupDurationMs:clamp(maxLookupDurationMs,1000,30000,8000),
+  maxReviewDurationMs:clamp(maxReviewDurationMs,1000,30000,12000)
  };
  const result={
   kind:'LAUNCHLAB_MOCKABLE_RECONNECT_RESEARCH',schemaVersion:1,
@@ -68,6 +70,7 @@ export function createLaunchlabReconnectSession({
   liveVerificationBatchCalls:0,liveLookupsStarted:0,liveLookupsFinished:0,
   liveVerifiedBirths:0,liveInconclusive:0,staleLiveVerificationResultsIgnored:0,
   liveLookupAborts:0,liveLookupTimeouts:0,
+  backfillReviewAborts:0,backfillReviewTimeouts:0,
   liveVerificationStatus:'NOT_REQUESTED',
   lastBackfillStatus:null,backfillReviews:[],
   pendingLive:[],seenSignatures:[],
@@ -86,7 +89,7 @@ export function createLaunchlabReconnectSession({
  };
  let ws=null,generation=0,subscriptionId=null,startedMono=null,
   lastActivityMono=null,closing=false,gapOpen=false,activeReview=null,
-  activeVerification=null;
+  activeVerification=null,activeReviewRequest=null;
  const seen=new Set(),inFlight=new Set();
  const snapshot=()=>structuredClone(result);
  const abortRequest=(request,reason)=>{
@@ -99,6 +102,14 @@ export function createLaunchlabReconnectSession({
  const abortInFlight=reason=>{
   for(const request of inFlight)abortRequest(request,reason);
  };
+ const abortReview=reason=>{
+  const request=activeReviewRequest;
+  if(!request||request.cancelled)return;
+  request.cancelled=reason;
+  result.backfillReviewAborts++;
+  if(reason==='MANUAL_REVIEW_TIMEOUT')result.backfillReviewTimeouts++;
+  request.controller.abort();
+ };
  const stamp=()=>{
   const t=now();if(!utc(t))throw Error('UTC_RESEARCH_CLOCK_REQUIRED');
   return t;
@@ -106,6 +117,7 @@ export function createLaunchlabReconnectSession({
  const stop=(reason='MANUALLY_STOPPED')=>{
   if(closing)return snapshot();
   closing=true;generation++;abortInFlight('SESSION_STOPPED');
+  abortReview('SESSION_STOPPED');
   result.phase='STOPPED';result.status=reason;
   result.endedAt=stamp();
   try{ws?.close()}catch{} // synchronous close events are ignored via generation
@@ -116,7 +128,8 @@ export function createLaunchlabReconnectSession({
   result.disconnects++;gapOpen=true;subscriptionId=null;
   result.lastGapOpenedAt=stamp();
   result.status=reason;result.phase='DISCONNECTED';
-  generation++;abortInFlight('STREAM_DISCONNECTED'); // invalidate in-flight work
+  generation++;abortInFlight('STREAM_DISCONNECTED');
+  abortReview('STREAM_DISCONNECTED'); // invalidate in-flight work
   try{ws?.close()}catch{}
   if(result.reconnects>=limits.maxReconnects){
    stop('RECONNECT_BUDGET_EXHAUSTED');return;
@@ -161,17 +174,30 @@ export function createLaunchlabReconnectSession({
   result.reviewCalls++;result.phase='BACKFILL';result.status='BACKFILL_RUNNING';
   const reviewStartedMono=monotonic(),reviewStartedAt=stamp();
   const index=result.reviewCalls;
+  const request={controller:new AbortController(),startedMono:monotonic(),cancelled:null};
+  activeReviewRequest=request;
+  let resolveCancellation;
+  const cancelled=new Promise(resolve=>{
+   resolveCancellation=()=>resolve({status:'REVIEW_ABORTED',reconciliationStatus:'RPC_ABORTED',
+    historyPages:null,transactionLookups:null,advanceAuthorized:false,births:[]});
+  });
+  request.controller.signal.addEventListener('abort',resolveCancellation,{once:true});
   let review;
   try{
-   review=await reviewer({
+   const work=Promise.resolve().then(()=>reviewer({
     rpcUrl,checkpointSignature,checkpointSlot,fetcher,
     pageLimit:limits.pageLimit,maxPages:limits.maxPages,
     maxTransactions:limits.maxTransactions,
     // Reclassify history independently; do not silently trust prior live hints.
-    liveSeenSignatures:[],now
-   });
+    liveSeenSignatures:[],now,signal:request.controller.signal
+   }));
+   review=await Promise.race([work,cancelled]);
   }catch{review={status:'BACKFILL_REVIEW_FAILED',reconciliationStatus:'UNKNOWN',
     historyPages:null,transactionLookups:null,advanceAuthorized:false,births:[]}}
+  finally{
+   request.controller.signal.removeEventListener('abort',resolveCancellation);
+   if(activeReviewRequest===request)activeReviewRequest=null;
+  }
   if(closing||g!==generation){
    result.staleReviewResultsIgnored++;return;
   }
@@ -263,7 +289,12 @@ export function createLaunchlabReconnectSession({
       tickMono-request.startedMono>=limits.maxLookupDurationMs)
     abortRequest(request,'MANUAL_LOOKUP_TIMEOUT');
   }
-  if(result.phase==='BACKFILL')return snapshot(); // bounded reviewer controls RPC
+  if(result.phase==='BACKFILL'){
+   if(activeReviewRequest&&Number.isFinite(tickMono-activeReviewRequest.startedMono)&&
+      tickMono-activeReviewRequest.startedMono>=limits.maxReviewDurationMs)
+    abortReview('MANUAL_REVIEW_TIMEOUT');
+   return snapshot(); // asynchronous review settles via cancellation race
+  }
   const idle=tickMono-lastActivityMono;
   if(Number.isFinite(idle)&&idle>=limits.staleAfterMs){
    result.staleDetected++;disconnect(generation,'STALE_STREAM_TIMEOUT');
