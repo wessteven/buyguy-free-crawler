@@ -1,9 +1,6 @@
 name: GOGET MIHAO raw candle research export
+# Explicit opt-in only: PR commits must not repeatedly consume public API quota.
 on:
-  pull_request:
-    paths:
-      - 'scripts/export-mihao-ohlcv.mjs'
-      - '.github/workflows/mihao-ohlcv-research.yml'
   workflow_dispatch:
 permissions:
   contents: read
