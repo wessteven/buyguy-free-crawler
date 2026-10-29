@@ -61,6 +61,28 @@ This case validates the need for an immediate **BIRTH_OBSERVED** research
 alert followed by separate source-grounded safety and liquidity checks.
 No asset here is buy qualified or a recommended purchase.
 
+## Cost feasibility — *projection*, not a Helius invoice
+
+Helius's currently published [pricing](https://www.helius.dev/pricing) lists
+1,000,000 credits per month on Free. The
+[March 31, 2026 streaming update](https://www.helius.dev/blog/laserstream-websockets)
+announced 20 credits per decimal MB of WebSocket streaming data, effective
+April 7 with metering from May 1, 2026.
+
+Our observed **583,040 client-visible bytes over 60 seconds** corresponds to
+**0.583 MB/minute**. If (a very large assumption) the same traffic rate held
+for **24 hours/day × 30 days**, projected traffic would be about
+**25.19 GB/month**, or **503,747 streaming credits**, roughly **50.4%**
+of the advertised Free allowance *for this single LaunchLab subscription*.
+
+Important: this assumes provider-billed volume matches our measured client
+JSON bytes, a constant stream rate, an unchanged billing policy and an
+unshared credit allocation. **None of those are verified.** RPC calls,
+Pump.fun/Meteora subscriptions, retries, retries after gaps and existing
+collector usage are additional. Continuous free operations must have an
+independent live usage check and strict kill-switch before deployment.
+No long-running service was started.
+
 ## Practical bottleneck and next gates
 
 Helius standard WebSockets accept `logsSubscribe` on lower-cost tiers.
