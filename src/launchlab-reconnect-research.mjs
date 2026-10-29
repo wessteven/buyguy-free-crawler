@@ -58,11 +58,17 @@ export async function reconcileLaunchlabCheckpoint({
    let invalid=false,oldestSignature=null;
    for(const row of rows){
     const s=row?.signature;
-    if(!validSig(s)||!integer(row?.slot)){invalid=true;break}
+    if(!validSig(s)||!integer(row?.slot)||
+       !Object.hasOwn(row,'err')||
+       (row.err!==null&&(typeof row.err!=='object'||Array.isArray(row.err)))){
+     invalid=true;break;
+    }
     oldestSignature=s;
     if(previousSlot!==null&&row.slot>previousSlot)result.sourceOrderViolations++;
     previousSlot=row.slot;
-    if(seen.has(s)){result.duplicateSignatures++;continue}
+    if(seen.has(s)){
+     result.duplicateSignatures++;invalid=true;break;
+    }
     seen.add(s);result.signaturesFetched++;
     if(s===checkpointSignature){
      if(checkpointSlot!==null&&row.slot!==checkpointSlot){
