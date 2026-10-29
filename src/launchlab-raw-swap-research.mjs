@@ -98,7 +98,8 @@ export function decodeLaunchlabSwapTransaction({
    requestedQuoteUnitsCaveat:'Instruction arguments are requests, not observed executed transfer amounts.',
    executedQuoteSol:null,independentBuyersVerified:null,
    sourceProof:'SUCCESSFUL_SIGNED_LAUNCHLAB_SWAP_INSTRUCTION',
-   sourceIdentityIndependentlyVerified:true,
+   sourceIdentityIndependentlyVerified:false,
+   instructionIdentityDecodedFromRaw:true,
    liquidityUsd:null,marketCapUsd:null,executableExitVerified:false,
    buyQualified:false
   });
@@ -109,8 +110,8 @@ export function decodeLaunchlabSwapTransaction({
   status:'DECODED_SUCCESSFUL_SWAP_INSTRUCTION',
   signature,slot:transaction.slot,receivedAt,feePayer,
   count:swaps.length,swaps,
-  sourceIdentityIndependentlyVerified:true,
-  independentBuyersVerified:null,executedQuoteSol:null,
+  sourceIdentityIndependentlyVerified:false,
+  instructionIdentityDecodedFromRaw:true,independentBuyersVerified:null,executedQuoteSol:null,
   actualLiveAlertLatencyMs:null,buyQualified:false,
   caveat:'Validated successful LaunchLab instruction/accounts and signer from raw RPC shape; no proof of transfer amount, beneficial buyer, token safety, reserves, valuation or sellability.'
  };
