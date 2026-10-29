@@ -10,7 +10,7 @@ const feePayers=['A','B','C','D','E','F','G','H'].map(c=>c.repeat(32));
 let seq=0;
 const event=(t,side,payer,quote=0.1)=>{
  seq++;
- return {t,side,payer,sol:quote,sig:String(seq).padStart(88,'7')};
+ return {t,side,payer,sol:quote,sig:String.fromCharCode(65+seq).padStart(88,'7')};
 };
 function synthetic(){
  seq=0;
@@ -87,7 +87,7 @@ test('the recorded receipt is retained separately from earliest retrospective ca
  const retrieved='2026-10-20T15:16:00.541Z';
  const a=analyzeMicroAcceleration(events,windows,{receivedAt:retrieved});
  assert.equal(a.episodes[0].actualCollectorReceiptAt,retrieved);
- assert.ok(a.episodes[0].liveLatencySeconds>300);
+ assert.ok(a.episodes[0].archiveAgeAtReceiptSeconds>300);
  assert.equal(a.episodes[0].earliestCausalCalculationAt,'2026-10-20T15:11:00.000Z');
 });
 test('only strict, bounded observations and 30s windows can be analyzed',()=>{
