@@ -296,16 +296,27 @@ export function createLaunchlabReconnectSession({
      result.liveLookupsStarted++;
      const request={controller:new AbortController(),startedMono:monotonic(),cancelled:null};
      inFlight.add(request);
-     let finding;
+     // Race with caller-owned abort: a provider/mock ignoring AbortSignal
+     // must not hold the research session open indefinitely after manual tick
+     // timeout or disconnect. Late RPC results can never change the snapshot.
+     let finding,abortResolve;
+     const cancelled=new Promise(resolve=>{
+      abortResolve=()=>resolve({classification:'RPC_ABORTED'});
+     });
+     request.controller.signal.addEventListener('abort',abortResolve,{once:true});
      try{
-      finding=await liveVerifier({
+      const lookup=Promise.resolve(liveVerifier({
        rpcUrl,signature:entry.signature,slot:entry.slot,
        streamReceivedAt:entry.streamReceivedAt,
        streamReceivedMonotonicMs:entry.streamReceivedMonotonicMs,
        fetcher,now,monotonic,signal:request.controller.signal
-      });
+      }));
+      finding=await Promise.race([lookup,cancelled]);
      }catch{finding={classification:'VERIFIER_EXCEPTION'}}
-     finally{inFlight.delete(request)}
+     finally{
+      request.controller.signal.removeEventListener('abort',abortResolve);
+      inFlight.delete(request);
+     }
      result.liveLookupsFinished++;
      if(closing||g!==generation){
       result.staleLiveVerificationResultsIgnored++;
