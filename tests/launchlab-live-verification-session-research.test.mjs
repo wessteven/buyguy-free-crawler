@@ -189,3 +189,77 @@ test('verifier cannot invent positive birth with missing receipt provenance or m
   m.session.stop();
  }
 });
+
+
+test('manual lookup timeout aborts signal and rejects a late success even if provider ignores abort',async()=>{
+ let release,seenSignal;
+ const m=setup({maxLookupDurationMs:1000,staleAfterMs:10000,
+  liveVerifier:({signal})=>{
+   seenSignal=signal;
+   return new Promise(resolve=>{release=resolve});
+  }});
+ m.activate();m.sockets[0].log();
+ const pending=m.session.verifyPendingLive();
+ assert.equal(seenSignal.aborted,false);
+ m.advance(1001);
+ const mid=m.session.tick();
+ assert.equal(mid.liveLookupTimeouts,1);
+ assert.equal(mid.liveLookupAborts,1);
+ assert.equal(seenSignal.aborted,true);
+ release({
+  signature:f.signature,slot:f.slot,classification:'LAUNCH_INSTRUCTION_VERIFIED',
+  evidence:'SUCCESSFUL_ANCHOR_INITIALIZE_DISCRIMINATOR_AND_IDL_ACCOUNTS',
+  mint:f.expectedMint,curve:f.expectedCurve,
+  quoteMint:'So11111111111111111111111111111111111111112',
+  origin:'POST_ACK_LIVE_LOG_HINT',streamReceivedAt:'2026-10-30T02:00:00.080Z',
+  streamReceivedMonotonicMs:100,
+  verifiedAt:'2026-10-30T02:00:00.080Z',noticeToVerificationMs:1001,
+  buyQualified:false,actualLiveAlertLatencyMs:null,deviceDeliveredAt:null,rpcCalls:1
+ });
+ const out=await pending;
+ assert.equal(out.liveVerifiedBirths,0);
+ assert.equal(out.liveInconclusive,1);
+ assert.equal(out.pendingLive[0].verificationStatus,'LIVE_LOOKUP_TIMED_OUT');
+ assert.equal(out.pendingLive[0].mint,null);
+ assert.equal(out.liveLookupsStarted,1);
+ m.session.tick();assert.equal(m.session.snapshot().liveLookupAborts,1);
+ m.session.stop();
+});
+test('disconnect and session stop actively abort in-flight verification without a second RPC',async()=>{
+ let release,seenSignal;
+ const m=setup({maxReconnects:0,liveVerifier:({signal})=>{
+  seenSignal=signal;
+  return new Promise(resolve=>{release=resolve});
+ }});
+ m.activate();m.sockets[0].log();
+ const pending=m.session.verifyPendingLive();
+ assert.equal(seenSignal.aborted,false);
+ m.sockets[0].close();
+ assert.equal(seenSignal.aborted,true);
+ assert.equal(m.session.snapshot().liveLookupAborts,1);
+ release({signature:f.signature,slot:f.slot,classification:'TRANSACTION_UNAVAILABLE',
+  rpcCalls:1,buyQualified:false,actualLiveAlertLatencyMs:null,deviceDeliveredAt:null});
+ const out=await pending;
+ assert.equal(out.liveVerifiedBirths,0);
+ assert.equal(out.staleLiveVerificationResultsIgnored,1);
+ assert.equal(out.pendingLive[0].verificationStatus,'STALE_RESULT_IGNORED');
+ assert.equal(out.liveLookupsStarted,1);
+});
+test('stopping a session aborts all concurrent lookups exactly once',async()=>{
+ const signals=[],resolvers=[];
+ const m=setup({maxLiveConcurrent:2,liveVerifier:({signal})=>{
+  signals.push(signal);
+  return new Promise(resolve=>{resolvers.push(resolve)});
+ }});
+ m.activate();m.sockets[0].log(f.signature);m.sockets[0].log(other,f.slot+1);
+ const pending=m.session.verifyPendingLive();
+ assert.equal(signals.length,2);
+ m.session.stop();
+ assert.equal(signals.every(s=>s.aborted),true);
+ assert.equal(m.session.snapshot().liveLookupAborts,2);
+ resolvers.forEach(resolve=>resolve({classification:'TRANSACTION_UNAVAILABLE'}));
+ const out=await pending;
+ assert.equal(out.liveVerifiedBirths,0);
+ assert.equal(out.staleLiveVerificationResultsIgnored,2);
+ assert.equal(out.liveLookupsStarted,2);
+});
