@@ -44,6 +44,36 @@ D1 or RPC receipt evidence was read in this POC to reconstruct FLOAT's
 actual first GOGET observation. Do not claim GOGET definitely saw or missed FLOAT.
 A later creation of the CPMM pool is not equivalent to LaunchLab birth.
 
+## Verified recorded FLOAT birth instruction (post-audit update)
+
+We obtained Helius enhanced parsed creator-history evidence for a successful
+Raydium LaunchLab initializer transaction on **2026-10-28 21:53:17 UTC**
+at confirmed transaction slot **462635268**:
+
+- Signature: `2FudGznjF8iz2kdZ7zhehZU5j2GewzWEd8XFrB8j4yjcwFyJncPFsuf54qv6wFWxRNEFjWJ8g8UxHJX7qhjogFNL`
+- Exactly matched Anchor `initialize_v2` discriminator: `4399af27da102620`.
+- Base mint: `Bv1a7cEj5aRnJQhMw4kRQqAFesMSd5LwcDnUzq52BMmr`.
+- Curve state: `HCvVkQCnU4Z2G1T1SNZBenwor13SW4inRV85cKvzwFDz`.
+- Creator instruction account: `2rQ13KrAdDsAtd1LuKV1kGj6nFB4V4GsD9GAYKXi353T`.
+- Source: Helius Solana Reader indexed transaction response; minimal exact raw
+  initializer accounts and instruction bytes retained in
+  `tests/fixtures/float-launchlab-birth-2026-10-28.json`.
+  `tests/launchlab-float-replay.test.mjs` tests the actual classifier against
+  this recorded evidence rather than only synthetic test cases.
+- The same Helius creator history reports a subsequent LaunchLab migration
+  at **2026-10-28 22:15:43 UTC**, slot **462641570**, signature
+  `47DyahJTTeuCPFefZQUTnLfKZvEMBebrmiUfGjuocXDVeDa5feyi4Yd9rKuug2hCr58JxFrnAbdfDno2owjMftub`.
+  The initializer and migration events bracket ~22m26s before graduation.
+
+**Evidence boundary:** The indexed historical transaction and correct instruction
+discriminator support the creation event and exact curve identity. We still have
+NOT independently replayed that raw transaction via another RPC provider,
+verified at-birth curve account/reserves, reconstructed early executed quotes or
+historically checked production D1. The ~$20k valuation remains a third-party
+indicative snapshot, not an executable price or an independent on-chain calculation.
+Also, identifying the creator instruction account does not prove beneficial control
+of project funds or the authenticity of website claims.
+
 ## Cheapest bounded step: LaunchLab creation instruction detection
 
 A manually dispatched, 90-second Standard WebSocket `logsSubscribe` for the verified
