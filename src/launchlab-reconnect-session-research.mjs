@@ -9,6 +9,7 @@ import {verifyLaunchlabLiveCandidate} from './launchlab-live-candidate-verifier-
 
 const sigRE=/^[1-9A-HJ-NP-Za-km-z]{80,90}$/;
 const validSig=s=>typeof s==='string'&&sigRE.test(s);
+const addressRE=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const slotOK=s=>Number.isSafeInteger(s)&&s>0;
 const utc=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}T/.test(s)&&
  s.endsWith('Z')&&Number.isFinite(Date.parse(s));
@@ -292,10 +293,15 @@ export function createLaunchlabReconnectSession({
       finding.slot===entry.slot&&finding.buyQualified===false&&
       finding.actualLiveAlertLatencyMs===null&&finding.deviceDeliveredAt===null&&
       finding.rpcCalls===1&&
-      (!verified||(typeof finding.mint==='string'&&typeof finding.curve==='string'&&
-       typeof finding.quoteMint==='string'&&
+      (!verified||(addressRE.test(finding.mint||'')&&
+       addressRE.test(finding.curve||'')&&addressRE.test(finding.quoteMint||'')&&
+       new Set([finding.mint,finding.curve,finding.quoteMint]).size===3&&
+       finding.origin==='POST_ACK_LIVE_LOG_HINT'&&
+       finding.streamReceivedAt===entry.streamReceivedAt&&
+       finding.streamReceivedMonotonicMs===entry.streamReceivedMonotonicMs&&
        finding.evidence==='SUCCESSFUL_ANCHOR_INITIALIZE_DISCRIMINATOR_AND_IDL_ACCOUNTS'&&
-       typeof finding.verifiedAt==='string'&&
+       utc(finding.verifiedAt)&&
+       Date.parse(finding.verifiedAt)>=Date.parse(entry.streamReceivedAt)&&
        Number.isFinite(finding.noticeToVerificationMs)&&
        finding.noticeToVerificationMs>=0));
      if(!good){
