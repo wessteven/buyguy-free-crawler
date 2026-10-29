@@ -40,18 +40,21 @@ export async function verifyLaunchlabLiveCandidate({
   independentBuyersVerified:null,marketCapUsd:null,liquidityUsd:null,
   tradabilityVerified:false,buyQualified:false
  };
- let tx;
+ let tx,lookupFailed=false;
  try{tx=await transactionLoader(rpcUrl,signature,fetcher)}
- catch{out.classification='RPC_TRANSACTION_LOOKUP_FAILED';return out}
+ catch{lookupFailed=true}
  const finish=()=>{
   const t=now(),elapsed=monotonic()-streamReceivedMonotonicMs;
   if(!validUtc(t)||!Number.isFinite(elapsed)||elapsed<0){
    out.classification='VERIFICATION_CLOCK_INVALID';
-   out.evidence='CLOCK_INVALID';return out;
+   out.evidence='CLOCK_INVALID';
+   out.mint=null;out.curve=null;out.quoteMint=null;out.kind=null;
+   return out;
   }
   out.verifiedAt=t;out.noticeToVerificationMs=round(elapsed);
   return out;
  };
+ if(lookupFailed){out.classification='RPC_TRANSACTION_LOOKUP_FAILED';return finish()}
  if(!tx){out.classification='TRANSACTION_UNAVAILABLE';return finish()}
  if(!validSlot(tx.slot)||tx.slot!==slot){
   out.classification='TRANSACTION_SLOT_MISMATCH_OR_UNKNOWN';return finish()
