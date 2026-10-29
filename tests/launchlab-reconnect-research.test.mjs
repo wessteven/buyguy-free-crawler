@@ -85,6 +85,22 @@ test('failed checkpoint cannot establish a successful prior live event',async()=
  assert.equal(r.status,'CHECKPOINT_FAILED_TRANSACTION');
  assert.equal(r.checkpointOverlapFound,false);
 });
+test('duplicate signature in history invalidates source completeness',async()=>{
+ const m=fakeFetch([[row('D',1003),row('D',1003)]]);
+ const r=await reconcileLaunchlabCheckpoint({...base,fetcher:m.fetcher});
+ assert.equal(r.status,'INVALID_RPC_HISTORY');
+ assert.equal(r.duplicateSignatures,1);
+ assert.equal(r.checkpointOverlapFound,false);
+});
+test('missing or malformed RPC error field invalidates signature history',async()=>{
+ const m=fakeFetch([[{signature:sig('D'),slot:1003,blockTime:1793290000},row('B',1000)]]);
+ const r=await reconcileLaunchlabCheckpoint({...base,fetcher:m.fetcher});
+ assert.equal(r.status,'INVALID_RPC_HISTORY');
+ assert.equal(r.checkpointOverlapFound,false);
+ const n=fakeFetch([[{...row('D',1003),err:'bad'},row('B',1000)]]);
+ const q=await reconcileLaunchlabCheckpoint({...base,fetcher:n.fetcher});
+ assert.equal(q.status,'INVALID_RPC_HISTORY');
+});
 test('invalid endpoint or cursor is refused',async()=>{
  await assert.rejects(()=>reconcileLaunchlabCheckpoint({...base,rpcUrl:'http://rpc.example'}),/VALID_RPC/);
  await assert.rejects(()=>reconcileLaunchlabCheckpoint({...base,checkpointSignature:'TOMMY'}),/VALID_RPC/);
