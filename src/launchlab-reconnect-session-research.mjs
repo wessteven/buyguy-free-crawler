@@ -54,6 +54,7 @@ export function createLaunchlabReconnectSession({
   program:LAUNCHLAB_PROGRAM,phase:'IDLE',status:'NOT_STARTED',
   startedAt:null,endedAt:null,connectionAttempts:0,reconnects:0,
   subscriptionAcks:0,disconnects:0,reviewCalls:0,
+  lastSubscriptionAckAt:null,lastGapOpenedAt:null,
   notices:0,candidates:0,duplicateCandidates:0,bufferedDuringReview:0,
   overflowed:0,staleDetected:0,staleReviewResultsIgnored:0,
   lastBackfillStatus:null,backfillReviews:[],
@@ -89,6 +90,7 @@ export function createLaunchlabReconnectSession({
  const disconnect=(g,reason)=>{
   if(closing||g!==generation)return;
   result.disconnects++;gapOpen=true;subscriptionId=null;
+  result.lastGapOpenedAt=stamp();
   result.status=reason;result.phase='DISCONNECTED';
   generation++; // invalidate callbacks AND in-flight review results
   try{ws?.close()}catch{}
@@ -114,7 +116,10 @@ export function createLaunchlabReconnectSession({
   if(result.phase==='BACKFILL')result.bufferedDuringReview++;
   result.pendingLive.push({
    signature:candidate.signature,slot:candidate.slot,
-   streamReceivedAt:stamp(),origin:result.phase==='BACKFILL'?
+   streamReceivedAt:stamp(),streamReceivedMonotonicMs:monotonic(),
+   subscriptionId,connectionGeneration:generation,
+   verifiedAt:null,noticeToVerificationMs:null,deviceDeliveredAt:null,
+   origin:result.phase==='BACKFILL'?
     'LIVE_DURING_HISTORICAL_REVIEW':'LIVE_LOG_NOTIFICATION',
    classification:'UNVERIFIED_LOG_HINT',buyQualified:false,
    actualLiveAlertLatencyMs:null
@@ -128,6 +133,7 @@ export function createLaunchlabReconnectSession({
    result.phase='GAP_UNRESOLVED';result.status='NO_VERIFIED_CHECKPOINT';return;
   }
   result.reviewCalls++;result.phase='BACKFILL';result.status='BACKFILL_RUNNING';
+  const reviewStartedMono=monotonic(),reviewStartedAt=stamp();
   const index=result.reviewCalls;
   let review;
   try{
@@ -144,6 +150,13 @@ export function createLaunchlabReconnectSession({
    result.staleReviewResultsIgnored++;return;
   }
   const valid=review?.status==='BOUNDED_REPLAY_CLASSIFIED'&&
+   review?.reconciliationStatus==='CHECKPOINT_OVERLAP_VERIFIED'&&
+   review?.historyOverlapFound===true&&
+   review?.sourceOrderViolations===0&&
+   review?.replayCoverage==='BOUNDED_SIGNATURE_HISTORY_OVERLAP_AND_CLASSIFICATION_ONLY'&&
+   Number.isSafeInteger(review?.historyPages)&&review.historyPages<=limits.maxPages&&
+   Number.isSafeInteger(review?.transactionLookups)&&review.transactionLookups<=limits.maxTransactions&&
+   Array.isArray(review?.unresolved)&&review.unresolved.length===0&&
    review?.advanceAuthorized===false&&review?.buyQualified===false;
   result.lastBackfillStatus=review?.status||'INVALID_REVIEW_RESULT';
   result.backfillReviews.push({
@@ -153,7 +166,9 @@ export function createLaunchlabReconnectSession({
    transactionLookups:Number.isSafeInteger(review?.transactionLookups)?review.transactionLookups:null,
    replayBirthCount:Array.isArray(review?.births)?review.births.length:null,
    completeBoundedReview:valid,
-   finishedAt:stamp(),coverage:'UNKNOWN',
+   startedAt:reviewStartedAt,finishedAt:stamp(),
+   reviewElapsedMonotonicMs:Math.max(0,monotonic()-reviewStartedMono),
+   coverage:'UNKNOWN',
    checkpointAdvanceAuthorized:false
   });
   result.phase=valid?'ACTIVE_AFTER_BOUNDED_REVIEW':'GAP_UNRESOLVED';
@@ -185,6 +200,7 @@ export function createLaunchlabReconnectSession({
      disconnect(g,'SUBSCRIPTION_REJECTED');return;
     }
     subscriptionId=message.result;result.subscriptionAcks++;
+    result.lastSubscriptionAckAt=stamp();
     if(gapOpen){
      activeReview=runReview(g);
     }else{
