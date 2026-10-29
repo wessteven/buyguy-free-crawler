@@ -1,0 +1,37 @@
+name: GOGET matched-cohort OHLCV research (nonproduction)
+on:
+  pull_request:
+    paths:
+      - 'scripts/export-cohort-replay.mjs'
+      - 'src/cohort-replay-research.mjs'
+      - 'tests/cohort-replay-research.test.mjs'
+      - '.github/workflows/cohort-replay-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-immutable-cohort-replay
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pure fixed-rule replay regression tests
+        run: |
+          node --check src/cohort-replay-research.mjs
+          node --check scripts/export-cohort-replay.mjs
+          node --test tests/cohort-replay-research.test.mjs
+      - name: Immutable Oct 20 Night Lab historical cohort — public API, quota bounded
+        run: node scripts/export-cohort-replay.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: GOGET-MATCHED-COHORT-REPLAY
+          path: cohort-replay-artifact/
+          if-no-files-found: warn
+          retention-days: 7
