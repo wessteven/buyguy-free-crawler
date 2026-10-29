@@ -15,12 +15,18 @@ const iso=t=>new Date(t*1000).toISOString();
 const quote='So11111111111111111111111111111111111111112';
 const token='TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
 const token2022='TokenzQdBNbLqP5VEhdkAS6EPF4rEM3LhLQzwkpA3sA';
-const discs={
- BUY_EXACT_IN:[250,234,13,123,213,156,19,236],
- BUY_EXACT_OUT:[24,211,116,40,105,3,153,56],
- SELL_EXACT_IN:[149,39,222,155,211,124,152,26],
- SELL_EXACT_OUT:[95,200,71,34,8,9,11,166]
-};
+const pinnedIdl=JSON.parse(readFileSync(new URL(
+ './fixtures/raydium-launchlab-swap-idl-pinned-2026-10-30.json',import.meta.url),'utf8'));
+const discs=pinnedIdl.discriminators;
+test('swap fixture pins official immutable Raydium IDL v0.2.0 account indexes',()=>{
+ assert.equal(pinnedIdl.idlVersion,'0.2.0');
+ assert.equal(pinnedIdl.programId,LAUNCHLAB_PROGRAM);
+ assert.equal(pinnedIdl.accountOrder.indexOf('pool_state'),4);
+ assert.equal(pinnedIdl.accountOrder.indexOf('base_token_mint'),9);
+ assert.equal(pinnedIdl.accountOrder.indexOf('quote_token_mint'),10);
+ assert.equal(pinnedIdl.accountOrder.indexOf('program'),14);
+ assert.equal(Object.keys(discs).length,4);
+});
 function base58(bytes){
  let n=0n;for(const b of bytes)n=n*256n+BigInt(b);
  let out='';while(n){out=A[Number(n%58n)]+out;n/=58n;}
