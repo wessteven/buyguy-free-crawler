@@ -20,13 +20,14 @@ const round=n=>Math.round(n*100)/100;
  */
 export async function verifyLaunchlabLiveCandidate({
  rpcUrl,signature,slot,streamReceivedAt,streamReceivedMonotonicMs,
- fetcher=fetch,transactionLoader=loadLaunchlabTransaction,
+ fetcher=fetch,transactionLoader=loadLaunchlabTransaction,signal=null,
  now=()=>new Date().toISOString(),monotonic=()=>performance.now()
 }={}){
  if(typeof rpcUrl!=='string'||!rpcUrl.startsWith('https://')||
     !validSig(signature)||!validSlot(slot)||!validUtc(streamReceivedAt)||
     !Number.isFinite(streamReceivedMonotonicMs)||
     typeof fetcher!=='function'||typeof transactionLoader!=='function'||
+    (signal!==null&&(typeof signal!=='object'||typeof signal.aborted!=='boolean'))||
     typeof now!=='function'||typeof monotonic!=='function')
   throw Error('VALID_LIVE_CANDIDATE_VERIFICATION_INPUTS_REQUIRED');
  const out={
@@ -41,9 +42,15 @@ export async function verifyLaunchlabLiveCandidate({
   tradabilityVerified:false,buyQualified:false
  };
  let tx,lookupFailure=null;
- try{tx=await transactionLoader(rpcUrl,signature,fetcher)}
- catch(error){
-  lookupFailure=error?.message==='RPC_HTTP_429'?'RPC_RATE_LIMITED':
+ try{
+  if(signal?.aborted)lookupFailure='RPC_ABORTED';
+  else{
+   tx=await transactionLoader(rpcUrl,signature,fetcher,{signal:signal??undefined});
+   if(signal?.aborted)lookupFailure='RPC_ABORTED';
+  }
+ }catch(error){
+  lookupFailure=signal?.aborted||error?.name==='AbortError'?'RPC_ABORTED':
+   error?.message==='RPC_HTTP_429'?'RPC_RATE_LIMITED':
    'RPC_TRANSACTION_LOOKUP_FAILED';
  }
  const finish=()=>{
