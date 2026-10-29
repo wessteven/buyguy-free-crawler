@@ -1,0 +1,54 @@
+name: GOGET MIHAO raw candle research export
+on:
+  pull_request:
+    paths:
+      - 'scripts/export-mihao-ohlcv.mjs'
+      - '.github/workflows/mihao-ohlcv-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-mihao-ohlcv-research
+  cancel-in-progress: false
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and read-only scope
+        run: node --check scripts/export-mihao-ohlcv.mjs
+      - name: Fetch historical MIHAO OHLCV from public GeckoTerminal (no secrets)
+        env:
+          START_UTC: '2026-10-27T00:00:00Z'
+          END_UTC: '2026-10-29T00:00:00Z'
+        run: node scripts/export-mihao-ohlcv.mjs
+      - name: Verify package identity, completeness flags, and CSV files
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFileSync} from 'node:fs';
+          const p='research-candle-export/';
+          const manifest=JSON.parse(readFileSync(p+'manifest.json','utf8'));
+          if(manifest.mint!=='4CxjZyMNoF1p6eXHXHv1TWpS2X47CuUmLwtGe18spump'||
+             manifest.pool!=='Ho1aSG6WGH1FfXdEHrK2f4Ggt1Hoxo9s5jcLMDqeyeBz')
+            throw Error('WRONG_MINT_OR_POOL');
+          if(!manifest.periods['1m']?.rows)
+            throw Error('NO_VERIFIABLE_1M_CANDLES_RETURNED');
+          if(manifest.status!=='FETCHED_PROVIDER_AGGREGATES')
+            throw Error('CANDLE_REQUEST_BUDGET_INCOMPLETE');
+          for(const period of ['1m','5m','15m','1h']){
+            const csv=readFileSync(p+'ohlcv_'+period+'.csv','utf8');
+            if(!csv.startsWith('timestamp_s,utc,open_usd,'))
+              throw Error('MISSING_CSV_HEADER_'+period);
+          }
+          console.log('MIHAO_HISTORICAL_PACKAGE',JSON.stringify({status:manifest.status,requests:manifest.requests,periods:manifest.periods}));
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MIHAO-RAW-OHLCV-GOGET
+          path: research-candle-export/
+          retention-days: 7
+          if-no-files-found: error
