@@ -180,6 +180,55 @@ test('finite candidate buffer and time budget stop safely, without alerts',()=>{
  const n=base({maxDurationMs:1000});n.session.start();n.advance(1000);n.session.tick();
  assert.equal(n.session.snapshot().status,'SESSION_TIME_BUDGET_EXHAUSTED');
 });
+test('missing verified checkpoint cannot initiate backfill or claim catch-up',async()=>{
+ const m=base({checkpointSignature:null,checkpointSlot:null,
+  reviewer:async()=>{throw Error('REVIEW_MUST_NOT_RUN')}});
+ m.session.start();m.sockets[0].open();m.sockets[0].ack();
+ m.sockets[0].close();m.sockets[1].open();m.sockets[1].ack();
+ const r=await m.session.waitForReview();
+ assert.equal(r.status,'NO_VERIFIED_CHECKPOINT');
+ assert.equal(r.reviewCalls,0);
+ assert.equal(r.coverage,'UNKNOWN');
+ m.session.stop();
+});
+test('reviewer exception and malformed response remain unresolved without leaking errors',async()=>{
+ for(const reviewer of [
+  async()=>{throw Error('SECRET_CONNECTION_STRING_DO_NOT_LOG')},
+  async()=>({status:'BOUNDED_REPLAY_CLASSIFIED'})
+ ]){
+  const m=base({reviewer});
+  m.session.start();m.sockets[0].open();m.sockets[0].ack();
+  m.sockets[0].close();m.sockets[1].open();m.sockets[1].ack();
+  const r=await m.session.waitForReview();
+  assert.equal(r.phase,'GAP_UNRESOLVED');
+  assert.equal(r.checkpointAdvanceAuthorized,false);
+  assert.ok(!JSON.stringify(r).includes('SECRET_CONNECTION_STRING'));
+  m.session.stop();
+ }
+});
+test('duplicate notices during backfill are suppressed and cannot become verified births',async()=>{
+ let finish;const deferred=new Promise(resolve=>finish=resolve);
+ const m=base({reviewer:()=>deferred});
+ m.session.start();m.sockets[0].open();m.sockets[0].ack();
+ m.sockets[0].log(recorded.signature);
+ m.sockets[0].close();m.sockets[1].open();m.sockets[1].ack();
+ m.sockets[1].log(recorded.signature);
+ assert.equal(m.session.snapshot().duplicateCandidates,1);
+ assert.equal(m.session.snapshot().pendingLive.length,1);
+ finish(safeReview());await m.session.waitForReview();
+ assert.equal(m.session.snapshot().pendingLive[0].classification,'UNVERIFIED_LOG_HINT');
+ m.session.stop();
+});
+test('malformed stream JSON and rejected subscription consume finite reconnect budget',()=>{
+ const m=base({maxReconnects:0});
+ m.session.start();m.sockets[0].open();
+ m.sockets[0].emit('message',{data:'{broken'});
+ assert.equal(m.session.snapshot().status,'RECONNECT_BUDGET_EXHAUSTED');
+ const n=base({maxReconnects:0});
+ n.session.start();n.sockets[0].open();n.sockets[0].reject();
+ assert.equal(n.session.snapshot().status,'RECONNECT_BUDGET_EXHAUSTED');
+ assert.equal(n.session.snapshot().subscriptionAcks,0);
+});
 test('real FLOAT historical fixture integrates via mocked RPC into reconnect, never live birth',async()=>{
  const socket=socketFactory(),calls=[];
  const fetcher=async(url,options)=>{
