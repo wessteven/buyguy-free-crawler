@@ -23,7 +23,7 @@ const bounded=(n,max,defaultValue)=>Number.isFinite(n)?
  */
 export async function reviewLaunchlabReconnectGap({
  rpcUrl,checkpointSignature,checkpointSlot,
- fetcher=fetch,now=()=>new Date().toISOString(),
+ fetcher=fetch,now=()=>new Date().toISOString(),signal=null,
  pageLimit=80,maxPages=3,maxTransactions=6,
  liveSeenSignatures=[],reconciler=reconcileLaunchlabCheckpoint,
  transactionLoader=loadLaunchlabTransaction
@@ -31,6 +31,7 @@ export async function reviewLaunchlabReconnectGap({
  if(!validSig(checkpointSignature)||!validSlot(checkpointSlot)||
     typeof fetcher!=='function'||typeof reconciler!=='function'||
     typeof transactionLoader!=='function'||typeof now!=='function'||
+    (signal!==null&&(typeof signal!=='object'||typeof signal.aborted!=='boolean'))||
     !Array.isArray(liveSeenSignatures)||liveSeenSignatures.length>300||
     !liveSeenSignatures.every(validSig))
   throw Error('VALID_BOUNDED_GAP_REVIEW_INPUTS_REQUIRED');
@@ -39,7 +40,7 @@ export async function reviewLaunchlabReconnectGap({
  if(!utc(startedAt))throw Error('UTC_REVIEW_CLOCK_REQUIRED');
  const liveSeen=new Set(liveSeenSignatures);
  const reconciliation=await reconciler({
-  rpcUrl,checkpointSignature,checkpointSlot,fetcher,pageLimit,maxPages,requestedAt:now
+  rpcUrl,checkpointSignature,checkpointSlot,fetcher,pageLimit,maxPages,requestedAt:now,signal
  });
  const out={
   kind:'LAUNCHLAB_OFFLINE_RECONNECT_GAP_REVIEW',schemaVersion:1,
@@ -64,10 +65,13 @@ export async function reviewLaunchlabReconnectGap({
   ]
  };
  const finish=status=>{
-  out.status=status;out.completedAt=now();
+  out.status=signal?.aborted?'REVIEW_ABORTED':status;
+  if(signal?.aborted){out.watermarkCandidate=null;out.replayCoverage='UNKNOWN'}
+  out.completedAt=now();
   if(!utc(out.completedAt))throw Error('UTC_REVIEW_CLOCK_REQUIRED');
   return out;
  };
+ if(signal?.aborted)return finish('REVIEW_ABORTED');
  // Invalid, missing, truncated or nonmonotonic history is never "caught up".
  if(reconciliation.status!=='CHECKPOINT_OVERLAP_VERIFIED'||
     reconciliation.checkpointOverlapFound!==true||
@@ -79,6 +83,7 @@ export async function reviewLaunchlabReconnectGap({
  const signatures=new Set();
  let incomplete=false;
  for(const c of candidates){
+  if(signal?.aborted)return finish('REVIEW_ABORTED');
   if(!validSig(c?.signature)||!validSlot(c?.slot)||signatures.has(c.signature)){
    out.unresolved.push({signature:validSig(c?.signature)?c.signature:null,
     status:'INVALID_OR_DUPLICATE_HISTORY_CANDIDATE'});
@@ -102,11 +107,13 @@ export async function reviewLaunchlabReconnectGap({
   }
   out.transactionLookups++;
   let tx;
-  try{tx=await transactionLoader(rpcUrl,c.signature,fetcher)}
+  try{tx=await transactionLoader(rpcUrl,c.signature,fetcher,{signal:signal??undefined})}
   catch{
+   if(signal?.aborted)return finish('REVIEW_ABORTED');
    out.unresolved.push({signature:c.signature,slot:c.slot,status:'RPC_TRANSACTION_LOOKUP_FAILED'});
    incomplete=true;continue;
   }
+  if(signal?.aborted)return finish('REVIEW_ABORTED');
   if(!tx||!validSlot(tx.slot)||tx.slot!==c.slot||!tx.meta||
      !Object.hasOwn(tx.meta,'err')||
      (tx.meta.err!==null&&(typeof tx.meta.err!=='object'||Array.isArray(tx.meta.err)))){
