@@ -66,7 +66,7 @@ test('RPC exceptions are sanitized and cannot leak provider keys',async()=>{
 test('invalid monotonic clock cannot certify a live birth',async()=>{
  const out=await run(withSig(),{monotonic:()=>99});
  assert.equal(out.classification,'VERIFICATION_CLOCK_INVALID');
- assert.equal(out.mint,f.expectedMint); // evidence still decoded, but not valid timed verification
+ assert.equal(out.mint,null); // invalid timing must not expose a verified birth
  assert.equal(out.noticeToVerificationMs,null);
 });
 test('reject insecure endpoints and ungrounded event identity without a lookup',async()=>{
