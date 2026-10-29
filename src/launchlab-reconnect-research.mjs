@@ -16,10 +16,11 @@ const rpc=(method,params)=>({jsonrpc:'2.0',id:1,method,params});
  */
 export async function reconcileLaunchlabCheckpoint({
  rpcUrl,checkpointSignature,checkpointSlot=null,
- fetcher=fetch,pageLimit=80,maxPages=3,requestedAt=()=>new Date().toISOString()
+ fetcher=fetch,pageLimit=80,maxPages=3,requestedAt=()=>new Date().toISOString(),signal=null
 }={}){
  if(typeof rpcUrl!=='string'||!rpcUrl.startsWith('https://')||
-    !validSig(checkpointSignature)||typeof fetcher!=='function')
+    !validSig(checkpointSignature)||typeof fetcher!=='function'||
+    (signal!==null&&(typeof signal!=='object'||typeof signal.aborted!=='boolean')))
   throw Error('VALID_RPC_AND_CHECKPOINT_REQUIRED');
  const limit=Math.max(1,Math.min(100,Math.floor(Number(pageLimit)||80)));
  const pagesCap=Math.max(1,Math.min(3,Math.floor(Number(maxPages)||3)));
@@ -45,13 +46,16 @@ export async function reconcileLaunchlabCheckpoint({
  const seen=new Set();let cursor=null,previousSlot=null,reason='GAP_UNRESOLVED_PAGE_CAP';
  try{
   for(let page=0;page<pagesCap;page++){
+   if(signal?.aborted){reason='RPC_ABORTED';break}
    const options={limit,commitment:'confirmed'};
    if(cursor)options.before=cursor;
-   const response=await fetcher(rpcUrl,{method:'POST',headers:{'content-type':'application/json'},
+   const response=await fetcher(rpcUrl,{method:'POST',signal:signal??undefined,headers:{'content-type':'application/json'},
     body:JSON.stringify(rpc('getSignaturesForAddress',[LAUNCHLAB_PROGRAM,options]))});
    result.pages++;
+   if(signal?.aborted){reason='RPC_ABORTED';break}
    if(!response?.ok){reason=response?.status===429?'RATE_LIMITED':'RPC_HTTP_ERROR';break}
    const data=await response.json();
+   if(signal?.aborted){reason='RPC_ABORTED';break}
    if(data?.error||!Array.isArray(data?.result)){reason='RPC_INVALID_RESPONSE';break}
    const rows=data.result;
    if(!rows.length){reason='HISTORY_EXHAUSTED_BEFORE_CHECKPOINT';break}
@@ -100,8 +104,9 @@ export async function reconcileLaunchlabCheckpoint({
    cursor=oldestSignature;
   }
  }catch{
-  reason='RPC_UNAVAILABLE';
+  reason=signal?.aborted?'RPC_ABORTED':'RPC_UNAVAILABLE';
  }
+ if(signal?.aborted){reason='RPC_ABORTED';result.checkpointOverlapFound=false}
  result.finishedAt=requestedAt();
  result.status=reason==='CHECKPOINT_OVERLAP_VERIFIED'&&result.sourceOrderViolations?
   'CHECKPOINT_OVERLAP_WITH_ORDER_VIOLATION':reason;
