@@ -73,6 +73,18 @@ test('failed transactions are counted but never converted to observed token birt
  assert.equal(out.candidates[0].status,'FAILED_TRANSACTION');
  assert.equal(out.notifiedBirthsVerified,0);
 });
+test('same checkpoint signature but wrong slot cannot count as continuity',async()=>{
+ const m=fakeFetch([[row('D',1003),row('B',999)]]);
+ const r=await reconcileLaunchlabCheckpoint({...base,fetcher:m.fetcher});
+ assert.equal(r.status,'CHECKPOINT_SLOT_MISMATCH');
+ assert.equal(r.checkpointOverlapFound,false);
+});
+test('failed checkpoint cannot establish a successful prior live event',async()=>{
+ const m=fakeFetch([[row('D',1003),row('B',1000,{InstructionError:[0,'Custom']})]]);
+ const r=await reconcileLaunchlabCheckpoint({...base,fetcher:m.fetcher});
+ assert.equal(r.status,'CHECKPOINT_FAILED_TRANSACTION');
+ assert.equal(r.checkpointOverlapFound,false);
+});
 test('invalid endpoint or cursor is refused',async()=>{
  await assert.rejects(()=>reconcileLaunchlabCheckpoint({...base,rpcUrl:'http://rpc.example'}),/VALID_RPC/);
  await assert.rejects(()=>reconcileLaunchlabCheckpoint({...base,checkpointSignature:'TOMMY'}),/VALID_RPC/);
