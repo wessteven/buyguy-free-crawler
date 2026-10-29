@@ -29,6 +29,8 @@ function socketFactory(){
 const safeReview=(extra={})=>({
  status:'BOUNDED_REPLAY_CLASSIFIED',reconciliationStatus:'CHECKPOINT_OVERLAP_VERIFIED',
  historyPages:1,transactionLookups:1,advanceAuthorized:false,buyQualified:false,
+ historyOverlapFound:true,sourceOrderViolations:0,unresolved:[],
+ replayCoverage:'BOUNDED_SIGNATURE_HISTORY_OVERLAP_AND_CLASSIFICATION_ONLY',
  births:[{mint:recorded.expectedMint,observedVia:'HISTORICAL_RPC_REPLAY'}],...extra
 });
 function base(overrides={}){
@@ -62,6 +64,11 @@ test('initial ACK is required; logs are unverified hints and no alert latency is
  assert.equal(r.candidates,1);assert.equal(r.duplicateCandidates,1);
  assert.equal(r.pendingLive[0].classification,'UNVERIFIED_LOG_HINT');
  assert.equal(r.pendingLive[0].actualLiveAlertLatencyMs,null);
+ assert.equal(r.pendingLive[0].streamReceivedAt,iso);
+ assert.equal(r.pendingLive[0].streamReceivedMonotonicMs,0);
+ assert.equal(r.pendingLive[0].subscriptionId,77);
+ assert.equal(r.pendingLive[0].noticeToVerificationMs,null);
+ assert.equal(r.lastSubscriptionAckAt,iso);
  assert.equal(r.actualLiveAlertLatencyMs,null);
  assert.equal(r.checkpointAdvanceAuthorized,false);
  assert.equal(r.coverage,'UNKNOWN');assert.equal(r.buyQualified,false);
@@ -80,6 +87,8 @@ test('close triggers new socket, confirmed ACK, one bounded backfill and no auto
  assert.equal(r.phase,'ACTIVE_AFTER_BOUNDED_REVIEW');
  assert.equal(r.lastBackfillStatus,'BOUNDED_REPLAY_CLASSIFIED');
  assert.equal(r.backfillReviews[0].replayBirthCount,1);
+ assert.equal(r.backfillReviews[0].reviewElapsedMonotonicMs,0);
+ assert.equal(r.backfillReviews[0].startedAt,iso);
  assert.equal(r.checkpointAdvanceAuthorized,false);
  assert.equal(r.coverage,'UNKNOWN');
  assert.equal(r.subscriptionGapUnknown,true);
@@ -125,6 +134,23 @@ test('stale in-flight backfill results are ignored after another disconnect',asy
  m.sockets[2].open();m.sockets[2].ack();
  assert.equal(m.session.snapshot().status,'BACKFILL_REVIEW_BUDGET_EXHAUSTED');
  m.session.stop();
+});
+test('a forged or internally inconsistent completed backfill never clears gap',async()=>{
+ for(const bad of [
+  {historyOverlapFound:false},{sourceOrderViolations:1},
+  {replayCoverage:'UNVERIFIED'},{historyPages:3},
+  {transactionLookups:7},{unresolved:[{status:'MISSING'}]},
+  {advanceAuthorized:true},{buyQualified:true}
+ ]){
+  const m=base({reviewer:async()=>safeReview(bad)});
+  m.session.start();m.sockets[0].open();m.sockets[0].ack();
+  m.sockets[0].close();m.sockets[1].open();m.sockets[1].ack();
+  const r=await m.session.waitForReview();
+  assert.equal(r.phase,'GAP_UNRESOLVED',JSON.stringify(bad));
+  assert.equal(r.backfillReviews[0].completeBoundedReview,false);
+  assert.equal(r.checkpointAdvanceAuthorized,false);
+  m.session.stop();
+ }
 });
 test('stale stream causes capped reconnect; third disconnect exhausts budget',()=>{
  const m=base();m.session.start();m.sockets[0].open();m.sockets[0].ack();
