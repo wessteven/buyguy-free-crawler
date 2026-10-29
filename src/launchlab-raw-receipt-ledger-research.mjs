@@ -89,11 +89,16 @@ export function buildLaunchlabRawReceiptLedger({
   const previous=seen.get(swap.signature);
   if(previous){
    if(previous.slot!==swap.slot||previous.side!==swap.side||
+      previous.kind!==swap.kind||
+      previous.instructionArgumentsU64.first!==swap.instructionArgumentsU64.first||
       previous.traderSigner!==swap.traderSigner||
       previous.receivedAt!==swap.receivedAt)
     return empty('CONFLICTING_DUPLICATE_SIGNATURE');
    continue;
   }
+  const covering=coverage.get(Math.floor(swap.blockTime*1000/30000)*30000);
+  if(covering&&ms(swap.receivedAt)>covering.receipt)
+   return empty('CAUSAL_COVERAGE_RECEIPT_CONTRADICTION');
   seen.set(swap.signature,swap);
   events.push(swap);
  }
@@ -164,7 +169,8 @@ export function buildLaunchlabRawReceiptLedger({
   })),
   coverage:'CALLER_ATTESTED_BOUNDED_WINDOWS_NOT_INDEPENDENTLY_VERIFIED',
   coverageIndependentlyVerified:false,
-  sourceIdentityIndependentlyVerified:true,
+  sourceIdentityIndependentlyVerified:false,
+  rawInstructionIdentityValidated:true,
   episodes,episodeCount:episodes.length,
   caveat:'Raw transaction instruction identities and signers were decoded, but source completeness, actual executed quote transfers, buyer independence, valuation, reserves and sellability remain unverified.'
  };
