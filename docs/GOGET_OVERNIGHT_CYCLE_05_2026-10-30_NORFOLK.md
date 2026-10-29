@@ -19,7 +19,7 @@ Read [cycle 04](./GOGET_OVERNIGHT_CYCLE_04_2026-10-30_NORFOLK.md), the reconnect
 - `9f25f6fda9727f904f3b8aff8ba15fe35e09c32d`: abortable gap review, transaction loader signal and fail-closed status.
 - `a828a3843dc2bc4c70b34c8e4c821852c3ac0349`: session-level manual review timeout, disconnect/stop cancellation, noncooperative-provider settlement. [Full regression #40907669717](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40907669717) and [offline #40907669625](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40907669625) green.
 - `b58c63b8f18b8b57e1dabf34f5f4db53b9afeebe`: seven cancellation/chaos tests. **384/384 Node tests and 7/7 Python tests passed** in [full regression #40907731505](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40907731505); [offline 30-second evidence #40907731628](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40907731628) green.
-- `cf6908614db3da99f34cbd01202620966fb65cf1`: two additional negative tests for pre-aborted review and actual hung history RPC cancellation. **At document creation, CI for this last test-only commit was pending; next run must verify it.**
+- `cf6908614db3da99f34cbd01202620966fb65cf1`: two additional negative tests for pre-aborted review and actual hung history RPC cancellation. **Exact final-code CI verified green:** [full regression #40907859212](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40907859212) **386/386 Node + 7/7 Python passed**, and [offline 30-second evidence #40907859466](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40907859466) passed.
 
 ## Evidence boundaries
 
@@ -29,7 +29,7 @@ No new provider requests/credits, D1 reads/writes, paid resources, production cr
 
 ## Next hourly cycle — review CI first
 
-1. Verify the exact head `cf6908614db3da99f34cbd01202620966fb65cf1` Node/Python regression and offline workflow. Investigate any failing tests before new code.
+1. Review the final documentation-head CI and reconfirm the exact tested code SHA `cf6908614db3da99f34cbd01202620966fb65cf1` before new work; investigate any new failures first.
 2. Strengthen **exact signature and instruction-level independent swap evidence** using raw archived transaction fixture(s), verified program IDL/account mapping and bounded decoder. Do not confuse a fee payer with an independent buyer.
 3. Build a read-only **receipt-time evidence ledger** joining verified birth, decoded swap, 30-second window completeness, verification time and first feasible alert time, with explicit unknowns and strict no-lookahead. Preserve actual live alert latency as null until a real delivered alert exists.
 4. Add adversarial tests for wrong mint/curve/program, reused signature, unsupported token extensions, missing reserves and incomplete source windows. Avoid uncontrolled live scans, provider spend or changes to production.
