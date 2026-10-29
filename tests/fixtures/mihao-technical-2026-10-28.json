@@ -1,0 +1,51 @@
+{
+  "caseId": "MIHAO_2026-10-28T06:10:00Z",
+  "schemaVersion": 1,
+  "scope": "HISTORICAL_TECHNICAL_SNAPSHOT_RESEARCH_ONLY",
+  "origin": "User-supplied MIHAO technical snapshot 2026-10-28 06:10 UTC; raw 1,065-trade dataset not attached here",
+  "identity": {
+    "chain": "solana",
+    "symbol": "MIHAO",
+    "name": "ni hao cat",
+    "mint": "4CxjZyMNoF1p6eXHXHv1TWpS2X47CuUmLwtGe18spump",
+    "pool": "Ho1aSG6WGH1FfXdEHrK2f4Ggt1Hoxo9s5jcLMDqeyeBz",
+    "poolProgram": "PUMPSWAP",
+    "poolSource": "Helius recent mint transactions and external token-market listing, not a historical pool creation replay"
+  },
+  "asOf": "2026-10-28T06:10:00Z",
+  "priceUsd": 0.00009981,
+  "ema15m9": 0.00010089,
+  "ema15m21": 0.00009395,
+  "ema1h9": 0.00009243,
+  "atr15m": 0.00001,
+  "swingLow": 0.00007322,
+  "swingHigh": 0.00013333,
+  "fibSupport": 0.00009618,
+  "bullishConfirmationZone": [
+    0.0001104,
+    0.0001139
+  ],
+  "upsideLevels": [
+    0.0001333,
+    0.0001497,
+    0.0001705
+  ],
+  "downsideLevels": [
+    0.0000861,
+    0.0000732
+  ],
+  "reconstructedTrades": 1065,
+  "reconstructionHoursApprox": 30,
+  "reconstructionEvidence": "USER_REPORTED_RECONSTRUCTION_SUMMARY_ONLY",
+  "independentlyVerifiedUniqueBuyers": null,
+  "traderFunderLinksVerified": null,
+  "volumeAccelerationEvidence": null,
+  "onChainCandleSeriesAvailable": false,
+  "marketCapAtSnapshot": null,
+  "liquidityAtSnapshot": null,
+  "quoteSourceTime": null,
+  "launchTimeVerified": null,
+  "riskNote": "Third-party automated launch-analysis sources disagree about concentration and flag potentially coordinated early buyers; not independently forensically verified here",
+  "decision": "RESEARCH_ONLY_NOT_BUY_QUALIFIED",
+  "lookAheadPolicy": "All features above available only as of asOf. Later price highs, trending results, and safety reports must remain separate labeled outcome data."
+}
