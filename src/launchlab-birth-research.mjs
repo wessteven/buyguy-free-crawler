@@ -68,10 +68,10 @@ export function launchlabLogCandidate(message){
    message.params.result.context.slot:null};
 }
 
-export async function loadLaunchlabTransaction(rpcUrl,txSignature,fetcher=fetch){
+export async function loadLaunchlabTransaction(rpcUrl,txSignature,fetcher=fetch,{signal}={}){
  if(typeof rpcUrl!=='string'||!rpcUrl.startsWith('https://')||
     !validSignature(txSignature))throw Error('VALID_RPC_URL_AND_SIGNATURE_REQUIRED');
- const reply=await fetcher(rpcUrl,{method:'POST',
+ const reply=await fetcher(rpcUrl,{method:'POST',signal,
   headers:{'content-type':'application/json'},
   body:JSON.stringify(rpcRequest('getTransaction',[txSignature,{
     encoding:'jsonParsed',commitment:'confirmed',maxSupportedTransactionVersion:0
