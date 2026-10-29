@@ -1,0 +1,5 @@
+GOGET isolated one-time Helius LaunchLab live timing research trigger.
+Approved research scope: a single confirmed-commitment WebSocket stream for up to 60 seconds;
+at most 150 notifications and six RPC transaction lookups, concurrent lookups <=2.
+No production deployment, no schema/wallet changes, no trade or Android notification.
+Timestamp: 2026-10-29.
