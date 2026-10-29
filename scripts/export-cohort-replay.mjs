@@ -14,6 +14,13 @@ export const FROZEN_COHORT=Object.freeze([
 const FROM=Date.parse('2026-10-19T00:00:00Z')/1000;
 const TO=Date.parse('2026-10-21T00:00:00Z')/1000;
 const DEST='cohort-replay-artifact';
+// Explicit subset for rate-limit-safe manual follow-up: only previously frozen cohort IDs.
+const subset=String(process.env.COHORT_SYMBOLS||'').trim().toUpperCase();
+const selected=subset?subset.split(',').map(s=>s.trim()).filter(Boolean):FROZEN_COHORT.map(x=>x.symbol);
+if(new Set(selected).size!==selected.length||selected.length<1||
+   selected.some(symbol=>!FROZEN_COHORT.some(x=>x.symbol===symbol)))
+ throw Error('COHORT_SUBSET_INVALID');
+const requested=FROZEN_COHORT.filter(x=>selected.includes(x.symbol));
 const date=t=>new Date(t*1000).toISOString();
 await mkdir(DEST,{recursive:true});
 const details=[],raw=[],requestLog=[];
@@ -21,7 +28,7 @@ let attempts=0,networkLimited=false;
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function fetchBars(target,timeframe,aggregate,seconds){
  if(networkLimited)return {status:'PROVIDER_RATE_LIMIT',bars:[]};
- if(attempts)await pause(8000); // 7.5 calls/min at most
+ if(attempts)await pause(12000); // 5 calls/min at most, provider 429 fails closed
  const u=new URL('https://api.geckoterminal.com/api/v2/networks/solana/pools/'+target.pool+'/ohlcv/'+timeframe);
  for(const [k,v] of Object.entries({aggregate,limit:1000,before_timestamp:TO,currency:'usd',token:target.mint}))
   u.searchParams.set(k,String(v));
@@ -55,7 +62,7 @@ async function fetchBars(target,timeframe,aggregate,seconds){
   return {status:'MALFORMED_DATA',bars:[]};
  }
 }
-for(const c of FROZEN_COHORT){
+for(const c of requested){
  const fifteen=await fetchBars(c,'minute',15,900);
  const five=await fetchBars(c,'minute',5,300);
  const valid=fifteen.status==='OK'&&fifteen.bars.length>=22;
@@ -79,7 +86,8 @@ const summary={
  sourceFilePattern:'data/night-lab/2026-10-20/2026-10-20T1515Z-cycle11-*-helius-pool.json',
  studyStartUtc:date(FROM),studyEndUtcExclusive:date(TO),
  provider:'GeckoTerminal public OHLCV (15m and 5m)',rule:REPLAY_RULE,
- recordedAt:new Date().toISOString(),requestsAttempted:attempts,
+ recordedAt:new Date().toISOString(),requestedSymbols:requested.map(x=>x.symbol),
+ frozenCohortSize:FROZEN_COHORT.length,requestsAttempted:attempts,
  networkLimited,analysedCases:details.filter(x=>x.replayStatus==='EVALUATED').length,
  inconclusiveCases:details.filter(x=>x.replayStatus!=='EVALUATED').map(x=>x.symbol),
  signalCount:signals.length,outcomes,
