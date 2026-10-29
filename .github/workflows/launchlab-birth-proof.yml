@@ -1,0 +1,41 @@
+name: GOGET LaunchLab birth POC (manual, read-only)
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: '90-second bounded live watch, or replay one known historical signature'
+        type: choice
+        required: true
+        default: LIVE
+        options:
+          - LIVE
+          - FLOAT_REPLAY
+      historical_signature:
+        description: 'Exact on-chain signature for FLOAT_REPLAY; no assumptions from token mint'
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: goget-launchlab-birth-manual
+  cancel-in-progress: false
+jobs:
+  launchlab-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run isolated launch-detection unit/regression tests
+        run: |
+          node --check src/launchlab-birth-research.mjs
+          node --check scripts/launchlab-birth-proof.mjs
+          node --test tests/launchlab-birth-research.test.mjs
+      - name: Opt-in Helius proof (zero D1 writes)
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          PROBE_MODE: ${{ inputs.mode }}
+          HISTORICAL_SIGNATURE: ${{ inputs.historical_signature }}
+        run: node scripts/launchlab-birth-proof.mjs
