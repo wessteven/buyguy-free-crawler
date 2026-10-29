@@ -63,6 +63,17 @@ test('RPC exceptions are sanitized and cannot leak provider keys',async()=>{
  assert.equal(out.classification,'RPC_TRANSACTION_LOOKUP_FAILED');
  assert.ok(!JSON.stringify(out).includes('DO_NOT_LEAK'));
 });
+test('429 RPC rate limit is explicit and never retried or silently moved to another provider',async()=>{
+ let calls=0;
+ const out=await verifyLaunchlabLiveCandidate({...base,fetcher:async()=>{
+  calls++;return {ok:false,status:429};
+ }});
+ assert.equal(out.classification,'RPC_RATE_LIMITED');
+ assert.equal(out.rpcCalls,1);
+ assert.equal(calls,1);
+ assert.equal(out.mint,null);
+ assert.equal(out.buyQualified,false);
+});
 test('invalid monotonic clock cannot certify a live birth',async()=>{
  const out=await run(withSig(),{monotonic:()=>99});
  assert.equal(out.classification,'VERIFICATION_CLOCK_INVALID');
