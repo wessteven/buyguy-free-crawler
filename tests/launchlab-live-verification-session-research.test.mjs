@@ -263,3 +263,38 @@ test('stopping a session aborts all concurrent lookups exactly once',async()=>{
  assert.equal(out.staleLiveVerificationResultsIgnored,2);
  assert.equal(out.liveLookupsStarted,2);
 });
+
+
+test('a never-resolving noncooperative RPC cannot hang manual timeout handoff',async()=>{
+ let seenSignal;
+ const m=setup({maxLookupDurationMs:1000,staleAfterMs:10000,
+  liveVerifier:({signal})=>{
+   seenSignal=signal;
+   return new Promise(()=>{}); // intentionally ignores AbortSignal forever
+  }});
+ m.activate();m.sockets[0].log();
+ const pending=m.session.verifyPendingLive();
+ m.advance(1001);m.session.tick();
+ const out=await pending; // must settle from abort, no real timers
+ assert.equal(seenSignal.aborted,true);
+ assert.equal(out.liveLookupTimeouts,1);
+ assert.equal(out.liveVerifiedBirths,0);
+ assert.equal(out.pendingLive[0].verificationStatus,'LIVE_LOOKUP_TIMED_OUT');
+ assert.equal(out.liveLookupsFinished,1);
+ m.session.stop();
+});
+test('a never-resolving RPC cannot hang a disconnected stopped session',async()=>{
+ let seenSignal;
+ const m=setup({maxReconnects:0,liveVerifier:({signal})=>{
+  seenSignal=signal;
+  return new Promise(()=>{});
+ }});
+ m.activate();m.sockets[0].log();
+ const pending=m.session.verifyPendingLive();
+ m.sockets[0].close();
+ const out=await pending;
+ assert.equal(seenSignal.aborted,true);
+ assert.equal(out.phase,'STOPPED');
+ assert.equal(out.staleLiveVerificationResultsIgnored,1);
+ assert.equal(out.liveVerifiedBirths,0);
+});
