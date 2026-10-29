@@ -10,7 +10,7 @@ const feePayers=['A','B','C','D','E','F','G','H'].map(c=>c.repeat(32));
 let seq=0;
 const event=(t,side,payer,quote=0.1)=>{
  seq++;
- return {t,side,payer,sol:quote,sig:String.fromCharCode(65+seq).padStart(88,'7')};
+ return {t,side,payer,sol:quote,sig:'ABCDEFGHJKLMNPQRSTUVWXYZ'[seq].padStart(88,'7')};
 };
 function synthetic(){
  seq=0;
