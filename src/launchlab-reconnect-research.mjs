@@ -69,11 +69,12 @@ export async function reconcileLaunchlabCheckpoint({
      reason='CHECKPOINT_OVERLAP_VERIFIED';
      break;
     }
-    if(row.err!==null)result.failedTxSignatures++;
+    if(row.err!==null&&row.err!==undefined)result.failedTxSignatures++;
     result.candidates.push({
      signature:s,slot:row.slot,
      blockTime:integer(row.blockTime)?row.blockTime:null,
-     status:row.err===null?'UNCLASSIFIED_TRANSACTION':'FAILED_TRANSACTION'
+     status:row.err===null?'UNCLASSIFIED_TRANSACTION':
+      row.err===undefined?'TX_RESULT_UNKNOWN':'FAILED_TRANSACTION'
     });
    }
    if(invalid){reason='INVALID_RPC_HISTORY';break}
@@ -88,7 +89,8 @@ export async function reconcileLaunchlabCheckpoint({
   reason='RPC_UNAVAILABLE';
  }
  result.finishedAt=requestedAt();
- result.status=reason;
+ result.status=reason==='CHECKPOINT_OVERLAP_VERIFIED'&&result.sourceOrderViolations?
+  'CHECKPOINT_OVERLAP_WITH_ORDER_VIOLATION':reason;
  result.candidates.reverse(); // old -> new, explicitly requiring later independent classification
  result.notifiedBirthsVerified=0;
  result.launchInitializationEvidence=null;
