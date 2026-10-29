@@ -34,7 +34,7 @@ export function classifyLaunchlabBirth(transaction,context={}){
   // Both current Initialize variants: payer, creator, config, platform, authority,
   // pool_state[5], base_mint[6], quote_mint[7], ...
   const curve=ac[5],mint=ac[6],quote=ac[7],creator=ac[1];
-  if(ac.length<18||!isAddress(curve)||!isAddress(mint)||!isAddress(quote)||
+  if(ac.length<(spec.kind==='INITIALIZE_V2'?18:15)||!isAddress(curve)||!isAddress(mint)||!isAddress(quote)||
      !isAddress(creator)||new Set([curve,mint,quote]).size!==3){
     malformed++;continue;
   }
