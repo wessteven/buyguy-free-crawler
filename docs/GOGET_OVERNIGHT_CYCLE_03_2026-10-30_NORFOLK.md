@@ -18,7 +18,7 @@
 ## CI evidence
 
 - The full regression and archived 30-second replay workflows passed at `f66f5f16bbbd6136ac3fa3ff0576e04bb0face42`: [full regression #40888271092](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40888271092) **362/362 Node tests, 7/7 Python tests**; [offline acceleration #40888271026](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40888271026) green.
-- Additional 429 rate-limit classification and test added at `39abdc3b376a86e3e1d0d05f0e3dff314a30caef`. **Check the exact latest commit CI before treating this final change as validated.** The prior verified green run is not proof for a later untested commit.
+- Additional 429 rate-limit classification and test added at `39abdc3b376a86e3e1d0d05f0e3dff314a30caef`. **Verified green on that exact code SHA:** [full regression #40888333970](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40888333970) **363/363 Node tests and 7/7 Python tests**; [offline 30s replay #40888333951](https://github.com/wessteven/buyguy-free-crawler/actions/runs/40888333951) success. Subsequent documentation-only commits are not a new code baseline.
 - Intermediate commits may show red while test expectations were updated; final success must be tied to exact SHA.
 
 ## Evidence boundary and unresolved work
