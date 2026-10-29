@@ -94,3 +94,37 @@ test('reject insecure endpoints and ungrounded event identity without a lookup',
  await assert.rejects(()=>verifyLaunchlabLiveCandidate({...base,signature:'fake'}),
   /VALID_LIVE_CANDIDATE/);
 });
+
+
+test('explicit AbortSignal cancels a single RPC lookup with no retry or birth evidence',async()=>{
+ const controller=new AbortController();
+ let calls=0,observedSignal;
+ const fetcher=async(url,request)=>{
+  calls++;observedSignal=request.signal;
+  return await new Promise((resolve,reject)=>{
+   request.signal.addEventListener('abort',()=>{
+    const e=Error('cancelled');e.name='AbortError';reject(e);
+   },{once:true});
+  });
+ };
+ const pending=verifyLaunchlabLiveCandidate({...base,fetcher,signal:controller.signal});
+ assert.equal(calls,1);
+ assert.equal(observedSignal,controller.signal);
+ controller.abort();
+ const out=await pending;
+ assert.equal(out.classification,'RPC_ABORTED');
+ assert.equal(out.mint,null);assert.equal(out.buyQualified,false);
+ assert.equal(out.rpcCalls,1);assert.equal(calls,1);
+});
+test('a loader ignoring cancellation cannot promote a late RPC response to a birth',async()=>{
+ const controller=new AbortController();
+ let release;
+ const pending=run(null,{
+  signal:controller.signal,
+  transactionLoader:()=>new Promise(resolve=>{release=resolve})
+ });
+ controller.abort();release(withSig());
+ const out=await pending;
+ assert.equal(out.classification,'RPC_ABORTED');
+ assert.equal(out.mint,null);assert.equal(out.actualLiveAlertLatencyMs,null);
+});
