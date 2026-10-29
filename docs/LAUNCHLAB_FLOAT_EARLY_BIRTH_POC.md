@@ -25,14 +25,14 @@ Token: `Bv1a7cEj5aRnJQhMw4kRQqAFesMSd5LwcDnUzq52BMmr`.
 
 | UTC Oct 28 | Indicative market cap | Elapsed from reported 21:53 launch | What is NOT proved |
 |---|---:|---:|---|
-| 21:53 | ~$20k | 0m | On-chain instruction/signature, actual executable quote |
+| 21:53 | ~$20k | 0m | The creation instruction is now confirmed at 21:53:17 (details below); $20k execution remains unproven |
 | 22:15 | $145,770 | 22m | Whether GOGET polled/received this specific curve |
 | 22:33 | $884,200 | 40m | Historical fills, buyer identity, provider quote time |
 | 22:37 | ~$1.6m | 44m | Successful exit at the displayed headline valuation |
 | Later | ~$2.2m | Unknown | Exact time, liquidity and price path |
 
-Sources supplied in the handover are third-party snapshots, **not** an independently
-reconstructed historical time series. A separate market tracker identifies the first
+Market-cap snapshots supplied in the handover are third-party data, **not** an independently
+reconstructed OHLCV or executable historical time series. A separate market tracker identifies the first
 FLOAT pool as Raydium LaunchLab, with subsequent graduation:
 https://www.solanaterminal.com/solana/token/float/Bv1a7cEj5aRnJQhMw4kRQqAFesMSd5LwcDnUzq52BMmr
 
