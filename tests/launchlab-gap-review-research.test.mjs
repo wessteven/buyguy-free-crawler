@@ -124,6 +124,15 @@ test('unknown transaction success status cannot be classified as birth',async()=
  assert.equal(out.status,'REPLAY_INCOMPLETE');
  assert.equal(out.unresolved[0].status,'TRANSACTION_RESULT_UNKNOWN');
 });
+test('explicit undefined or string RPC error status is not evidence of a successful birth',async()=>{
+ for(const err of [undefined,'success']){
+  const m=mock({transactions:{[recorded.signature]:{...recorded.transaction,meta:{err}}}});
+  const out=await reviewLaunchlabReconnectGap({...base,fetcher:m.fetcher});
+  assert.equal(out.status,'REPLAY_INCOMPLETE');
+  assert.equal(out.births.length,0);
+  assert.equal(out.unresolved[0].status,'TRANSACTION_RESULT_UNKNOWN');
+ }
+});
 test('malformed inputs and non-UTC clocks are rejected before RPC use',async()=>{
  const m=mock();
  await assert.rejects(()=>reviewLaunchlabReconnectGap({...base,fetcher:m.fetcher,
