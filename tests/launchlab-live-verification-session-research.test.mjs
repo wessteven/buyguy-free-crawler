@@ -140,3 +140,52 @@ test('simultaneous manual verify requests do not double-spend RPC budget',async(
  await Promise.all([p,q]);
  assert.equal(m.session.snapshot().liveLookupsStarted,1);m.session.stop();
 });
+
+test('post-backfill live candidate verification is allowed but never upgrades stream coverage',async()=>{
+ const review=()=>({
+  status:'BOUNDED_REPLAY_CLASSIFIED',reconciliationStatus:'CHECKPOINT_OVERLAP_VERIFIED',
+  historyPages:1,transactionLookups:1,advanceAuthorized:false,buyQualified:false,
+  historyOverlapFound:true,sourceOrderViolations:0,unresolved:[],
+  replayCoverage:'BOUNDED_SIGNATURE_HISTORY_OVERLAP_AND_CLASSIFICATION_ONLY',
+  births:[{observedVia:'HISTORICAL_RPC_REPLAY'}]
+ });
+ const m=setup({reviewer:async()=>review()});
+ m.activate();m.sockets[0].close();m.sockets[1].open();m.sockets[1].ack();
+ m.sockets[1].log(f.signature);
+ await m.session.waitForReview();
+ assert.equal(m.session.snapshot().phase,'ACTIVE_AFTER_BOUNDED_REVIEW');
+ assert.equal(m.session.snapshot().liveVerifiedBirths,0);
+ const r=await m.session.verifyPendingLive();
+ assert.equal(r.liveVerifiedBirths,1);
+ assert.equal(r.backfillReviews[0].replayBirthCount,1);
+ assert.equal(r.coverage,'UNKNOWN');
+ assert.equal(r.subscriptionGapUnknown,true);
+ assert.equal(r.checkpointAdvanceAuthorized,false);
+ assert.equal(r.actualLiveAlertLatencyMs,null);
+ m.session.stop();
+});
+test('verifier cannot invent positive birth with missing receipt provenance or mismatched curve identity',async()=>{
+ for(const altered of [
+  {streamReceivedAt:'2026-10-30T01:00:00.000Z'},
+  {curve:f.expectedMint},
+  {verifiedAt:'2026-10-30T01:00:00.000Z'}
+ ]){
+  const m=setup({liveVerifier:async({signature,slot,streamReceivedAt,streamReceivedMonotonicMs})=>({
+   signature,slot,streamReceivedAt,streamReceivedMonotonicMs,
+   origin:'POST_ACK_LIVE_LOG_HINT',
+   classification:'LAUNCH_INSTRUCTION_VERIFIED',
+   mint:f.expectedMint,curve:f.expectedCurve,
+   quoteMint:'So11111111111111111111111111111111111111112',
+   evidence:'SUCCESSFUL_ANCHOR_INITIALIZE_DISCRIMINATOR_AND_IDL_ACCOUNTS',
+   verifiedAt:'2026-10-30T02:00:00.080Z',noticeToVerificationMs:10,
+   buyQualified:false,actualLiveAlertLatencyMs:null,deviceDeliveredAt:null,rpcCalls:1,
+   ...altered
+  })});
+  m.activate();m.sockets[0].log();
+  const r=await m.session.verifyPendingLive();
+  assert.equal(r.liveVerifiedBirths,0,JSON.stringify(altered));
+  assert.equal(r.pendingLive[0].verificationStatus,'INVALID_VERIFIER_RESULT');
+  assert.equal(r.pendingLive[0].mint,null);
+  m.session.stop();
+ }
+});
