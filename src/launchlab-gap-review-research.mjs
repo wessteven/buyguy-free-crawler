@@ -108,7 +108,8 @@ export async function reviewLaunchlabReconnectGap({
    incomplete=true;continue;
   }
   if(!tx||!validSlot(tx.slot)||tx.slot!==c.slot||!tx.meta||
-     !Object.hasOwn(tx.meta,'err')){
+     !Object.hasOwn(tx.meta,'err')||
+     (tx.meta.err!==null&&(typeof tx.meta.err!=='object'||Array.isArray(tx.meta.err)))){
    out.unresolved.push({signature:c.signature,slot:c.slot,
     status:!tx?'TRANSACTION_UNAVAILABLE':
      !validSlot(tx.slot)?'TRANSACTION_SLOT_UNKNOWN':
