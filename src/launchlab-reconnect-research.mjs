@@ -84,7 +84,9 @@ export async function reconcileLaunchlabCheckpoint({
     });
    }
    if(invalid){reason='INVALID_RPC_HISTORY';break}
-   if(result.checkpointOverlapFound)break;
+   if(result.checkpointOverlapFound||
+      reason==='CHECKPOINT_SLOT_MISMATCH'||
+      reason==='CHECKPOINT_FAILED_TRANSACTION')break;
    if(rows.length<limit){reason='HISTORY_EXHAUSTED_BEFORE_CHECKPOINT';break}
    if(!oldestSignature||oldestSignature===cursor){
     reason='NONADVANCING_CURSOR';break;
