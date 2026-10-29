@@ -51,8 +51,9 @@ function makeTx({
   token2022Base?token2022:token,token,addr('K'),
   wrongProgram?addr('Z'):LAUNCHLAB_PROGRAM];
  const ix={programId:LAUNCHLAB_PROGRAM,data:base58(data),accounts};
- const keys=[{pubkey:feePayer,signer:true}];
- if(trader!==feePayer)keys.push({pubkey:trader,signer:!wrongSigner});
+ const keys=[...new Set([feePayer,...accounts])].map(pubkey=>({
+  pubkey,signer:pubkey===feePayer||(pubkey===trader&&!wrongSigner)
+ }));
  if(wrongSigner&&trader===feePayer)keys[0].signer=false;
  return {
   signature:sig,receivedAt:iso(t+1),
@@ -129,6 +130,13 @@ test('failed, unsigned, mismatched-signature and malformed accounts fail closed'
  const unsigned=structuredClone(raw);
  unsigned.transaction.transaction.message.accountKeys[0].signer=false;
  assert.equal(decodeLaunchlabSwapTransaction(unsigned).status,'FEE_PAYER_SIGNER_UNVERIFIED');
+});
+test('forged account not present in raw transaction message is not accepted',()=>{
+ const raw=makeTx();
+ const forged=structuredClone(raw);
+ forged.transaction.transaction.message.accountKeys=
+  forged.transaction.transaction.message.accountKeys.filter(x=>x.pubkey!==birth.curve);
+ assert.equal(decodeLaunchlabSwapTransaction(forged).status,'MALFORMED_SWAP_INSTRUCTION');
 });
 test('Token-2022 swap is decoded but extensions and sellability remain unknown',()=>{
  const r=decodeLaunchlabSwapTransaction(makeTx({token2022Base:true}));
