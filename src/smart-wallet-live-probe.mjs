@@ -93,8 +93,8 @@ export function classifyObservedTransaction({wallet,signature:txsig,tx,observedA
   const protocols=[PUMPSWAP,PUMP_BONDING_CURVE].filter(x=>invoked.has(x));
   const common={...base2,tokenIncreases:deltas.slice(0,8),programs:protocols,
     notes:[...base2.notes,...(partial?['PARTIAL_TOKEN_OWNER_MAPPING']:[])]};
-  if(!deltas.length)return {...common,classification:'SIGNED_TX_NO_TOKEN_INCREASE'};
   if(partial)return {...common,classification:'TOKEN_INCREASE_OWNER_MAPPING_PARTIAL'};
+  if(!deltas.length)return {...common,classification:'SIGNED_TX_NO_TOKEN_INCREASE'};
   if(!protocols.length)return {...common,classification:'TOKEN_INCREASE_NO_VERIFIED_AMM'};
   return {...common,classification:'AMM_INVOCATION_WITH_TOKEN_INCREASE_UNPRICED',
     notes:[...common.notes,'AMM_PROGRAM_INVOKED_BUT_EXACT_SWAP_ROUTE_UNVERIFIED']};
