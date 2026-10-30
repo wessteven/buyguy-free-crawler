@@ -54,7 +54,8 @@ export function summarizeHeliusBatch(body,watched,receivedAt){
   const reject=why=>reasonCounts[why]=(reasonCounts[why]||0)+1;
   for(const tx of body){
     if(!tx||typeof tx!=='object'||!SIGNATURE.test(tx.signature||'')||
-      !integer(tx.slot)||!integer(tx.timestamp)){reject('BAD_TRANSACTION_IDENTITY');continue;}
+      !integer(tx.slot)||!integer(tx.timestamp)||tx.timestamp<1577836800||
+      !Number.isFinite(tx.timestamp*1000)||tx.timestamp*1000>Date.parse(receivedAt)+300000){reject('BAD_TRANSACTION_IDENTITY');continue;}
     if(tx.transactionError!==null){reject('TX_FAILURE_OR_ERROR_UNKNOWN');continue;}
     const referenced=new Set();
     // Fee payer is a candidate signal only; user-owned transfer references may be separate.
