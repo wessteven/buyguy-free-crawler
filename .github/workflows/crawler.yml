@@ -50,3 +50,28 @@ jobs:
           else
             exit 2
           fi
+
+  night_efficacy:
+    if: github.event_name != 'workflow_dispatch'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read-only GOGET overnight evidence
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/smart-wallet-overnight-efficacy.mjs
+      - name: Archive overnight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-smart-wallet-overnight-efficacy
+          path: smart-wallet-overnight-efficacy.json
+          retention-days: 7
+          if-no-files-found: warn
