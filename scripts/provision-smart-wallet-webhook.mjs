@@ -97,15 +97,23 @@ async function main(){
     '--config','wrangler.smart-wallet.toml'],{
       input:token,encoding:'utf8',env:process.env,maxBuffer:1024*128});
   if(put.status!==0)throw Error('WORKER_SECRET_INSTALL_FAILED');
-  // Never register a billable webhook until the isolated receiver proves reachable.
-  let readyResponse;
-  try{
-    readyResponse=await fetch(RECEIVER_URL.replace(/\/webhook$/,'/ready'),{
-      headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(15000)});
-  }catch{throw Error('RECEIVER_READINESS_UNREACHABLE');}
-  if(readyResponse.status!==200)throw Error('RECEIVER_READINESS_HTTP_'+readyResponse.status);
-  const readiness=await readyResponse.json().catch(()=>null);
-  if(readiness?.ready!==true||readiness?.tradeEligible!==false)throw Error('RECEIVER_READINESS_INVALID');
+  // Never register a billable webhook until the receiver proves publicly reachable.
+  // Secret writes can create a new Worker version and take time to propagate.
+  let ready=false,code='UNREACHABLE',detail='UNKNOWN';
+  for(let attempt=0;attempt<5;attempt++){
+    try{
+      const res=await fetch(RECEIVER_URL.replace(/\/webhook$/,'/ready'),{
+        headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(15000)});
+      code=String(res.status);
+      const data=await res.json().catch(()=>null);
+      detail=['RECEIVER_NOT_CONFIGURED','DATABASE_UNAVAILABLE'].includes(data?.error)
+        ?data.error:'UNKNOWN_OR_TRANSIENT';
+      if(res.status===200&&data?.ready===true&&data?.tradeEligible===false){ready=true;break;}
+      if(![503,502,504].includes(res.status))break; // never blindly retry bad authentication
+    }catch{code='UNREACHABLE';detail='NETWORK_OR_CLOUDFLARE';}
+    if(attempt<4)await new Promise(resolve=>setTimeout(resolve,4000));
+  }
+  if(!ready)throw Error('RECEIVER_READINESS_'+code+'_'+detail);
   const payload={webhookURL:RECEIVER_URL,transactionTypes:['SWAP'],
     accountAddresses:wallets,webhookType:'enhanced',authHeader:'Bearer '+token};
   if(!hook){
