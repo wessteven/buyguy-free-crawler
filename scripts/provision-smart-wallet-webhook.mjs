@@ -73,6 +73,15 @@ async function main(){
     '--config','wrangler.smart-wallet.toml'],{
       input:token,encoding:'utf8',env:process.env,maxBuffer:1024*128});
   if(put.status!==0)throw Error('WORKER_SECRET_INSTALL_FAILED');
+  // Never register a billable webhook until the isolated receiver proves reachable.
+  let readyResponse;
+  try{
+    readyResponse=await fetch(RECEIVER_URL.replace(/\/webhook$/,'/ready'),{
+      headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(15000)});
+  }catch{throw Error('RECEIVER_READINESS_UNREACHABLE');}
+  if(readyResponse.status!==200)throw Error('RECEIVER_READINESS_HTTP_'+readyResponse.status);
+  const readiness=await readyResponse.json().catch(()=>null);
+  if(readiness?.ready!==true||readiness?.tradeEligible!==false)throw Error('RECEIVER_READINESS_INVALID');
   const payload={webhookURL:RECEIVER_URL,transactionTypes:['SWAP'],
     accountAddresses:wallets,webhookType:'enhanced',authHeader:'Bearer '+token};
   if(!hook){
