@@ -17,20 +17,44 @@ export function derivePurposeToken(admin,helius){
   if(admin.length<24||helius.length<12)throw Error('CREDENTIAL_ENTROPY_UNVERIFIED');
   return createHmac('sha256',admin).update('GOGET:WEBHOOK:BEARER:v1:').update(helius).digest('base64url');
 }
+// Helius documentation currently shows both old/new API hosts and distinct key schemes.
+// Probe read-only list access, then use the *same* working scheme for mutations.
+let selectedEndpoint=null;
+const schemes=[
+  {host:'https://api-mainnet.helius-rpc.com/v0/webhooks',kind:'bearer'},
+  {host:'https://api-mainnet.helius-rpc.com/v0/webhooks',kind:'query'},
+  {host:'https://api.helius.xyz/v0/webhooks',kind:'query'},
+  {host:'https://mainnet.helius-rpc.com/v0/webhooks',kind:'query'}
+];
 async function api(key,method,entry='',body){
-  const url='https://api-mainnet.helius-rpc.com/v0/webhooks'+entry;
-  const response=await fetch(url,{
-    method,headers:{authorization:'Bearer '+key,accept:'application/json',
-      ...(body?{'content-type':'application/json'}:{})},
-    body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});
-  if(!response.ok)throw Error('HELIUS_HTTP_'+response.status);
-  if(response.status===204)return null;
-  const text=await response.text();
-  if(!text)return null;
-  try{return JSON.parse(text);}catch{throw Error('HELIUS_RESPONSE_INVALID_JSON');}
+  const options=selectedEndpoint?[selectedEndpoint]:method==='GET'&&entry===''?schemes:[];
+  if(options.length===0)throw Error('HELIUS_ENDPOINT_NOT_VERIFIED');
+  let lastCode='UNREACHABLE';
+  for(const option of options){
+    const query=option.kind==='query'?'?api-key='+encodeURIComponent(key):'';
+    let response;
+    try{
+      response=await fetch(option.host+entry+query,{
+        method,headers:{accept:'application/json',
+          ...(option.kind==='bearer'?{authorization:'Bearer '+key}:{}),
+          ...(body?{'content-type':'application/json'}:{})},
+        body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});
+    }catch{lastCode='NETWORK_UNAVAILABLE';continue;}
+    if(!response.ok){
+      lastCode='HTTP_'+response.status;
+      // Only alternate authentication/host on failed read-only discovery,
+      // never repeat a mutation whose outcome may be uncertain.
+      if(!selectedEndpoint&&method==='GET'&&entry===''&&[400,401,403,404].includes(response.status))continue;
+      throw Error('HELIUS_'+lastCode);
+    }
+    if(!selectedEndpoint)selectedEndpoint=option;
+    if(response.status===204)return null;
+    const text=await response.text();
+    if(!text)return null;
+    try{return JSON.parse(text);}catch{throw Error('HELIUS_RESPONSE_INVALID_JSON');}
+  }
+  throw Error('HELIUS_ALL_AUTH_SCHEMES_FAILED_'+lastCode);
 }
-const setEquals=(a,b)=>Array.isArray(a)&&a.length===b.length&&
-  a.every(x=>b.includes(x));
 async function listOwn(key){
   const all=await api(key,'GET');
   if(!Array.isArray(all))throw Error('HELIUS_WEBHOOK_LIST_INVALID');
