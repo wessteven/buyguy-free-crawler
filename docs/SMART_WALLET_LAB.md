@@ -1,6 +1,6 @@
 # GOGET Smart Wallet Lab v0.1 — isolated PAPER-ONLY experiment
 
-**Status:** deterministic rules and chronological offline replay are implemented on a draft PR branch; not deployed or connected to a trading wallet. This is not a live copy-trading service and does not claim a profitable strategy.
+**Status:** deterministic rules, chronological offline replay and a Helius parsed-SWAP **candidate-only extractor** are implemented on a draft PR branch; not deployed or connected to a trading wallet. This is not a live copy-trading service and does not claim a profitable strategy.
 
 ## What it does
 - Five hard-handoff gates: SCOUT -> FILTER -> ANALYST -> GUARD -> PAPER_SNIPER.
@@ -14,7 +14,7 @@
 - Requires fresh independently verified executable **side-specific** quotes. Adds a conservative adverse-slippage and fee assumption. Quotes are not fills; there is no guarantee that a stop can execute.
 
 ## What it does NOT do
-- No signer, key, transaction submission, swap API, Helius webhook receiver, smart-wallet ranking service, persistent event store, automatic trading or production deployment.
+- No signer, key, transaction submission, swap API, Helius webhook receiver, fully verified swap-decoder, smart-wallet ranking service, persistent event store, automatic trading or production deployment.
 - The source string `VERIFIED_SWAP` and booleans are **caller-supplied attestations**. The evaluator cannot verify them from raw blockchain data; that must be built and tested as a separate upstream adapter.
 - No wallet list of 640 was audited or synced. A list of deployed tokens does not demonstrate profitable wallet performance.
 - All replay state is in-memory until a future database-backed collector is approved. Restarting replay reconstructs the state from its entire input file.
@@ -45,11 +45,11 @@ node scripts/smart-wallet-replay.mjs --wallets vetted-wallets.json --input event
 The output file is created exclusively; it will not overwrite evidence. No production secrets are read.
 
 ## Next research milestones
-1. Build an authenticated, rate-limited receiver for Helius **Enhanced SWAP** webhook candidate envelopes. Validate webhooks and deduplicate signatures persistently before processing. A `SWAP` event or wallet fee payer is **not by itself** a proven buy. Derive exact wallet deltas from transaction metadata, not descriptions.
+1. Extend the initial `src/smart-wallet-helius.mjs` candidate-only adapter into an authenticated, rate-limited receiver for Helius **Enhanced SWAP** webhook envelopes. The adapter conservatively accepts fee-payer-matching watchlist candidates, but that is not proof the fee payer was the trader; delegated wallets could be missed. Verify webhook authentication and deduplicate signatures persistently before processing. A `SWAP` event or wallet fee payer is **not by itself** a proven buy. Derive exact wallet deltas from transaction metadata, not descriptions.
 2. Create immutable time-of-event D1 evidence with independent sellable route quotes, wallet accounting over complete historical positions, LP control/true-owner mapping and controls for fake volume/linked wallets.
 3. Measure end-to-end detection lag; build a reference cohort plus rejected-signal outcomes. Compare to the existing GOGET momentum strategy, avoiding look-ahead and survivor bias. Only then consider unattended paper runs.
 4. Independent safety review and explicit new authorization before any real-money execution; prefer no real trading by default.
 
 Architecture uses the existing project's Helius experience but does **not** assume the tested 30-second *pool-price* collector can observe every wallet trade in <1s.
 
-Source: `src/smart-wallet-lab.mjs`; offline runner: `scripts/smart-wallet-replay.mjs`; tests: `tests/smart-wallet-lab.test.mjs`.
+Source: `src/smart-wallet-lab.mjs`; Helius candidates: `src/smart-wallet-helius.mjs`; offline runner: `scripts/smart-wallet-replay.mjs`; tests: `tests/smart-wallet-lab.test.mjs` and `tests/smart-wallet-helius.test.mjs`.
