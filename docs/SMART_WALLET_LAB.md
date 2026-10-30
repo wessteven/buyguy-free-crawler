@@ -1,6 +1,6 @@
 # GOGET Smart Wallet Lab v0.1 — isolated PAPER-ONLY experiment
 
-**Status:** deterministic rules, chronological offline replay and a Helius parsed-SWAP **candidate-only extractor** are implemented on a draft PR branch; not deployed or connected to a trading wallet. This is not a live copy-trading service and does not claim a profitable strategy.
+**Status (30 October 2026):** merged via PR #8. The isolated five-stage paper engine remains offline-only; a separate three-wallet **watch-only live Helius polling pilot** is running on GitHub Actions with bounded Cloudflare D1 evidence. No actual paper copy orders or real-money orders are triggered by the live pilot. See SMART_WALLET_LIVE.md and GitHub Actions run #41024550922. No profitable strategy is claimed.
 
 ## What it does
 - Five hard-handoff gates: SCOUT -> FILTER -> ANALYST -> GUARD -> PAPER_SNIPER.
