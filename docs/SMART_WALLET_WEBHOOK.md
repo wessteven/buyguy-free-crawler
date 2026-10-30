@@ -1,5 +1,14 @@
 # GOGET — event-driven Helius webhook receiver v1
 
+## Production proof — 30 October 2026 UTC
+
+- Separate Worker `goget-smart-wallet-hook` deployed; authenticated `/ready` returned expected watch-only status.
+- GitHub Actions deployment [#41031560983](https://github.com/wessteven/buyguy-free-crawler/actions/runs/41031560983) succeeded, with Helius webhook ID `e3d71c5f-8729-424d-8940-bbfe762d660d` created.
+- Independent Helius webhook detail was verified in [#41031897119](https://github.com/wessteven/buyguy-free-crawler/actions/runs/41031897119): `active=true`, exactly **3** account addresses configured.
+- Read-only delivery inspection [#41031897043](https://github.com/wessteven/buyguy-free-crawler/actions/runs/41031897043) succeeded at **2026-10-30 09:13:59 UTC** and showed **0 webhook event rows**. This is **not** an end-to-end delivery proof. Do not assert true push latency, no missed events, or smart-money profits until actual deliveries appear.
+- The older Helius five-minute read-only polling lane remained functional at 09:13:54 UTC, with 2 decoded new transactions, 1 unpriced AMM/token increase candidate, and 0 verified trade signals.
+
+
 **Scope:** independent watch-only research infrastructure. No trading wallet, no signing, no swap API, no paper execution, and no claimed profitable signals.
 
 ## Deployment
