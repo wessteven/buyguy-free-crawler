@@ -54,6 +54,14 @@ async function run(){
     limits:WATCH_LIMITS,wallets:[],events:[],errors:[],
     totals:{newCandidates:0,baselineSamples:0,gaps:0,verifiedTradeSignals:0}};
   try{
+    const end=Date.parse(process.env.SMART_WALLET_LIVE_END_UTC||'');
+    if(!Number.isFinite(end))throw Error('PILOT_END_MISSING');
+    if(Date.now()>=end){
+      report.status='PILOT_EXPIRED';report.finishedAt=now();report.usage=usage;
+      await writeFile('smart-wallet-live-report.json',JSON.stringify(report,null,2)+'\n','utf8');
+      console.log('GOGET_WALLET_LIVE_PILOT',JSON.stringify({status:'PILOT_EXPIRED',mode:report.mode,usage}));
+      return;
+    }
     if(process.env.SMART_WALLET_LIVE_ENABLED!=='true')throw Error('LIVE_PILOT_DISABLED');
     const key=process.env.HELIUS_API_KEY;
     const vars=[process.env.CF_ACCOUNT_ID,process.env.CF_DATABASE_ID,process.env.CF_D1_API_TOKEN];
