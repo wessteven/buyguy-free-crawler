@@ -14,11 +14,11 @@ function fixture(overrides={}) {
     routeSource:'INDEPENDENT_EXECUTABLE_QUOTE',routeVerified:true,
     riskVerified:true,holderOwnerMappingVerified:true,mintAuthorityRevoked:true,
     freezeAuthorityRevoked:true,extensionsReviewed:true,liquidityUsd:56000,
-    top10OwnerPct:22,devOwnerPct:2,lpCustodyVerified:true,lpStatus:'BURNED',
+    top10OwnerPct:22,devOwnerPct:2,lpCustodyVerified:true,lpStatus:'BURNED',riskVerifiedAt:new Date(NOW-300000).toISOString(),
     midUsd:1.1,askUsd:1.1,bidUsd:1.08,...overrides.market};
   const walletEvidence={audited:true,closedTrades:40,profitFactor:1.4,
-    netRealizedPnlUsd:1400,washRiskReviewed:true,washRiskDetected:false,...overrides.walletEvidence};
-  return {event,context:{market,walletEvidence,soldSinceBuy:false,tradeFeedComplete:true,...overrides.context}};
+    netRealizedPnlUsd:1400,washRiskReviewed:true,washRiskDetected:false,asOfAt:new Date(NOW-3600000).toISOString(),...overrides.walletEvidence};
+  return {event,context:{market,walletEvidence,soldSinceBuy:false,tradeFeedComplete:true,tradeFeedAsOf:new Date(NOW).toISOString(),...overrides.context}};
 }
 const newDesk=()=>new SmartWalletLab({wallets:[wallet],startCashUsd:1000});
 function decision(overrides={}) {const f=fixture(overrides);return assessCopyBuy(f.event,
@@ -49,6 +49,7 @@ test('unknown concentration, active mint authority, risky liquidity and unverifi
   assert.ok(decision({market:{liquidityUsd:24999}}).reasons.includes('LOW_OR_UNKNOWN_LIQUIDITY'));
   assert.ok(decision({market:{lpCustodyVerified:false}}).reasons.includes('LP_CUSTODY_UNVERIFIED'));
   assert.ok(decision({market:{holderOwnerMappingVerified:false}}).reasons.includes('RISK_OR_OWNER_MAPPING_UNVERIFIED'));
+  assert.ok(decision({market:{riskVerifiedAt:new Date(NOW+1000).toISOString()}}).reasons.includes('RISK_EVIDENCE_STALE_OR_FUTURE'));
 });
 
 test('stale and mismatched execution quote cannot create a paper position',()=>{
@@ -63,6 +64,8 @@ test('wallet edge requires independently audited profitable trades and complete 
   assert.ok(decision({context:{soldSinceBuy:true}}).reasons.includes('WALLET_SELL_STATUS_UNVERIFIED_OR_SOLD'));
   assert.ok(decision({market:{midUsd:1.82}}).reasons.includes('ALREADY_UP_80_PCT_OR_PRICE_UNKNOWN'));
   assert.ok(decision({walletEvidence:{washRiskDetected:true}}).reasons.includes('WALLET_EDGE_NOT_PROVEN'));
+  assert.ok(decision({walletEvidence:{asOfAt:new Date(NOW+10000).toISOString()}}).reasons.includes('WALLET_STATS_LOOKAHEAD_OR_STALE'));
+  assert.ok(decision({context:{tradeFeedAsOf:new Date(NOW-1500).toISOString()}}).reasons.includes('WALLET_FEED_TIMESTAMP_UNVERIFIED'));
 });
 
 test('guard stops trading when exposure, cash or daily loss is exceeded',()=>{
