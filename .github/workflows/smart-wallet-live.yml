@@ -7,6 +7,7 @@ on:
       - 'src/smart-wallet-live-probe.mjs'
       - 'scripts/smart-wallet-live-probe.mjs'
       - 'research/smart-wallet-live-cohort.json'
+      - 'scripts/smart-wallet-overnight-efficacy.mjs'
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
@@ -55,3 +56,20 @@ jobs:
           CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
           CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
         run: node scripts/smart-wallet-webhook-evidence.mjs
+
+      - name: Read-only overnight wallet efficacy
+        if: always()
+        continue-on-error: true
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/smart-wallet-overnight-efficacy.mjs
+      - name: Archive night efficacy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-night-efficacy
+          path: smart-wallet-overnight-efficacy.json
+          retention-days: 7
+          if-no-files-found: warn
