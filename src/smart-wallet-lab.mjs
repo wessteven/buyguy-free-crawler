@@ -46,6 +46,8 @@ export function assessCopyBuy(event, data={}, account={}, now=Date.now()) {
   const market=data.market;
   const f=[];
   if (market?.riskVerified!==true || market?.holderOwnerMappingVerified!==true) f.push('RISK_OR_OWNER_MAPPING_UNVERIFIED');
+  const riskAt=stamp(market?.riskVerifiedAt);
+  if(!Number.isFinite(riskAt)||riskAt>now||now-riskAt>3600000) f.push('RISK_EVIDENCE_STALE_OR_FUTURE');
   if (market?.mintAuthorityRevoked!==true || market?.freezeAuthorityRevoked!==true ||
       market?.extensionsReviewed!==true) f.push('MINT_CONTROL_UNVERIFIED');
   if (!positive(market?.liquidityUsd) || market.liquidityUsd<LAB_RULES.minLiquidityUsd) f.push('LOW_OR_UNKNOWN_LIQUIDITY');
@@ -57,6 +59,9 @@ export function assessCopyBuy(event, data={}, account={}, now=Date.now()) {
   pass('FILTER');
 
   const w=data.walletEvidence, a=[];
+  const walletAt=stamp(w?.asOfAt),feedAt=stamp(data?.tradeFeedAsOf);
+  if(!Number.isFinite(walletAt)||walletAt>t||t-walletAt>7*86400000) a.push('WALLET_STATS_LOOKAHEAD_OR_STALE');
+  if(!Number.isFinite(feedAt)||feedAt<seen||feedAt>now) a.push('WALLET_FEED_TIMESTAMP_UNVERIFIED');
   if (w?.audited!==true || !number(w?.closedTrades)||w.closedTrades<LAB_RULES.minClosedWalletTrades ||
       !positive(w?.profitFactor) || w.profitFactor<LAB_RULES.minProfitFactor ||
       !number(w?.netRealizedPnlUsd) || w.netRealizedPnlUsd<=LAB_RULES.minNetWalletPnlUsd ||
@@ -121,7 +126,8 @@ export class SmartWalletLab {
     if(event?.side==='SELL') {
       const p=this.positions.get(key);
       if(!p || p.wallet!==event.wallet || p.pool!==event.pool) return this.log(event,{ok:false,decision:'NO_MATCHING_PAPER_POSITION',reasons:['NO_MATCHING_PAPER_POSITION']},now);
-      if(event.confirmed!==true || event.swapVerified!==true || event.source!=='VERIFIED_SWAP')
+      if(event.confirmed!==true || event.swapVerified!==true || event.source!=='VERIFIED_SWAP' ||
+        typeof event.signature!=='string' || !/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(event.signature))
         return this.log(event,{ok:false,decision:'KILL',stage:'SCOUT',reasons:['UNVERIFIED_WALLET_SELL']},now);
       const elapsed=now-Date.parse(p.openedAt);
       const res=assessPaperExit(p,context.market,now,'COPIED_WALLET_SELL');
@@ -132,7 +138,8 @@ export class SmartWalletLab {
     const result=assessCopyBuy(event,{...context,monitoredWallets:this.wallets},
       {cashUsd:this.cashUsd,openExposureUsd:open.reduce((s,p)=>s+p.spendUsd,0),
        openPositions:open.length,openMints:new Set(this.positions.keys()),
-       dailyRealizedUsd:context.dailyRealizedUsd??this.realizedUsd},now);
+       dailyRealizedUsd:this.journal.filter(e=>e.at.slice(0,10)===new Date(now).toISOString().slice(0,10))
+         .reduce((total,e)=>total+(number(e.realizedUsd)?e.realizedUsd:0),0)},now);
     if(result.ok) {this.cashUsd-=result.proposal.spendUsd;this.positions.set(key,result.proposal);}
     return this.log(event,result,now);
   }
