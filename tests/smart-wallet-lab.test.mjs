@@ -135,7 +135,7 @@ test('offline replay CLI honors chronological inputs and reports paper-only outc
     const wallets=join(dir,'wallets.json'),input=join(dir,'events.jsonl'),output=join(dir,'result.json');
     const f=fixture();writeFileSync(wallets,JSON.stringify([wallet]));
     const row={observedAt:new Date(NOW).toISOString(),event:f.event,context:f.context};
-    writeFileSync(input,JSON.stringify(row)+'\\n'+JSON.stringify(row)+'\\n');
+    writeFileSync(input,JSON.stringify(row)+'\n'+JSON.stringify(row)+'\n');
     const run=spawnSync(process.execPath,['scripts/smart-wallet-replay.mjs','--wallets',wallets,'--input',input,'--output',output],{encoding:'utf8'});
     assert.equal(run.status,0,run.stderr);
     const report=JSON.parse(readFileSync(output,'utf8'));
