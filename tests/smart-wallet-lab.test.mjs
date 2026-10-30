@@ -1,5 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {mkdtempSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {SmartWalletLab,assessCopyBuy,assessPaperExit,LAB_RULES} from '../src/smart-wallet-lab.mjs';
 
 const NOW=Date.parse('2026-10-30T02:00:00.000Z');
@@ -123,4 +127,21 @@ test('no simulated paper exit without a fresh independently verified sell-side q
   assert.equal(assessPaperExit(p,{...q,routeVerified:false},NOW).decision,'EXIT_BLOCKED');
   assert.equal(assessPaperExit(p,q,NOW).decision,'HOLD');
   assert.equal(LAB_RULES.maxTradeUsd,100);
+});
+
+test('offline replay CLI honors chronological inputs and reports paper-only outcomes',()=>{
+  const dir=mkdtempSync(join(tmpdir(),'goget-smart-wallet-'));
+  try {
+    const wallets=join(dir,'wallets.json'),input=join(dir,'events.jsonl'),output=join(dir,'result.json');
+    const f=fixture();writeFileSync(wallets,JSON.stringify([wallet]));
+    const row={observedAt:new Date(NOW).toISOString(),event:f.event,context:f.context};
+    writeFileSync(input,JSON.stringify(row)+'\\n'+JSON.stringify(row)+'\\n');
+    const run=spawnSync(process.execPath,['scripts/smart-wallet-replay.mjs','--wallets',wallets,'--input',input,'--output',output],{encoding:'utf8'});
+    assert.equal(run.status,0,run.stderr);
+    const report=JSON.parse(readFileSync(output,'utf8'));
+    assert.equal(report.mode,'PAPER_ONLY_NO_EXECUTION');assert.equal(report.paperBuys,1);
+    assert.equal(report.rejectedByReason.DUPLICATE_EVENT,1);
+    const overwrite=spawnSync(process.execPath,['scripts/smart-wallet-replay.mjs','--wallets',wallets,'--input',input,'--output',output],{encoding:'utf8'});
+    assert.notEqual(overwrite.status,0,'Evidence output must not be overwritten');
+  } finally {rmSync(dir,{recursive:true,force:true});}
 });
