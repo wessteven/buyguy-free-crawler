@@ -80,8 +80,18 @@ async function main(){
     return;
   }
   if(action==='verify'){
-    console.log('GOGET_HELIUS_WEBHOOK',{mode:'verified_listing',present:!!hook,
-      active:hook?.active??null,wallets:hook?.accountAddresses?.length??0});
+    if(!hook)throw Error('GOGET_WEBHOOK_NOT_REGISTERED');
+    if(!idPattern.test(hook.webhookID||''))throw Error('WEBHOOK_ID_INVALID');
+    const details=await api(key,'GET','/'+encodeURIComponent(hook.webhookID));
+    const addresses=details?.accountAddresses??details?.account_addresses??
+      details?.addresses??hook.accountAddresses??hook.account_addresses??null;
+    const count=Array.isArray(addresses)?addresses.length:null;
+    const fields=Object.keys(details||{}).filter(x=>/address|active|webhook|type/i.test(x)).slice(0,16);
+    console.log('GOGET_HELIUS_WEBHOOK',{mode:'verified_listing',present:true,
+      active:details?.active??hook.active??null,wallets:count,
+      returnedFieldNames:fields});
+    if(Array.isArray(addresses)&&count!==3)throw Error('HELIUS_WALLET_COUNT_MISMATCH');
+    if(!Array.isArray(addresses))throw Error('HELIUS_WALLET_LIST_NOT_VERIFIABLE');
     return;
   }
   if(Date.now()>=Date.parse(STOP_AT))throw Error('PILOT_EXPIRED_NO_CREATION');
