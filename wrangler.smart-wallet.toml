@@ -1,0 +1,12 @@
+name = "goget-smart-wallet-hook"
+main = "src/smart-wallet-webhook-worker.mjs"
+compatibility_date = "2026-10-18"
+workers_dev = true
+[[d1_databases]]
+binding = "DB"
+database_name = "buyguy-free-v3"
+database_id = "REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID"
+[vars]
+WALLET_WEBHOOK_ENABLED = "true"
+WALLET_WEBHOOK_STOP_AT = "2026-11-02T00:00:00Z"
+WALLET_WATCHED_ADDRESSES = "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4,whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx,7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP"
