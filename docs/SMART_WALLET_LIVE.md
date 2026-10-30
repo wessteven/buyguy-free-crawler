@@ -1,5 +1,7 @@
 # GOGET Smart Wallet LIVE watch-only pilot — 30 October 2026
 
+**First verified production run:** GitHub Actions [#41024550922](https://github.com/wessteven/buyguy-free-crawler/actions/runs/41024550922) completed successfully at 08:09 UTC on 30 October. It made 9 Helius RPC calls and 14 successful D1 API operations, recorded 6 baseline transaction classifications, found 0 verified trade signals, and flagged all three sampled wallets as incomplete because the bounded signature window exceeded the per-wallet decoding limit. This is real baseline collection, NOT a proven complete or low-latency trading feed.
+
 ## Operational scope
 
 - Real Helius confirmed Solana JSON-RPC calls: `getSignaturesForAddress` and `getTransaction` (jsonParsed).
