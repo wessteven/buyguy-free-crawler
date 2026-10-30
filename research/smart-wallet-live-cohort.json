@@ -1,0 +1,17 @@
+[
+  {
+    "wallet": "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4",
+    "vetted": false,
+    "source": "recent confirmed PumpSwap fee-payer activity; independent wallet profit not established"
+  },
+  {
+    "wallet": "whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx",
+    "vetted": false,
+    "source": "prior Deployer Lab watch; evidence of recent transfer activity, not a copy-trading recommendation"
+  },
+  {
+    "wallet": "7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP",
+    "vetted": false,
+    "source": "Deployer Lab entity; transactions may reference this wallet without it signing"
+  }
+]
