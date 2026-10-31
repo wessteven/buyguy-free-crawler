@@ -95,7 +95,7 @@ jobs:
         id: expiry
         shell: bash
         run: |
-          if [ "$(date -u +%s)" -ge "$(date -u -d '2026-11-02T00:00:00Z' +%s)" ]; then
+          if [ "$(date -u +%s)" -ge "$(date -u -d '2026-11-08T00:00:00Z' +%s)" ]; then
             echo "expired=true" >> "$GITHUB_OUTPUT"
           else
             echo "expired=false" >> "$GITHUB_OUTPUT"
