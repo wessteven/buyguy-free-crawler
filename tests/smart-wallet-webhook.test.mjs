@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {serveSmartWalletWebhook,verifyBearer,summarizeHeliusBatch,WEBHOOK_LIMITS}
+import {serveSmartWalletWebhook,verifyBearer,summarizeHeliusBatch,buildResearchEvidence,WEBHOOK_LIMITS}
   from '../src/smart-wallet-webhook-worker.mjs';
 
 const wallet='8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4';
@@ -102,4 +102,34 @@ test('failed transactions, future malformed timestamps, and non-SWAP never becom
   assert.equal(t.ok,true);
   assert.ok(t.rows.every(x=>!Object.hasOwn(x,'tradeEligible')));
   assert.ok(t.rows.some(x=>x.status==='OTHER_TRANSACTION'));
+});
+
+test('v2 research evidence retains token quantities, SOL movement, fees and swap hints without inferring a trade',()=>{
+  const source={...tx,fee:5000,
+    tokenTransfers:[{mint:'B'.repeat(44),fromUserAccount:other,toUserAccount:wallet,tokenAmount:123.456789}],
+    nativeTransfers:[{fromUserAccount:wallet,toUserAccount:other,amount:250000000}],
+    accountData:[{account:wallet,nativeBalanceChange:-250005000,tokenBalanceChanges:[{
+      mint:'B'.repeat(44),userAccount:wallet,rawTokenAmount:{tokenAmount:'123456789000',decimals:9}
+    }]}],
+    events:{swap:{tokenInputs:[{mint:'C'.repeat(44),tokenAmount:0.25}],
+      tokenOutputs:[{mint:'B'.repeat(44),tokenAmount:123.456789}]}}
+  };
+  const evidence=JSON.parse(buildResearchEvidence(source,wallet));
+  assert.equal(evidence.schemaVersion,2);
+  assert.equal(evidence.feeLamports,'5000');
+  assert.equal(evidence.tokenTransfers[0].tokenAmount,'123.456789');
+  assert.equal(evidence.nativeTransfers[0].lamports,'250000000');
+  assert.equal(evidence.accountBalanceChanges[0].tokenBalanceChanges[0].rawTokenAmount,'123456789000');
+  assert.equal(evidence.swapHints.tokenInputs[0].amount,'0.25');
+  assert.match(evidence.caveat,/NOT_EXECUTABLE/);
+  assert.equal(evidence.verifiedBuy,undefined);
+});
+test('v2 bounded source observation handles large data and remains parseable',()=>{
+  const t={...tx,tokenTransfers:Array.from({length:200},()=>({
+    mint:'B'.repeat(44),fromUserAccount:wallet,toUserAccount:other,tokenAmount:2000
+  }))};
+  const result=JSON.parse(buildResearchEvidence(t,wallet));
+  assert.equal(result.truncatedSource.tokenTransfers,true);
+  assert.ok(JSON.stringify(result).length<14000);
+  assert.equal(WEBHOOK_LIMITS.storedEventsPerDay,5000);
 });
