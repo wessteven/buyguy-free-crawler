@@ -107,7 +107,7 @@ async function main(){
      new Set(wallets).size!==wallets.length)throw Error('UNVETTED_PILOT_COHORT_INVALID');
   // Verify that the Worker configuration and Helius subscription target the same cohort.
   const cfgToml=await readFile('wrangler.smart-wallet.toml','utf8');
-  const deployedWallets=cfgToml.match(/WALLET_WATCHED_ADDRESSES\\s*=\\s*"([^"]+)"/)?.[1]?.split(',')||[];
+  const deployedWallets=cfgToml.match(/WALLET_WATCHED_ADDRESSES\s*=\s*"([^"]+)"/)?.[1]?.split(',')||[];
   if(deployedWallets.length!==wallets.length || !wallets.every(w=>deployedWallets.includes(w)))
     throw Error('WORKER_HELIUS_COHORT_MISMATCH');
   // Secret is derived to be stable across GitHub runs, with a purpose-separated HMAC.
