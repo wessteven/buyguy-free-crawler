@@ -37,7 +37,7 @@ Data persistence is keyed by exact __(wallet, signature)__, deduplicated across 
 
 As block timestamps are second-granular, their difference from receive time is approximate. Subsecond delivery must be measured using additional evidence, not asserted.
 
-Time-limited pilot: all webhook POST ingestion stops at **2026-11-02 00:00 UTC**. The hourly GitHub cleanup workflow deletes only the matching Helius webhook after expiry and then disables itself; if deletion fails, the scheduled cleanup retries. Verify the actual Helius webhook has been removed — a receiver deadline by itself would not stop provider event charges.
+Time-limited pilot: all webhook POST ingestion stops at **2026-11-08 00:00 UTC**. The hourly GitHub cleanup workflow deletes only the matching Helius webhook after expiry and then disables itself; if deletion fails, the scheduled cleanup retries. Verify the actual Helius webhook has been removed — a receiver deadline by itself would not stop provider event charges.
 
 ## Operational verification
 
@@ -57,3 +57,7 @@ Status should clearly differentiate: code merged, Worker deployed, receiver read
 Combine signer authority, token owner deltas (SOL/WSOL accounting), verified exact pool/mint route, double-sided executable quotes, mint/LP controls and beneficial holder concentration. Build wallet realized P&L *as of signal time* avoiding look-ahead. Only then route verified candidates to the existing forward PAPER engine.
 
 **Never claim** this webhook alone detects purchases within one second or produces any real-money profit.
+
+
+### Accumulation update — 31 October 2026
+The active bounded collection pilot was extended to 8 November UTC. The webhook can retain quantitative transfer and native SOL movement hints; these are not independent verified executions. The configured three-wallet cohort is unchanged until measured growth is approved. A separate 6-hour signer-candidate research scan is configured, with a persisted D1 provenance table. See `docs/GOGET_DATA_ACCUMULATION_PLAN.md`.
