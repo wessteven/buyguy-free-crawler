@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectWindow,classifyObservedTransaction,WATCH_LIMITS,WSOL} from '../src/smart-wallet-live-probe.mjs';
+import {selectWindow,classifyObservedTransaction,WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,WSOL} from '../src/smart-wallet-live-probe.mjs';
 import {PUMPSWAP} from '../src/pumpswap.mjs';
 
 const wallet='A'.repeat(44),mint='B'.repeat(44),sig='5'.repeat(88);
@@ -55,4 +55,8 @@ test('only bounded new signatures are selected with honest gap and truncation ac
 test('invalid account-owner mapping or amount cannot be counted as safe',()=>{
  const tx=structuredClone(transaction);tx.meta.postTokenBalances[0].uiTokenAmount.amount='NOT_A_NUMBER';
  assert.equal(classify(tx).classification,'TOKEN_INCREASE_OWNER_MAPPING_PARTIAL');
+});
+
+test('Helius JSON-RPC reader supports Solana v1 transactions',()=>{
+ assert.equal(MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,1);
 });

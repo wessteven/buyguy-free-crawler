@@ -5,6 +5,7 @@ import {PUMPSWAP,PUMP_BONDING_CURVE} from './pumpswap.mjs';
 
 export const WATCH_LIMITS=Object.freeze({maxWallets:3, signaturesPerWallet:16,
   decodePerWallet:2, maxDecodesPerRun:6, maxAgeSeconds:1800});
+export const MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION=1;
 export const WSOL='So11111111111111111111111111111111111111112';
 const address=s=>typeof s==='string'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
 const signature=s=>typeof s==='string'&&/^[1-9A-HJ-NP-Za-km-z]{64,88}$/.test(s);

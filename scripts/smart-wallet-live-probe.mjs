@@ -2,7 +2,7 @@
 // GOGET WATCH-ONLY live pilot. Reads public Solana data and writes isolated D1 evidence.
 // No signing, no real transactions, no automatic paper entries.
 import {readFile,writeFile} from 'node:fs/promises';
-import {WATCH_LIMITS,selectWindow,classifyObservedTransaction} from '../src/smart-wallet-live-probe.mjs';
+import {WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,selectWindow,classifyObservedTransaction} from '../src/smart-wallet-live-probe.mjs';
 
 const usage={rpc:0,transactions:0,d1:0};
 const now=()=>new Date().toISOString();
@@ -87,7 +87,7 @@ async function run(){
             w.gap=true;w.errors.push('GLOBAL_DECODE_BUDGET');break;
           }
           usage.transactions++;
-          const tx=await rpc('getTransaction',[sig.signature,{encoding:'jsonParsed',maxSupportedTransactionVersion:0,commitment:'confirmed'}]);
+          const tx=await rpc('getTransaction',[sig.signature,{encoding:'jsonParsed',maxSupportedTransactionVersion:MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,commitment:'confirmed'}]);
           const e=classifyObservedTransaction({wallet,signature:sig.signature,tx,observedAt:now(),baseline:selection.baseline});
           w.processed++;
           report.events.push({wallet,signature:e.signature,classification:e.classification,
