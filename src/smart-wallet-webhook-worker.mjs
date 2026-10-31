@@ -3,8 +3,8 @@
 const ADDRESS=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const SIGNATURE=/^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
 export const WEBHOOK_LIMITS=Object.freeze({
-  bodyBytes:96000,eventsPerRequest:30,storedEventsPerDay:1200,
-  maxWallets:3,deadline:'2026-11-02T00:00:00Z'
+  bodyBytes:512000,eventsPerRequest:64,storedEventsPerDay:5000,
+  maxWallets:32,deadline:'2026-11-08T00:00:00Z'
 });
 const enc=new TextEncoder();
 const json=(obj,status=200)=>new Response(JSON.stringify(obj),{
@@ -47,6 +47,51 @@ export async function boundedText(request,max=WEBHOOK_LIMITS.bodyBytes) {
   for(const c of chunks){data.set(c,offset);offset+=c.length;}
   return {ok:true,text:new TextDecoder('utf-8',{fatal:true}).decode(data)};
 }
+// Compact but replay-useful source observations. These are Helius-reported quantities,
+// NOT on-chain verified deltas or executable swap prices. Preserve numeric strings.
+const str=(v,max=100)=>typeof v==='string'?v.slice(0,max):
+  typeof v==='number'&&Number.isFinite(v)?String(v):null;
+const acct=v=>typeof v==='string'&&ADDRESS.test(v)?v:null;
+export function buildResearchEvidence(tx,wallet){
+  const tokenTransfers=(Array.isArray(tx?.tokenTransfers)?tx.tokenTransfers:[]).slice(0,24)
+    .map(t=>({mint:acct(t?.mint),from:acct(t?.fromUserAccount),to:acct(t?.toUserAccount),
+      tokenAmount: str(t?.tokenAmount,64),tokenStandard:str(t?.tokenStandard,40)}));
+  const nativeTransfers=(Array.isArray(tx?.nativeTransfers)?tx.nativeTransfers:[]).slice(0,16)
+    .map(t=>({from:acct(t?.fromUserAccount),to:acct(t?.toUserAccount),
+      lamports:str(t?.amount,64)}));
+  const changes=(Array.isArray(tx?.accountData)?tx.accountData:[]).slice(0,16)
+    .map(a=>({account:acct(a?.account),nativeBalanceChange:str(a?.nativeBalanceChange,64),
+      tokenBalanceChanges:(Array.isArray(a?.tokenBalanceChanges)?a.tokenBalanceChanges:[]).slice(0,6)
+        .map(b=>({mint:acct(b?.mint),owner:acct(b?.userAccount),
+          rawTokenAmount:str(b?.rawTokenAmount?.tokenAmount,96),
+          decimals:Number.isInteger(b?.rawTokenAmount?.decimals)?b.rawTokenAmount.decimals:null}))}));
+  const swaps=tx?.events?.swap??null;
+  const swapHints=swaps&&typeof swaps==='object'?{
+    tokenInputs:(Array.isArray(swaps.tokenInputs)?swaps.tokenInputs:[]).slice(0,8)
+      .map(t=>({mint:acct(t?.mint),amount:str(t?.tokenAmount,64)})),
+    tokenOutputs:(Array.isArray(swaps.tokenOutputs)?swaps.tokenOutputs:[]).slice(0,8)
+      .map(t=>({mint:acct(t?.mint),amount:str(t?.tokenAmount,64)})),
+    nativeInputLamports:str(swaps.nativeInput?.amount,64),
+    nativeOutputLamports:str(swaps.nativeOutput?.amount,64)}:null;
+  const doc={schemaVersion:2,recordType:'UNVERIFIED_HELIUS_ENHANCED_SOURCE',
+    watchedWallet:wallet,type:str(tx?.type,60),source:str(tx?.source,100),
+    feePayer:acct(tx?.feePayer),feePayerIsWallet:tx?.feePayer===wallet,
+    feeLamports:str(tx?.fee,64),
+    tokenTransfers,nativeTransfers,accountBalanceChanges:changes,swapHints,
+    truncatedSource:{
+      tokenTransfers:Array.isArray(tx?.tokenTransfers)&&tx.tokenTransfers.length>24,
+      nativeTransfers:Array.isArray(tx?.nativeTransfers)&&tx.nativeTransfers.length>16,
+      accountData:Array.isArray(tx?.accountData)&&tx.accountData.length>16},
+    caveat:'Helius data is not a signer-attested executed buy or sell; raw token deltas require independent RPC recheck'};
+  const serialized=JSON.stringify(doc);
+  if(new TextEncoder().encode(serialized).byteLength<=14000)return serialized;
+  return JSON.stringify({schemaVersion:2,recordType:'UNVERIFIED_HELIUS_ENHANCED_SOURCE',
+    watchedWallet:wallet,feePayer:acct(tx?.feePayer),type:str(tx?.type,60),
+    source:str(tx?.source,100),tooLargeForFullHints:true,
+    tokenTransfers:tokenTransfers.slice(0,8),nativeTransfers:nativeTransfers.slice(0,4),
+    caveat:'EXCESS_SOURCE_HETEROGENEITY_REQUIRES_RAW_REPLAY;NO_VERIFIED_TRADE'});
+}
+
 export function summarizeHeliusBatch(body,watched,receivedAt){
   const reasonCounts={},rows=[],seen=new Set();
   if(!Array.isArray(body))return {ok:false,error:'BODY_NOT_ARRAY'};
@@ -78,9 +123,7 @@ export function summarizeHeliusBatch(body,watched,receivedAt){
         blockTime:new Date(tx.timestamp*1000).toISOString(),observedAt:receivedAt,
         feePayerObserved:tx.feePayer===wallet,
         status,delayMs:Number.isFinite(delayMs)?delayMs:null,source:tx.source||'UNKNOWN',
-        evidence:JSON.stringify({source:'HELIUS_ENHANCED_WEBHOOK',type:tx.type||null,
-          feePayerIsWallet:tx.feePayer===wallet,transferHints,
-          warning:'NOT_SIGNER_VERIFIED_NOT_EXECUTABLE_NOT_TRADE_ELIGIBLE'}).slice(0,1750)});
+        evidence:buildResearchEvidence(tx,wallet)});
     }
   }
   return {ok:true,rows,reasonCounts,received:body.length};
