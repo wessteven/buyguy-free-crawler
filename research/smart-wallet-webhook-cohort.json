@@ -15,13 +15,6 @@
     "vetted": false
   },
   {
-    "wallet": "FHpcNSe6tb2n15bAdq4BkeYWGyZKFD7yLYrH92ng7wCT",
-    "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
-    "observedTransactions": 3,
-    "poolCount": 2,
-    "vetted": false
-  },
-  {
     "wallet": "kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 3,
