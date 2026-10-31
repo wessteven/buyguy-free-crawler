@@ -1,0 +1,31 @@
+name: GOGET Capacity Audit (read only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-capacity-audit.yml'
+      - 'scripts/goget-capacity-audit.mjs'
+  workflow_dispatch:
+  schedule:
+    - cron: '43 0 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: goget-capacity-audit
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit current GOGET D1 capacity with no data modifications
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+          CF_ANALYTICS_API_TOKEN: ${{ secrets.CF_ANALYTICS_API_TOKEN }}
+        run: node scripts/goget-capacity-audit.mjs
