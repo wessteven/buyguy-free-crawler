@@ -10,7 +10,7 @@
 - Hard limits of three signature RPC calls + six transaction RPC calls per cycle, at most two decodes per wallet, and a 16-signature sampling window. Gaps/overflows are reported, not repaired with invented data.
 - Separate Cloudflare D1 tables `smart_wallet_live_cursors` and `smart_wallet_live_events`. A run also uploads a JSON evidence artifact with seven-day retention.
 - Existing production GOGET, real wallet, fast-radar, Pocket Radar, original paper account and 10-minute discovery cron remain untouched. No trade sending capability exists.
-- **Automatic end:** 2026-11-02 00:00 UTC. The workflow then skips all remote Helius/D1 calls. To stop earlier, set `SMART_WALLET_LIVE_ENABLED` to false in the workflow.
+- **Automatic end:** 2026-11-08 00:00 UTC. The workflow then skips all remote Helius/D1 calls. To stop earlier, set `SMART_WALLET_LIVE_ENABLED` to false in the workflow.
 - Only signatures with signer identity and independent transaction metadata are classified. If a wallet is merely referenced, it is not a copied trader.
 - `AMM_INVOCATION_WITH_TOKEN_INCREASE_UNPRICED` is NOT a verified buy: an AMM program ran in the same transaction as a positive token balance delta, but the exact spending route, pool and sellability remain uncertain.
 - Every observation is `tradeEligible:false`, `paperEligible:false`. Nothing invokes the paper-sniper until a future independently verified enrichment adapter exists.
@@ -40,3 +40,7 @@ Nine Helius RPC requests maximum per five-minute cycle, ~2,592 calls/day if the 
 3. Audit real *realized* wallet P&L from complete trade histories, accounting for failures, fees, wash activity, and missing illiquid exits.
 4. Verify beneficial holder concentration, mint controls, LP custody, exact sell route, and independently priced executable bid/ask quotes at the decision timestamp.
 5. Link **only fully independently verified** events to the existing five-stage paper engine. Compare results against plain GOGET momentum over a forward test. No real-money trading without additional explicit authorization.
+
+
+### Accumulation update — 31 October 2026
+The active bounded collection pilot was extended to 8 November UTC. The webhook can retain quantitative transfer and native SOL movement hints; these are not independent verified executions. The configured three-wallet cohort is unchanged until measured growth is approved. A separate 6-hour signer-candidate research scan is configured, with a persisted D1 provenance table. See `docs/GOGET_DATA_ACCUMULATION_PLAN.md`.

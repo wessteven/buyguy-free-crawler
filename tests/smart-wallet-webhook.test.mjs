@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {serveSmartWalletWebhook,verifyBearer,summarizeHeliusBatch,WEBHOOK_LIMITS}
+import {serveSmartWalletWebhook,verifyBearer,summarizeHeliusBatch,buildResearchEvidence,WEBHOOK_LIMITS}
   from '../src/smart-wallet-webhook-worker.mjs';
 
 const wallet='8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4';
@@ -44,7 +44,7 @@ function db(){
 }
 function env(DB=db()){
   return {DB,WALLET_WEBHOOK_SECRET:key,WALLET_WATCHED_ADDRESSES:wallet+','+other,
-    WALLET_WEBHOOK_ENABLED:'true',WALLET_WEBHOOK_STOP_AT:'2026-11-02T00:00:00Z'};
+    WALLET_WEBHOOK_ENABLED:'true',WALLET_WEBHOOK_STOP_AT:'2026-11-08T00:00:00Z'};
 }
 function req(events=[tx],header='Bearer '+key,method='POST'){
   return new Request('https://hook.test/webhook',{method,headers:{
@@ -74,13 +74,13 @@ test('authenticated enhanced SWAP stored as unverified evidence and deduplicated
   assert.equal((await dup.json()).duplicates,2);
   assert.equal(e.DB.rows.size,2);
   const evidence=JSON.parse([...e.DB.rows.values()][0][8]);
-  assert.match(evidence.warning,/NOT_EXECUTABLE/);
+  assert.match(evidence.caveat,/NOT_EXECUTABLE/);
 });
 test('wrong content type, huge batch, missing signer mapping and malformed JSON reject safely',async()=>{
   const e=env();
   const badtype=new Request('https://hook.test/webhook',{method:'POST',headers:{authorization:'Bearer '+key,'content-type':'text/plain'},body:'x'});
   assert.equal((await serveSmartWalletWebhook(badtype,e,now)).status,415);
-  assert.equal((await serveSmartWalletWebhook(req(Array.from({length:31},()=>tx)),e,now)).status,413);
+  assert.equal((await serveSmartWalletWebhook(req(Array.from({length:WEBHOOK_LIMITS.eventsPerRequest+1},()=>tx)),e,now)).status,413);
   const unknown={...tx,feePayer:'D'.repeat(44),tokenTransfers:[]};
   const result=await serveSmartWalletWebhook(req([unknown]),e,now);
   assert.equal((await result.json()).accepted,0);
@@ -90,7 +90,7 @@ test('wrong content type, huge batch, missing signer mapping and malformed JSON 
   assert.equal((await serveSmartWalletWebhook(oversize,e,now)).status,413);
 });
 test('time expiry and missing secret fail closed',async()=>{
-  assert.equal((await serveSmartWalletWebhook(req(),env(),Date.parse('2026-11-02T00:00:00Z'))).status,410);
+  assert.equal((await serveSmartWalletWebhook(req(),env(),Date.parse('2026-11-08T00:00:00Z'))).status,410);
   const e=env();e.WALLET_WEBHOOK_SECRET=undefined;
   assert.equal((await serveSmartWalletWebhook(req(),e,now)).status,503);
 });
@@ -102,4 +102,34 @@ test('failed transactions, future malformed timestamps, and non-SWAP never becom
   assert.equal(t.ok,true);
   assert.ok(t.rows.every(x=>!Object.hasOwn(x,'tradeEligible')));
   assert.ok(t.rows.some(x=>x.status==='OTHER_TRANSACTION'));
+});
+
+test('v2 research evidence retains token quantities, SOL movement, fees and swap hints without inferring a trade',()=>{
+  const source={...tx,fee:5000,
+    tokenTransfers:[{mint:'B'.repeat(44),fromUserAccount:other,toUserAccount:wallet,tokenAmount:123.456789}],
+    nativeTransfers:[{fromUserAccount:wallet,toUserAccount:other,amount:250000000}],
+    accountData:[{account:wallet,nativeBalanceChange:-250005000,tokenBalanceChanges:[{
+      mint:'B'.repeat(44),userAccount:wallet,rawTokenAmount:{tokenAmount:'123456789000',decimals:9}
+    }]}],
+    events:{swap:{tokenInputs:[{mint:'C'.repeat(44),tokenAmount:0.25}],
+      tokenOutputs:[{mint:'B'.repeat(44),tokenAmount:123.456789}]}}
+  };
+  const evidence=JSON.parse(buildResearchEvidence(source,wallet));
+  assert.equal(evidence.schemaVersion,2);
+  assert.equal(evidence.feeLamports,'5000');
+  assert.equal(evidence.tokenTransfers[0].tokenAmount,'123.456789');
+  assert.equal(evidence.nativeTransfers[0].lamports,'250000000');
+  assert.equal(evidence.accountBalanceChanges[0].tokenBalanceChanges[0].rawTokenAmount,'123456789000');
+  assert.equal(evidence.swapHints.tokenInputs[0].amount,'0.25');
+  assert.match(evidence.caveat,/NOT_EXECUTABLE/);
+  assert.equal(evidence.verifiedBuy,undefined);
+});
+test('v2 bounded source observation handles large data and remains parseable',()=>{
+  const t={...tx,tokenTransfers:Array.from({length:200},()=>({
+    mint:'B'.repeat(44),fromUserAccount:wallet,toUserAccount:other,tokenAmount:2000
+  }))};
+  const result=JSON.parse(buildResearchEvidence(t,wallet));
+  assert.equal(result.truncatedSource.tokenTransfers,true);
+  assert.ok(JSON.stringify(result).length<14000);
+  assert.equal(WEBHOOK_LIMITS.storedEventsPerDay,5000);
 });
