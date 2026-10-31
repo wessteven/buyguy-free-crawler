@@ -90,17 +90,26 @@ async function main(){
     console.log('GOGET_HELIUS_WEBHOOK',{mode:'verified_listing',present:true,
       active:details?.active??hook.active??null,wallets:count,
       returnedFieldNames:fields});
-    if(Array.isArray(addresses)&&count!==3)throw Error('HELIUS_WALLET_COUNT_MISMATCH');
+    const source=JSON.parse(await readFile('research/smart-wallet-webhook-cohort.json','utf8'));
+    const expected=source.map(x=>x.wallet);
+    if(Array.isArray(addresses)&&
+      (count!==expected.length || !expected.every(w=>addresses.includes(w))))
+      throw Error('HELIUS_WALLET_COUNT_MISMATCH');
     if(!Array.isArray(addresses))throw Error('HELIUS_WALLET_LIST_NOT_VERIFIABLE');
     return;
   }
   if(Date.now()>=Date.parse(STOP_AT))throw Error('PILOT_EXPIRED_NO_CREATION');
   const token=derivePurposeToken(required('ADMIN_TOKEN'),key);
-  const cfg=await readFile('research/smart-wallet-live-cohort.json','utf8');
+  const cfg=await readFile('research/smart-wallet-webhook-cohort.json','utf8');
   const cohort=JSON.parse(cfg);
   const wallets=cohort.map(x=>x.wallet);
-  if(cohort.length!==3||!cohort.every(x=>x.vetted===false)||
+  if(cohort.length<3||cohort.length>20||!cohort.every(x=>x.vetted===false)||
      new Set(wallets).size!==wallets.length)throw Error('UNVETTED_PILOT_COHORT_INVALID');
+  // Verify that the Worker configuration and Helius subscription target the same cohort.
+  const cfgToml=await readFile('wrangler.smart-wallet.toml','utf8');
+  const deployedWallets=cfgToml.match(/WALLET_WATCHED_ADDRESSES\\s*=\\s*"([^"]+)"/)?.[1]?.split(',')||[];
+  if(deployedWallets.length!==wallets.length || !wallets.every(w=>deployedWallets.includes(w)))
+    throw Error('WORKER_HELIUS_COHORT_MISMATCH');
   // Secret is derived to be stable across GitHub runs, with a purpose-separated HMAC.
   // Wrangler never logs the secret contents; the worker has no trading secret.
   const put=spawnSync('npx',['wrangler','secret','put','WALLET_WEBHOOK_SECRET',
