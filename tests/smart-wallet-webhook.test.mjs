@@ -74,13 +74,13 @@ test('authenticated enhanced SWAP stored as unverified evidence and deduplicated
   assert.equal((await dup.json()).duplicates,2);
   assert.equal(e.DB.rows.size,2);
   const evidence=JSON.parse([...e.DB.rows.values()][0][8]);
-  assert.match(evidence.warning,/NOT_EXECUTABLE/);
+  assert.match(evidence.caveat,/NOT_EXECUTABLE/);
 });
 test('wrong content type, huge batch, missing signer mapping and malformed JSON reject safely',async()=>{
   const e=env();
   const badtype=new Request('https://hook.test/webhook',{method:'POST',headers:{authorization:'Bearer '+key,'content-type':'text/plain'},body:'x'});
   assert.equal((await serveSmartWalletWebhook(badtype,e,now)).status,415);
-  assert.equal((await serveSmartWalletWebhook(req(Array.from({length:31},()=>tx)),e,now)).status,413);
+  assert.equal((await serveSmartWalletWebhook(req(Array.from({length:WEBHOOK_LIMITS.eventsPerRequest+1},()=>tx)),e,now)).status,413);
   const unknown={...tx,feePayer:'D'.repeat(44),tokenTransfers:[]};
   const result=await serveSmartWalletWebhook(req([unknown]),e,now);
   assert.equal((await result.json()).accepted,0);
