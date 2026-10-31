@@ -82,7 +82,7 @@ export function buildResearchEvidence(tx,wallet){
       tokenTransfers:Array.isArray(tx?.tokenTransfers)&&tx.tokenTransfers.length>24,
       nativeTransfers:Array.isArray(tx?.nativeTransfers)&&tx.nativeTransfers.length>16,
       accountData:Array.isArray(tx?.accountData)&&tx.accountData.length>16},
-    caveat:'Helius data is not a signer-attested executed buy or sell; raw token deltas require independent RPC recheck'};
+    caveat:'NOT_SIGNER_VERIFIED_NOT_EXECUTABLE_NOT_TRADE_ELIGIBLE; raw token deltas require independent RPC recheck'};
   const serialized=JSON.stringify(doc);
   if(new TextEncoder().encode(serialized).byteLength<=14000)return serialized;
   return JSON.stringify({schemaVersion:2,recordType:'UNVERIFIED_HELIUS_ENHANCED_SOURCE',
