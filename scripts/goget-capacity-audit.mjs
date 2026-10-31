@@ -32,6 +32,8 @@ async function main(){
   const tasks=[
     ['webhook',"SELECT COUNT(*) AS n,COALESCE(SUM(length(evidence_json)),0) AS evidence_bytes,MIN(observed_at) AS first_at,MAX(observed_at) AS latest_at FROM smart_wallet_webhook_events",[]],
     ['webhook24h',"SELECT COUNT(*) AS n,COUNT(DISTINCT wallet) AS wallets FROM smart_wallet_webhook_events WHERE observed_at>=?",[new Date(Date.now()-86400000).toISOString()]],
+    ['webhookSchemaVersions',"SELECT COALESCE(json_extract(evidence_json, '$.schemaVersion'), 1) AS schema_version, COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=? GROUP BY schema_version ORDER BY schema_version",[new Date(Date.now()-86400000).toISOString()]],
+    ['expandedWebhook',"SELECT COUNT(*) AS n,COUNT(DISTINCT wallet) AS wallets,MAX(observed_at) AS last_at FROM smart_wallet_webhook_events WHERE observed_at>=?",['2026-10-31T04:24:53.000Z']],
     ['wallet_polling',"SELECT COUNT(*) AS n,MIN(observed_at) AS first_at,MAX(observed_at) AS latest_at FROM smart_wallet_live_events",[]],
     ['wallet_polling24h',"SELECT COUNT(*) AS n FROM smart_wallet_live_events WHERE observed_at>=?",[new Date(Date.now()-86400000).toISOString()]],
     ['webhook_daily',"SELECT day,reserved FROM smart_wallet_webhook_budget ORDER BY day DESC LIMIT 7",[]],
@@ -42,6 +44,13 @@ async function main(){
     try{answer.tableCounts[name]=await query(sql,params)}
     catch(e){answer.tableCounts[name]=/CLOUDFLARE_HTTP_\d+/.exec(e.message)?.[0]||'QUERY_UNAVAILABLE';}
   }
+  // Optional read-only R2 bucket inventory; no bucket created and no billing changes.
+  try {
+    const r2token=process.env.CF_DEPLOY_API_TOKEN||key;
+    const buckets=(await call('https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account)+'/r2/buckets',r2token)).result?.buckets;
+    answer.r2={status:Array.isArray(buckets)?'AVAILABLE':'UNVERIFIED',
+      namedGogetBuckets:Array.isArray(buckets)?buckets.filter(b=>/goget|buyguy|radar/i.test(b.name||'')).length:null};
+  }catch {answer.r2={status:'PERMISSIONS_OR_SERVICE_UNAVAILABLE'};}
   const graphqlToken=process.env.CF_ANALYTICS_API_TOKEN||key;
   const date=new Date().toISOString().slice(0,10),start=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   const q='query($accountTag: string!, $start: Date, $end: Date, $databaseId: string){ viewer { accounts(filter:{accountTag:$accountTag}) { d1AnalyticsAdaptiveGroups(limit:1000, filter:{date_geq:$start,date_leq:$end,databaseId:$databaseId}) { sum {rowsRead rowsWritten readQueries writeQueries} } } } }';
