@@ -4,6 +4,7 @@
 import {createHmac} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
+import {assessWebhookBudget} from '../src/smart-wallet-budget.mjs';
 
 export const STOP_AT='2026-11-08T00:00:00Z';
 export const RECEIVER_URL='https://goget-smart-wallet-hook.wessteven.workers.dev/webhook';
@@ -64,14 +65,47 @@ async function listOwn(key){
 }
 async function main(){
   const action=process.argv[2]||'sync';
-  if(!['sync','cleanup','verify'].includes(action))throw Error('UNSUPPORTED_MODE');
+  if(!['sync','cleanup','verify','guard'].includes(action))throw Error('UNSUPPORTED_MODE');
+  // Avoid management API calls in the frequent safety-monitoring path when nothing is due.
+  if(action==='cleanup' && Date.now()<Date.parse(STOP_AT)){
+    console.log('GOGET_HELIUS_WEBHOOK',{mode:'not_yet_expired'});
+    return;
+  }
   const key=required('HELIUS_API_KEY');
+  if(action==='guard'){
+    const account=required('CF_ACCOUNT_ID'),database=required('CF_DATABASE_ID'),token=required('CF_D1_API_TOKEN');
+    const url='https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account)+
+      '/d1/database/'+encodeURIComponent(database)+'/query';
+    async function d1(sql,params=[]){
+      const r=await fetch(url,{method:'POST',headers:{authorization:'Bearer '+token,
+        'content-type':'application/json'},body:JSON.stringify({sql,params}),
+        signal:AbortSignal.timeout(20000)});
+      if(!r.ok)throw Error('D1_BUDGET_HTTP_'+r.status);
+      const body=await r.json();
+      if(body?.success!==true||body?.result?.[0]?.success!==true)throw Error('D1_BUDGET_READ_FAILED');
+      return body.result[0].results||[];
+    }
+    const recent=new Date(Date.now()-3600000).toISOString();
+    const day=new Date().toISOString().slice(0,10);
+    const [hour,dayRows]=await Promise.all([
+      d1('SELECT COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=?',[recent]),
+      d1('SELECT reserved FROM smart_wallet_webhook_budget WHERE day=?',[day])
+    ]);
+    const counts={lastHour:hour[0]?.n??null,dayAttempted:dayRows[0]?.reserved??0};
+    const policy=assessWebhookBudget(counts);
+    console.log('GOGET_HELIUS_CREDIT_GUARD',{counts,action:policy.action,reasons:policy.reasons});
+    if(policy.action==='UNKNOWN_DATA_MANUAL_REVIEW')throw Error('GUARD_COUNTS_UNVERIFIED');
+    if(policy.action==='MONITOR')return;
+    const owned=await listOwn(key);
+    if(owned){
+      if(!idPattern.test(owned.webhookID||''))throw Error('WEBHOOK_ID_INVALID');
+      await api(key,'DELETE','/'+encodeURIComponent(owned.webhookID));
+    }
+    console.log('GOGET_HELIUS_CREDIT_GUARD',{mode:'OWN_SUBSCRIPTION_SUSPENDED',removed:!!owned});
+    return;
+  }
   const hook=await listOwn(key);
   if(action==='cleanup'){
-    if(Date.now()<Date.parse(STOP_AT)){
-      console.log('GOGET_HELIUS_WEBHOOK',{mode:'not_yet_expired',active:!!hook});
-      return;
-    }
     if(hook){
       if(!idPattern.test(hook.webhookID||''))throw Error('WEBHOOK_ID_INVALID');
       await api(key,'DELETE','/'+encodeURIComponent(hook.webhookID));
