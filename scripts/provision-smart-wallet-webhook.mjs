@@ -5,7 +5,7 @@ import {createHmac} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 
-export const STOP_AT='2026-11-02T00:00:00Z';
+export const STOP_AT='2026-11-08T00:00:00Z';
 export const RECEIVER_URL='https://goget-smart-wallet-hook.wessteven.workers.dev/webhook';
 const idPattern=/^[a-zA-Z0-9-]{10,128}$/;
 const required=(name)=>{
