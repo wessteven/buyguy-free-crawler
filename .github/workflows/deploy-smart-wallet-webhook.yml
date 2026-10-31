@@ -9,6 +9,8 @@ on:
       - 'scripts/provision-smart-wallet-webhook.mjs'
       - 'wrangler.smart-wallet.toml'
       - 'sql/smart-wallet-webhook.sql'
+      - 'research/smart-wallet-webhook-cohort.json'
+      - 'src/smart-wallet-budget.mjs'
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
@@ -101,9 +103,16 @@ jobs:
             echo "expired=false" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-node@v4
-        if: steps.expiry.outputs.expired == 'true'
         with:
           node-version: '22'
+      - name: Guard provider event-credit velocity before scheduled cleanup
+        if: steps.expiry.outputs.expired == 'false'
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: node scripts/provision-smart-wallet-webhook.mjs guard
       - name: Delete only exact GOGET Helius webhook after cutoff
         if: steps.expiry.outputs.expired == 'true'
         env:

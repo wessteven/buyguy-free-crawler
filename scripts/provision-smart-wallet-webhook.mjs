@@ -4,6 +4,7 @@
 import {createHmac} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
+import {assessWebhookBudget} from '../src/smart-wallet-budget.mjs';
 
 export const STOP_AT='2026-11-08T00:00:00Z';
 export const RECEIVER_URL='https://goget-smart-wallet-hook.wessteven.workers.dev/webhook';
@@ -64,14 +65,47 @@ async function listOwn(key){
 }
 async function main(){
   const action=process.argv[2]||'sync';
-  if(!['sync','cleanup','verify'].includes(action))throw Error('UNSUPPORTED_MODE');
+  if(!['sync','cleanup','verify','guard'].includes(action))throw Error('UNSUPPORTED_MODE');
+  // Avoid management API calls in the frequent safety-monitoring path when nothing is due.
+  if(action==='cleanup' && Date.now()<Date.parse(STOP_AT)){
+    console.log('GOGET_HELIUS_WEBHOOK',{mode:'not_yet_expired'});
+    return;
+  }
   const key=required('HELIUS_API_KEY');
+  if(action==='guard'){
+    const account=required('CF_ACCOUNT_ID'),database=required('CF_DATABASE_ID'),token=required('CF_D1_API_TOKEN');
+    const url='https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account)+
+      '/d1/database/'+encodeURIComponent(database)+'/query';
+    async function d1(sql,params=[]){
+      const r=await fetch(url,{method:'POST',headers:{authorization:'Bearer '+token,
+        'content-type':'application/json'},body:JSON.stringify({sql,params}),
+        signal:AbortSignal.timeout(20000)});
+      if(!r.ok)throw Error('D1_BUDGET_HTTP_'+r.status);
+      const body=await r.json();
+      if(body?.success!==true||body?.result?.[0]?.success!==true)throw Error('D1_BUDGET_READ_FAILED');
+      return body.result[0].results||[];
+    }
+    const recent=new Date(Date.now()-3600000).toISOString();
+    const day=new Date().toISOString().slice(0,10);
+    const [hour,dayRows]=await Promise.all([
+      d1('SELECT COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=?',[recent]),
+      d1('SELECT reserved FROM smart_wallet_webhook_budget WHERE day=?',[day])
+    ]);
+    const counts={lastHour:hour[0]?.n??null,dayAttempted:dayRows[0]?.reserved??0};
+    const policy=assessWebhookBudget(counts);
+    console.log('GOGET_HELIUS_CREDIT_GUARD',{counts,action:policy.action,reasons:policy.reasons});
+    if(policy.action==='UNKNOWN_DATA_MANUAL_REVIEW')throw Error('GUARD_COUNTS_UNVERIFIED');
+    if(policy.action==='MONITOR')return;
+    const owned=await listOwn(key);
+    if(owned){
+      if(!idPattern.test(owned.webhookID||''))throw Error('WEBHOOK_ID_INVALID');
+      await api(key,'DELETE','/'+encodeURIComponent(owned.webhookID));
+    }
+    console.log('GOGET_HELIUS_CREDIT_GUARD',{mode:'OWN_SUBSCRIPTION_SUSPENDED',removed:!!owned});
+    return;
+  }
   const hook=await listOwn(key);
   if(action==='cleanup'){
-    if(Date.now()<Date.parse(STOP_AT)){
-      console.log('GOGET_HELIUS_WEBHOOK',{mode:'not_yet_expired',active:!!hook});
-      return;
-    }
     if(hook){
       if(!idPattern.test(hook.webhookID||''))throw Error('WEBHOOK_ID_INVALID');
       await api(key,'DELETE','/'+encodeURIComponent(hook.webhookID));
@@ -90,17 +124,26 @@ async function main(){
     console.log('GOGET_HELIUS_WEBHOOK',{mode:'verified_listing',present:true,
       active:details?.active??hook.active??null,wallets:count,
       returnedFieldNames:fields});
-    if(Array.isArray(addresses)&&count!==3)throw Error('HELIUS_WALLET_COUNT_MISMATCH');
+    const source=JSON.parse(await readFile('research/smart-wallet-webhook-cohort.json','utf8'));
+    const expected=source.map(x=>x.wallet);
+    if(Array.isArray(addresses)&&
+      (count!==expected.length || !expected.every(w=>addresses.includes(w))))
+      throw Error('HELIUS_WALLET_COUNT_MISMATCH');
     if(!Array.isArray(addresses))throw Error('HELIUS_WALLET_LIST_NOT_VERIFIABLE');
     return;
   }
   if(Date.now()>=Date.parse(STOP_AT))throw Error('PILOT_EXPIRED_NO_CREATION');
   const token=derivePurposeToken(required('ADMIN_TOKEN'),key);
-  const cfg=await readFile('research/smart-wallet-live-cohort.json','utf8');
+  const cfg=await readFile('research/smart-wallet-webhook-cohort.json','utf8');
   const cohort=JSON.parse(cfg);
   const wallets=cohort.map(x=>x.wallet);
-  if(cohort.length!==3||!cohort.every(x=>x.vetted===false)||
+  if(cohort.length<3||cohort.length>20||!cohort.every(x=>x.vetted===false)||
      new Set(wallets).size!==wallets.length)throw Error('UNVETTED_PILOT_COHORT_INVALID');
+  // Verify that the Worker configuration and Helius subscription target the same cohort.
+  const cfgToml=await readFile('wrangler.smart-wallet.toml','utf8');
+  const deployedWallets=cfgToml.match(/WALLET_WATCHED_ADDRESSES\s*=\s*"([^"]+)"/)?.[1]?.split(',')||[];
+  if(deployedWallets.length!==wallets.length || !wallets.every(w=>deployedWallets.includes(w)))
+    throw Error('WORKER_HELIUS_COHORT_MISMATCH');
   // Secret is derived to be stable across GitHub runs, with a purpose-separated HMAC.
   // Wrangler never logs the secret contents; the worker has no trading secret.
   const put=spawnSync('npx',['wrangler','secret','put','WALLET_WEBHOOK_SECRET',
