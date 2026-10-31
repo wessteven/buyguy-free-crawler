@@ -54,3 +54,13 @@ GitHub workflow logs and D1 metrics provide ground truth. Check these:
 - [Wallet live polling and webhook receipts](https://github.com/wessteven/buyguy-free-crawler/actions/workflows/smart-wallet-live.yml)
 
 For storage billing, read Cloudflare dashboard Billing > Billable Usage and Workers & Pages > D1 > GOGET database > Metrics. An actual account Paid/Free entitlement and total spend cannot be inferred from the repository.
+
+## Research-only cohort expansion — 31 October 2026
+
+A real-time Helius discovery scan [#41168150512](https://github.com/wessteven/buyguy-free-crawler/actions/runs/41168150512) examined six pool accounts, decoded 36 confirmed transactions and submitted 36 signer+pool+signature provenance records to the isolated D1 research table, with zero provider errors. Candidates are **signed-PumpSwap-transaction activity**, not proven buyers, smart money, or profitable wallets.
+
+The Helius **webhook** cohort is enlarged from 3 to **15 unvetted research wallets**, using 12 clearly identified candidates from that first scan plus the three prior watch subjects. The existing slow polling cohort remains 3 to avoid increased RPC consumption. Configuration is checked for exact equality between the committed worker list and Helius subscription before registration.
+
+The separate hourly provider credit guard queries D1. If it finds at least 350 stored webhook records in the last hour or 2,200 attempted webhook storage reservations in the UTC day, it **deletes only the GOGET-owned Helius webhook** to avoid further event credits. No other provider webhooks may be altered. GitHub Actions schedules can be delayed, so this is a soft operational guard, **not a hard billing cap**. Cloudflare Worker itself continues with an independent 5,000 attempted reservation/day cap and stops at 8 November UTC unless explicitly renewed.
+
+This cohort is intended to collect enough evidence to *test whether each wallet is worth tracking*, rather than presupposing that all activity is profitable. Once a first 24-hour rate sample is measured, introduce 25 or more addresses only after an actual Helius credit-usage audit and explicit risk-cap review.
