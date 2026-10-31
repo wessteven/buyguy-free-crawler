@@ -21,8 +21,15 @@ async function run(){
  if(q.success!==true||q.result?.[0]?.success!==true)throw Error('D1_POOL_QUERY_FAILURE');
  const pools=[...new Map((q.result[0].results||[]).filter(x=>ADDR.test(x.pool||'')&&ADDR.test(x.address||''))
   .map(x=>[x.pool,x])).values()].slice(0,LIMIT.pools);
- let calls=0,decoded=0;
- const errors={},candidates=new Map();
+ const d1=async(sql,params=[])=>{
+   const x=await json(base,{token:cloud,body:{sql,params}});
+   if(x?.success!==true||x?.result?.[0]?.success!==true)throw Error('D1_CANDIDATE_WRITE_FAILED');
+   return x.result[0].results||[];
+ };
+ // Additive storage; never pollutes GOGET trading or published rankings.
+ await d1('CREATE TABLE IF NOT EXISTS smart_wallet_candidate_signers (wallet TEXT NOT NULL,pool TEXT NOT NULL,signature TEXT NOT NULL,slot INTEGER NOT NULL,first_observed_at TEXT NOT NULL,origin TEXT NOT NULL,PRIMARY KEY(wallet,pool,signature))');
+ let calls=0,decoded=0,inserted=0;
+ const errors={},candidates=new Map(),observed=[];
  async function rpc(method,params){
    calls++;
    const r=await json('https://mainnet.helius-rpc.com/?api-key='+encodeURIComponent(helius),
@@ -56,14 +63,20 @@ async function run(){
       sampleSignature:s.signature,source:'SIGNED_PUMPSWAP_POOL_TX',vetted:false};
     a.observedTransactions++;a.pools.add(pool.pool);a.lastSlot=Math.max(a.lastSlot,tx.slot||0);
     candidates.set(wallet,a);
+    observed.push({wallet,pool:pool.pool,signature:s.signature,slot:tx.slot||0});
    }
   }
+ }
+ for(const e of observed){
+   try{await d1('INSERT OR IGNORE INTO smart_wallet_candidate_signers(wallet,pool,signature,slot,first_observed_at,origin) VALUES(?,?,?,?,?,?)',
+     [e.wallet,e.pool,e.signature,e.slot,start,'SIGNED_PUMPSWAP_PROGRAM_SAME_TX']);inserted++;}
+   catch{errors.D1_CANDIDATE_WRITE_FAILED=(errors.D1_CANDIDATE_WRITE_FAILED||0)+1;}
  }
  const ranked=[...candidates.values()].map(x=>({...x,pools:[...x.pools],uniquePools:x.pools.size}))
   .sort((a,b)=>b.uniquePools-a.uniquePools||b.observedTransactions-a.observedTransactions).slice(0,40);
  const report={at:new Date().toISOString(),startedAt:start,mode:'READ_ONLY_ACTIVITY_CANDIDATES_NOT_PROFITABLE',
   limits:LIMIT,poolsQueried:pools.map(x=>({pool:x.pool,mint:x.address,symbol:x.symbol,score:x.score})),
-  calls,decoded,candidates:ranked,errors,
+  calls,decoded,attemptedCandidateWrites:observed.length,successfulCandidateWriteCalls:inserted,candidates:ranked,errors,
   caution:'Signers of selected PumpSwap transactions are not automatically profitable independent traders. No trade sizes, buys/sells or net P&L are established.'};
  await writeFile('smart-wallet-candidate-cohort.json',JSON.stringify(report,null,2)+'\n','utf8');
  console.log('GOGET_WALLET_DISCOVERY',JSON.stringify({...report,candidates:ranked.slice(0,18)}));
