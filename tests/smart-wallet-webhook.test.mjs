@@ -44,7 +44,7 @@ function db(){
 }
 function env(DB=db()){
   return {DB,WALLET_WEBHOOK_SECRET:key,WALLET_WATCHED_ADDRESSES:wallet+','+other,
-    WALLET_WEBHOOK_ENABLED:'true',WALLET_WEBHOOK_STOP_AT:'2026-11-02T00:00:00Z'};
+    WALLET_WEBHOOK_ENABLED:'true',WALLET_WEBHOOK_STOP_AT:'2026-11-08T00:00:00Z'};
 }
 function req(events=[tx],header='Bearer '+key,method='POST'){
   return new Request('https://hook.test/webhook',{method,headers:{
@@ -90,7 +90,7 @@ test('wrong content type, huge batch, missing signer mapping and malformed JSON 
   assert.equal((await serveSmartWalletWebhook(oversize,e,now)).status,413);
 });
 test('time expiry and missing secret fail closed',async()=>{
-  assert.equal((await serveSmartWalletWebhook(req(),env(),Date.parse('2026-11-02T00:00:00Z'))).status,410);
+  assert.equal((await serveSmartWalletWebhook(req(),env(),Date.parse('2026-11-08T00:00:00Z'))).status,410);
   const e=env();e.WALLET_WEBHOOK_SECRET=undefined;
   assert.equal((await serveSmartWalletWebhook(req(),e,now)).status,503);
 });
