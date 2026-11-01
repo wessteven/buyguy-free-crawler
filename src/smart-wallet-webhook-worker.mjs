@@ -198,21 +198,22 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
     if(!persisted.every(v=>v.success===true))return json({error:'PERSISTENCE_UNVERIFIED'},503);
     const inserted=persisted.reduce((n,r)=>n+(r.meta?.changes??0),0);
     let rawArchived=0,rawArchiveStatus='NO_ELIGIBLE_RAW_EVENTS';
-    let rawFallbackRecovered=0,rawFailedWrites=0;
+    let rawFallbackRecovered=0,rawFailedWrites=0,rawFailedChunks=0;
+    let rawStage='NONE',rawWriteCode='NONE';
     if(batch.rawRecords.length){
       rawArchiveStatus='CAP_OR_WRITE_UNAVAILABLE';
       try{
         const bytes=batch.rawRecords.reduce((n,r)=>n+r.bytes,0);
+        rawStage='RESERVE_INIT';
         await env.DB.prepare('INSERT OR IGNORE INTO smart_wallet_webhook_raw_budget(day,bytes_reserved) VALUES(?,0)').bind(day).run();
+        rawStage='RESERVE_UPDATE';
         const budget=await env.DB.prepare(
           'UPDATE smart_wallet_webhook_raw_budget SET bytes_reserved=bytes_reserved+? WHERE day=? AND bytes_reserved+?<=?'
         ).bind(bytes,day,bytes,WEBHOOK_LIMITS.rawBytesPerUtcDay).run();
         if((budget.meta?.changes??0)===1){
-          // Small batches remain fast in the normal path. If one bad record
-          // rejects an atomic batch, retry each idempotent insert separately;
-          // never let one malformed provider observation discard five others.
+          rawStage='BATCH_WRITE';
           const insertSql='INSERT OR IGNORE INTO smart_wallet_webhook_raw(signature,slot,observed_at,byte_length,raw_json) VALUES(?,?,?,?,?)';
-          let failedChunks=0,lastErrorCode='NONE';
+          let lastErrorCode='NONE';
           for(let i=0;i<batch.rawRecords.length;i+=6){
             const part=batch.rawRecords.slice(i,i+6);
             const writes=part.map(r=>env.DB.prepare(insertSql)
@@ -223,7 +224,7 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
                 throw Error('RAW_BATCH_RESULT_UNVERIFIED');
               rawArchived+=saved.reduce((n,r)=>n+(r.meta?.changes??0),0);
             }catch(batchError){
-              failedChunks++;
+              rawFailedChunks++;
               lastErrorCode=rawWriteErrorCode(batchError);
               for(const r of part){
                 try{
@@ -240,29 +241,39 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
               }
             }
           }
+          rawStage='COMPLETED';
           rawArchiveStatus=rawFailedWrites?'PARTIAL_OR_FAILED_RAW_BATCHES':
-            failedChunks?'RECOVERED_FROM_BATCH_ERRORS':'OK';
-          if(failedChunks){
-            console.error('GOGET_WEBHOOK_RAW_FALLBACK',JSON.stringify({
-              failedChunks,rawFallbackRecovered,rawFailedWrites,errorCode:lastErrorCode}));
-            // Bounded, read-only-auditable daily diagnostics. Do not store raw
-            // source payloads, signatures, wallet addresses or exceptions here.
-            try{
-              await env.DB.prepare(
-                'INSERT OR IGNORE INTO smart_wallet_webhook_raw_health(day,last_at) VALUES(?,?)'
-              ).bind(day,receivedAt).run();
-              await env.DB.prepare(
-                'UPDATE smart_wallet_webhook_raw_health SET degraded_requests=degraded_requests+1,attempted_records=attempted_records+?,recovered_records=recovered_records+?,still_failed_records=still_failed_records+?,failed_batches=failed_batches+?,last_error_code=?,last_at=? WHERE day=?'
-              ).bind(batch.rawRecords.length,rawFallbackRecovered,rawFailedWrites,
-                failedChunks,lastErrorCode,receivedAt,day).run();
-            }catch{console.error('GOGET_WEBHOOK_RAW_HEALTH_UNAVAILABLE');}
-          }
-        }else rawArchiveStatus='DAILY_RAW_BYTE_CAP';
-      }catch{
-        // Parsed research observations are already committed. Do not trigger
-        // provider delivery retries/credit burn solely for optional raw storage.
-        console.error('GOGET_WEBHOOK_RAW_ARCHIVE_DEGRADED');
+            rawFailedChunks?'RECOVERED_FROM_BATCH_ERRORS':'OK';
+          if(rawFailedChunks)console.error('GOGET_WEBHOOK_RAW_FALLBACK',JSON.stringify({
+            failedChunks:rawFailedChunks,rawFallbackRecovered,rawFailedWrites,
+            errorCode:lastErrorCode}));
+        }else{
+          rawStage='BYTE_CAP';
+          rawArchiveStatus='DAILY_RAW_BYTE_CAP';
+        }
+      }catch(error){
+        // Normalized observations are already committed; optional raw errors
+        // must not force provider delivery retries or additional Helius credits.
+        rawWriteCode=rawWriteErrorCode(error);
+        console.error('GOGET_WEBHOOK_RAW_ARCHIVE_DEGRADED',rawStage,rawWriteCode);
       }
+      // Every eligible intake is reflected in daily stage-level health even
+      // when archive failure occurs BEFORE a batch can start. One aggregate
+      // row per UTC day; no identities, original JSON, keys or error text.
+      try{
+        const degraded=rawArchiveStatus==='OK'||rawArchiveStatus==='RECOVERED_FROM_BATCH_ERRORS'?
+          (rawArchived===0?1:0):1;
+        const reason=rawArchived===0&&rawArchiveStatus==='OK'?'ZERO_NEW_ROWS':
+          rawArchiveStatus==='CAP_OR_WRITE_UNAVAILABLE'?
+            rawStage+'_'+rawWriteCode:rawArchiveStatus;
+        await env.DB.prepare(
+          'INSERT OR IGNORE INTO smart_wallet_webhook_raw_health(day,last_at) VALUES(?,?)'
+        ).bind(day,receivedAt).run();
+        await env.DB.prepare(
+          'UPDATE smart_wallet_webhook_raw_health SET degraded_requests=degraded_requests+?,attempted_records=attempted_records+?,recovered_records=recovered_records+?,still_failed_records=still_failed_records+?,failed_batches=failed_batches+?,last_error_code=CASE WHEN ?=1 THEN ? ELSE last_error_code END,last_at=? WHERE day=?'
+        ).bind(degraded,batch.rawRecords.length,rawFallbackRecovered,rawFailedWrites,
+          rawFailedChunks,degraded,reason,receivedAt,day).run();
+      }catch{console.error('GOGET_WEBHOOK_RAW_HEALTH_UNAVAILABLE');}
     }
     return json({ok:true,received:batch.received,accepted:inserted,
       duplicates:batch.rows.length-inserted,rejected:batch.reasonCounts,
