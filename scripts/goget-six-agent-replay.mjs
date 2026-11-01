@@ -69,7 +69,7 @@ async function main(){
       'Research reviews are not buy signals']};
   await writeFile('goget-six-agent-reviews.json',JSON.stringify({summary,report},null,2)+'\n','utf8');
   console.log('GOGET_SIX_AGENT_HARNESS',JSON.stringify(summary));
-  if(rows.length>TEAM_LIMITS.maxEvents)process.exitCode=1;
+  if(rows.length>MAX_ROWS)process.exitCode=1; // the harness handles bounded 100-event sub-batches
 }
 main().catch(e=>{
   console.error('GOGET_SIX_AGENT_HARNESS_FAILED',
