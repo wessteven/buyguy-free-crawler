@@ -4,6 +4,7 @@ const ADDRESS=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const SIGNATURE=/^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
 export const WEBHOOK_LIMITS=Object.freeze({
   bodyBytes:512000,eventsPerRequest:64,storedEventsPerDay:5000,
+  rawPerEventBytes:32000,rawBytesPerUtcDay:20000000,
   maxWallets:32,deadline:'2026-11-08T00:00:00Z'
 });
 const enc=new TextEncoder();
@@ -93,7 +94,7 @@ export function buildResearchEvidence(tx,wallet){
 }
 
 export function summarizeHeliusBatch(body,watched,receivedAt){
-  const reasonCounts={},rows=[],seen=new Set();
+  const reasonCounts={},rows=[],seen=new Set(),rawRecords=[],rawSeen=new Set();
   if(!Array.isArray(body))return {ok:false,error:'BODY_NOT_ARRAY'};
   if(body.length>WEBHOOK_LIMITS.eventsPerRequest)return {ok:false,error:'BATCH_TOO_LARGE'};
   const reject=why=>reasonCounts[why]=(reasonCounts[why]||0)+1;
@@ -110,6 +111,17 @@ export function summarizeHeliusBatch(body,watched,receivedAt){
       if(watched.has(t?.toUserAccount))referenced.add(t.toUserAccount);
     }
     if(!referenced.size){reject('NO_EXPLICIT_WALLET_OWNER_EVIDENCE');continue;}
+    // Save one bounded original Helius source event per signature, regardless of
+    // how many watchlisted wallets are mentioned. Preserve JSON parseability.
+    if(!rawSeen.has(tx.signature)){
+      rawSeen.add(tx.signature);
+      const full=JSON.stringify(tx);
+      const bytes=enc.encode(full).byteLength;
+      if(bytes<=WEBHOOK_LIMITS.rawPerEventBytes)
+        rawRecords.push({signature:tx.signature,slot:tx.slot,observedAt:receivedAt,
+          rawJson:full,bytes});
+      else reject('RAW_EVENT_EXCEEDS_ARCHIVE_CAP');
+    }
     const transferHints=(Array.isArray(tx.tokenTransfers)?tx.tokenTransfers:[])
       .filter(t=>ADDRESS.test(t?.mint||'')).slice(0,8)
       .map(t=>({mint:t.mint,from:t.fromUserAccount||null,to:t.toUserAccount||null}));
@@ -126,7 +138,7 @@ export function summarizeHeliusBatch(body,watched,receivedAt){
         evidence:buildResearchEvidence(tx,wallet)});
     }
   }
-  return {ok:true,rows,reasonCounts,received:body.length};
+  return {ok:true,rows,rawRecords,reasonCounts,received:body.length};
 }
 
 export async function serveSmartWalletWebhook(request,env,now=Date.now()){
@@ -173,9 +185,33 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
     // All statements must succeed or fail request; event identity is idempotent.
     if(!persisted.every(v=>v.success===true))return json({error:'PERSISTENCE_UNVERIFIED'},503);
     const inserted=persisted.reduce((n,r)=>n+(r.meta?.changes??0),0);
+    let rawArchived=0,rawArchiveStatus='NO_ELIGIBLE_RAW_EVENTS';
+    if(batch.rawRecords.length){
+      rawArchiveStatus='CAP_OR_WRITE_UNAVAILABLE';
+      try{
+        const bytes=batch.rawRecords.reduce((n,r)=>n+r.bytes,0);
+        await env.DB.prepare('INSERT OR IGNORE INTO smart_wallet_webhook_raw_budget(day,bytes_reserved) VALUES(?,0)').bind(day).run();
+        const budget=await env.DB.prepare(
+          'UPDATE smart_wallet_webhook_raw_budget SET bytes_reserved=bytes_reserved+? WHERE day=? AND bytes_reserved+?<=?'
+        ).bind(bytes,day,bytes,WEBHOOK_LIMITS.rawBytesPerUtcDay).run();
+        if((budget.meta?.changes??0)===1){
+          const writes=batch.rawRecords.map(r=>env.DB.prepare(
+            'INSERT OR IGNORE INTO smart_wallet_webhook_raw(signature,slot,observed_at,byte_length,raw_json) VALUES(?,?,?,?,?)'
+          ).bind(r.signature,r.slot,r.observedAt,r.bytes,r.rawJson));
+          const saved=await env.DB.batch(writes);
+          if(!saved.every(x=>x.success===true))throw Error('RAW_PERSISTENCE_UNVERIFIED');
+          rawArchived=saved.reduce((n,r)=>n+(r.meta?.changes??0),0);
+          rawArchiveStatus='OK';
+        }else rawArchiveStatus='DAILY_RAW_BYTE_CAP';
+      }catch{
+        // Parsed research observations are already committed. Do not trigger
+        // provider delivery retries/credit burn solely for optional raw storage.
+        console.error('GOGET_WEBHOOK_RAW_ARCHIVE_DEGRADED');
+      }
+    }
     return json({ok:true,received:batch.received,accepted:inserted,
       duplicates:batch.rows.length-inserted,rejected:batch.reasonCounts,
-      mode:'WATCH_ONLY',tradeEligible:false});
+      rawArchived,rawArchiveStatus,mode:'WATCH_ONLY',tradeEligible:false});
   }catch{return json({error:'PERSISTENCE_UNAVAILABLE'},503);}
 }
 export default {fetch:(request,env)=>serveSmartWalletWebhook(request,env)};
