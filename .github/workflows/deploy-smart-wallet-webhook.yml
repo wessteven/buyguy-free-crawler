@@ -105,7 +105,7 @@ jobs:
               const r=await fetch(url,{headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(8000)});
               if(r.status===200){
                 const p=await r.json();
-                if(p?.build==='RAW_PREFLIGHT_2026_11_01_V1'&&p?.ready===true&&p?.tradeEligible===false){
+                if(p?.build==='RAW_WAITUNTIL_2026_11_01_V2'&&p?.ready===true&&p?.tradeEligible===false){
                   verified=true;break;
                 }
               }
