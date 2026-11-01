@@ -12,7 +12,7 @@ database_id = "REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID"
 crons = ["*/5 * * * *"]
 
 [limits]
-cpu_ms = 30000
+cpu_ms = 2000
 
 [vars]
 AGENT_RESEARCH_ENABLED = "true"
