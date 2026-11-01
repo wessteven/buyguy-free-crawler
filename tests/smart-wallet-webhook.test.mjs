@@ -167,7 +167,7 @@ test('overlarge raw record stays unarchived while bounded parsed evidence is ret
 test('multiple raw events use at most six D1 statements per raw batch',async()=>{
  const e=env();
  const input=Array.from({length:14},(_,i)=>({
-  ...tx,signature:String(i+1).padStart(2,'1').repeat(44)
+  ...tx,signature:'123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[i+1].repeat(88)
  }));
  const result=await serveSmartWalletWebhook(req(input),e,now);
  assert.equal(result.status,200);
@@ -184,7 +184,7 @@ test('failed raw sub-batch cannot discard other raw records or normal events',as
   return original(items);
  };
  const e=env(base),input=Array.from({length:8},(_,i)=>({
-  ...tx,signature:String(i+1).padStart(2,'1').repeat(44)
+  ...tx,signature:'123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[i+1].repeat(88)
  }));
  const result=await serveSmartWalletWebhook(req(input),e,now);
  assert.equal(result.status,200);
