@@ -5,8 +5,10 @@ on:
     paths:
       - '.github/workflows/deploy-goget-pre-signal.yml'
       - 'src/goget-pre-signal-features.mjs'
+      - 'src/goget-pre-signal-market.mjs'
       - 'src/goget-pre-signal-worker.mjs'
       - 'tests/goget-pre-signal-features.test.mjs'
+      - 'tests/goget-pre-signal-market.test.mjs'
       - 'tests/goget-pre-signal-worker.test.mjs'
       - 'wrangler.pre-signal.toml'
       - 'sql/goget-pre-signal.sql'
