@@ -1,16 +1,5 @@
 name: GOGET Six-Agent Free Harness (paper-only research)
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/goget-six-agent-harness.yml'
-      - 'src/goget-six-agent-harness.mjs'
-      - 'src/goget-six-agent-batching.mjs'
-      - 'tests/goget-six-agent-batching.test.mjs'
-      - 'scripts/goget-six-agent-replay.mjs'
-      - 'tests/goget-six-agent-harness.test.mjs'
-  schedule:
-    - cron: '47 */6 * * *'
   workflow_dispatch:
 permissions:
   contents: read
