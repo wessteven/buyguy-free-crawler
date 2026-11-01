@@ -38,6 +38,10 @@ async function main(){
     ['wallet_polling24h',"SELECT COUNT(*) AS n FROM smart_wallet_live_events WHERE observed_at>=?",[new Date(Date.now()-86400000).toISOString()]],
     ['webhook_daily',"SELECT day,reserved FROM smart_wallet_webhook_budget ORDER BY day DESC LIMIT 7",[]],
     ['webhook_wallets',"SELECT wallet,COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=? GROUP BY wallet ORDER BY n DESC LIMIT 30",[new Date(Date.now()-86400000).toISOString()]],
+    ['agentRunTypes',"SELECT COALESCE(json_extract(summary_json,'$.trigger'),'manual_before_tagging') AS trigger, COUNT(*) AS runs,COALESCE(SUM(persisted_rows),0) AS persisted,MAX(started_at) AS latest_at FROM smart_wallet_agent_runs WHERE started_at>=? GROUP BY trigger ORDER BY runs DESC",[new Date(Date.now()-86400000).toISOString()]],
+    ['agentRunRecent',"SELECT started_at,source_rows,persisted_rows,backlog,COALESCE(json_extract(summary_json,'$.trigger'),'manual_before_tagging') AS trigger FROM smart_wallet_agent_runs ORDER BY started_at DESC LIMIT 8",[]],
+    ['agentBacklog',"SELECT COUNT(*) AS unreviewed FROM smart_wallet_webhook_events e WHERE NOT EXISTS (SELECT 1 FROM smart_wallet_six_agent_reviews a WHERE a.wallet=e.wallet AND a.signature=e.signature)",[]],
+    ['agentReviewed',"SELECT COUNT(*) AS reviewed,MAX(reviewed_at) AS latest_review FROM smart_wallet_six_agent_reviews",[]],
     ['tables',"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name LIMIT 100",[]],
   ];
   for(const [name,sql,params] of tasks){

@@ -51,7 +51,7 @@ const cleanError=error=>{
   return codes.has(error?.message)?error.message:'SCHEDULED_RESEARCH_FAILED';
 };
 
-export async function processAgentBatch(env,{now=Date.now(),runId=null}={}){
+export async function processAgentBatch(env,{now=Date.now(),runId=null,trigger='manual'}={}){
   if(!Number.isSafeInteger(now)||now<0)throw Error('INVALID_RUN_TIME');
   if(env?.AGENT_RESEARCH_ENABLED!=='true')return {status:'DISABLED',processed:0};
   if(!env?.DB)throw Error('DB_BINDING_MISSING');
@@ -87,7 +87,7 @@ export async function processAgentBatch(env,{now=Date.now(),runId=null}={}){
     const pending=(await dbAll(db,pendingCount))[0]?.n;
     const totals=groupTotals(reports);
     const summary={version:1,mode:'SIX_SPECIALISTS_ZERO_LLM_PAPER_ONLY',
-      status:'OK',runId:id,at:openedAt,completedAt:new Date().toISOString(),
+      status:'OK',runId:id,trigger:trigger==='cron'?'cron':'manual',at:openedAt,completedAt:new Date().toISOString(),
       observed:rows.length,persisted:inserted,duplicateWrites:reports.length-inserted,
       backlog:Number.isSafeInteger(pending)?pending:null,statistics:totals,
       modelCalls:0,heliusCalls:0,realTrades:0,paperBuys:0,verifiedProfitUsd:null};
@@ -128,7 +128,7 @@ export default {
   },
   async scheduled(controller,env){
     try{await processAgentBatch(env,{now:Number.isFinite(controller?.scheduledTime)?
-      controller.scheduledTime:Date.now()});}
+      controller.scheduledTime:Date.now(),trigger:'cron'});}
     catch(e){console.error('GOGET_AGENT_SCHEDULE_FAILURE',cleanError(e));throw e;}
   }
 };
