@@ -72,7 +72,11 @@ function db(){
    }
    throw Error('BAD_WRITE');
   }
- };}}};};
+  };
+  }
+  };
+  }
+};
  return database;
 }
 test('pre-signal cron is bounded, no AI/RPC/trades',()=>{
