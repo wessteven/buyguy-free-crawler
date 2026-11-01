@@ -205,7 +205,7 @@ test('failed raw sub-batch cannot discard other raw records or normal events',as
  assert.equal(body.rawArchiveStatus,'RECOVERED_FROM_BATCH_ERRORS');
  assert.equal(e.DB.rawRows.size,8);
  assert.equal(e.DB.rawHealth.length,1);
- assert.deepEqual(e.DB.rawHealth[0].slice(0,4),[8,6,0,1]);
+ assert.deepEqual(e.DB.rawHealth[0].slice(0,4),[0,8,6,0]);
 });
 test('single toxic source row cannot discard its valid batch neighbors',async()=>{
  const base=db(),batch=base.batch.bind(base),prepare=base.prepare.bind(base);
@@ -238,7 +238,30 @@ test('single toxic source row cannot discard its valid batch neighbors',async()=
  assert.equal(base.rawRows.size,7);
  assert.equal(base.rows.size,16);
  assert.equal(base.rawHealth.length,1);
- assert.deepEqual(base.rawHealth[0].slice(0,4),[8,5,1,1]);
- assert.equal(base.rawHealth[0][4],'SIZE_LIMIT');
+ assert.deepEqual(base.rawHealth[0].slice(0,4),[1,8,5,1]);
+ assert.equal(base.rawHealth[0][6],'PARTIAL_OR_FAILED_RAW_BATCHES');
 });
 
+
+test('daily raw diagnostics identify pre-batch budget errors without losing parsed records',async()=>{
+ const base=db(),original=base.prepare.bind(base);
+ base.prepare=sql=>{
+  const prepared=original(sql);
+  if(!sql.startsWith('UPDATE smart_wallet_webhook_raw_budget SET'))return prepared;
+  return {bind(...values){
+    return {...prepared.bind(...values),async run(){throw Error('SQLITE_BUSY');}};
+  }};
+ };
+ const output=await serveSmartWalletWebhook(req(),env(base),now);
+ assert.equal(output.status,200);
+ const body=await output.json();
+ assert.equal(body.accepted,2);
+ assert.equal(body.rawArchived,0);
+ assert.equal(body.rawArchiveStatus,'CAP_OR_WRITE_UNAVAILABLE');
+ assert.equal(base.rows.size,2);
+ assert.equal(base.rawRows.size,0);
+ assert.equal(base.rawHealth.length,1);
+ assert.equal(base.rawHealth[0][0],1);
+ assert.equal(base.rawHealth[0][1],1);
+ assert.equal(base.rawHealth[0][6],'RESERVE_UPDATE_DATABASE_BUSY');
+});
