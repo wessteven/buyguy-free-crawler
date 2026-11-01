@@ -7,7 +7,7 @@ export const WEBHOOK_LIMITS=Object.freeze({
   rawPerEventBytes:32000,rawBytesPerUtcDay:20000000,
   maxWallets:32,deadline:'2026-11-08T00:00:00Z'
 });
-export const WEBHOOK_BUILD='RAW_PREFLIGHT_2026_11_01_V1';
+export const WEBHOOK_BUILD='RAW_WAITUNTIL_2026_11_01_V2';
 const enc=new TextEncoder();
 // Only report fixed, non-sensitive failure categories. Never log provider JSON,
 // auth headers, D1 parameters or full exception messages.
