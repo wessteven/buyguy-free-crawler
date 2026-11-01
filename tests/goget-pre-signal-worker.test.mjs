@@ -62,6 +62,13 @@ function db(){
     }
     return {success:true,meta:{changes:changed}};
    }
+   if(sql.startsWith("UPDATE goget_pre_signal_market_outcomes SET status='MISSING_FUTURE_USD_QUOTE_COVERAGE'")){
+    const [checked,status,cutoff,limit]=params;
+    const due=[...state.marketOutcomes.values()].filter(x=>x.status===status&&x.due_at<cutoff)
+      .sort((a,b)=>a.due_at.localeCompare(b.due_at)).slice(0,limit);
+    for(const row of due)Object.assign(row,{status:'MISSING_FUTURE_USD_QUOTE_COVERAGE',checked_at:checked});
+    return {success:true,meta:{changes:due.length}};
+   }
    if(sql.startsWith('UPDATE goget_pre_signal_market_outcomes SET status=?')){
     const key=params[4]+':'+params[5]+':'+params[6],x=state.marketOutcomes.get(key);
     if(x?.status!=='PENDING')return {success:true,meta:{changes:0}};
@@ -213,4 +220,37 @@ test('provider 429 triggers durable cooldown and never causes a trade',async()=>
  assert.equal(second.market.status,'COOLDOWN');
  assert.equal(second.market.requests,0);
  assert.equal(first.trades,0);
+});
+
+test('expired USD price labels become unknown through cooldown without external quote calls',async()=>{
+ const d=db();let calls=0;
+ for(let i=0;i<25;i++){
+  const bucket='old-'+String(i).padStart(2,'0');
+  d.state.marketOutcomes.set(mint+':'+bucket+':5',{
+   mint,bucket,horizon_min:5,pool,reference_price_usd:0.001,
+   due_at:iso(now-(30+i)*60000),status:'PENDING'
+  });
+ }
+ d.state.marketOutcomes.set(mint+':recent:5',{
+  mint,bucket:'recent',horizon_min:5,pool,reference_price_usd:0.001,
+  due_at:iso(now-4*60000),status:'PENDING'
+ });
+ d.state.dexUntil=now+30*60000;
+ const env={DB:d,PRE_SIGNAL_ENABLED:'true',PRE_SIGNAL_MARKET_ENABLED:'true',
+   PRE_SIGNAL_FETCH:async()=>{calls++;throw Error('COOLDOWN_SHOULD_BLOCK_FETCH');}};
+ const first=await processPreSignalCycle(env,{now,runId:'expiry-1'});
+ assert.equal(first.market.status,'COOLDOWN');
+ assert.equal(first.market.requests,0);
+ assert.equal(first.market.expiredWithoutQuote,20);
+ assert.equal(first.market.unknown,20);
+ assert.equal(calls,0);
+ const unknown=[...d.state.marketOutcomes.values()].filter(x=>x.status==='MISSING_FUTURE_USD_QUOTE_COVERAGE');
+ assert.equal(unknown.length,20);
+ assert.ok(unknown.every(x=>x.change_pct===undefined));
+ assert.equal(d.state.marketOutcomes.get(mint+':recent:5').status,'PENDING');
+ const second=await processPreSignalCycle(env,{now:now+5*60000,runId:'expiry-2'});
+ assert.equal(second.market.expiredWithoutQuote,5);
+ assert.equal(second.market.requests,0);
+ assert.equal(calls,0);
+ assert.equal([...d.state.marketOutcomes.values()].filter(x=>x.status==='MISSING_FUTURE_USD_QUOTE_COVERAGE').length,25);
 });

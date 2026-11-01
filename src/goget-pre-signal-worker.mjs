@@ -4,7 +4,7 @@ import {detectSignalWindows,attachAsOfQuotes,SIGNAL_LIMITS} from './goget-pre-si
 import {selectMarketResearchMints,chooseMarketPairs,chooseExactPoolOutcomes,readBoundedJson,MARKET_BOUNDS} from './goget-pre-signal-market.mjs';
 
 export const SIGNAL_WORKER_LIMITS=Object.freeze({
-  cronMinutes:5,leaseMs:240000,maxOutcomeChecks:20,
+  cronMinutes:5,leaseMs:240000,maxOutcomeChecks:20,maxMarketExpiryMarks:20,
   maxWritesPerInvocation:90,maxQuoteCandidates:40,maxFreeDexRequests:2,
   horizonsMinutes:[5,60,360,1440],modelCalls:0,heliusCalls:0,tradeCalls:0
 });
@@ -166,9 +166,19 @@ export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual'
     // Never bypass a 429/provider cooldown from the existing GOGET scanner.
     const market={enabled:env.PRE_SIGNAL_MARKET_ENABLED==='true',
       status:env.PRE_SIGNAL_MARKET_ENABLED==='true'?'SKIPPED':'DISABLED',
-      requests:0,asOfQuotes:0,forwardJobs:0,outcomes:0,unknown:0};
+      requests:0,asOfQuotes:0,forwardJobs:0,outcomes:0,unknown:0,
+      expiredWithoutQuote:0};
     if(market.enabled){
       try{
+        // This evidence window is irrevocably gone; a later DEX price must
+        // NEVER be substituted into a 5m/1h/6h/24h forward label. Mark old
+        // PENDING rows unknown even when the free quote provider is cooling down.
+        // Bounded indexed D1 update: no extra network calls, no lookahead.
+        market.expiredWithoutQuote=await boundedWrite(
+          "UPDATE goget_pre_signal_market_outcomes SET status='MISSING_FUTURE_USD_QUOTE_COVERAGE',checked_at=? WHERE rowid IN (SELECT rowid FROM goget_pre_signal_market_outcomes WHERE status=? AND due_at<? ORDER BY due_at ASC LIMIT ?)",
+          stamp,'PENDING',new Date(now-10*MIN).toISOString(),
+          SIGNAL_WORKER_LIMITS.maxMarketExpiryMarks);
+        market.unknown+=market.expiredWithoutQuote;
         const [localState,sharedLeases]=await Promise.all([
           read(db,'SELECT until_ms FROM goget_pre_signal_provider_state WHERE name=?','dex'),
           read(db,sharedCooldownSQL)
