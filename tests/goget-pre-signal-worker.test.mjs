@@ -233,7 +233,7 @@ test('expired USD price labels become unknown through cooldown without external 
  }
  d.state.marketOutcomes.set(mint+':recent:5',{
   mint,bucket:'recent',horizon_min:5,pool,reference_price_usd:0.001,
-  due_at:iso(now-8*60000),status:'PENDING'
+  due_at:iso(now-4*60000),status:'PENDING'
  });
  d.state.dexUntil=now+30*60000;
  const env={DB:d,PRE_SIGNAL_ENABLED:'true',PRE_SIGNAL_MARKET_ENABLED:'true',
