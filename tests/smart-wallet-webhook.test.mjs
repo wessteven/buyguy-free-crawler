@@ -14,10 +14,10 @@ const tx={
   tokenTransfers:[{mint:'B'.repeat(44),fromUserAccount:other,toUserAccount:wallet}]
 };
 function db(){
-  const rows=new Map(),rawRows=new Map();let used=0,rawUsed=0;
+  const rows=new Map(),rawRows=new Map(),rawBatchSizes=[];let used=0,rawUsed=0;
   const limit=WEBHOOK_LIMITS.storedEventsPerDay,rawLimit=WEBHOOK_LIMITS.rawBytesPerUtcDay;
   return {
-    rows,rawRows,limit,
+    rows,rawRows,rawBatchSizes,limit,
     prepare(sql){
       return {bind(...values){
         return {
@@ -40,6 +40,7 @@ function db(){
       }};
     },
     async batch(statements){
+      if(statements[0]?._raw)rawBatchSizes.push(statements.length);
       return statements.map(s=>{
         if(s._raw){
           const id=s._raw[0],existing=rawRows.has(id);
@@ -161,4 +162,35 @@ test('overlarge raw record stays unarchived while bounded parsed evidence is ret
   assert.equal(out.rejected.RAW_EVENT_EXCEEDS_ARCHIVE_CAP,1);
   assert.equal(e.DB.rawRows.size,0);
   assert.equal(e.DB.rows.size,2);
+});
+
+test('multiple raw events use at most six D1 statements per raw batch',async()=>{
+ const e=env();
+ const input=Array.from({length:14},(_,i)=>({
+  ...tx,signature:'123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[i+1].repeat(88)
+ }));
+ const result=await serveSmartWalletWebhook(req(input),e,now);
+ assert.equal(result.status,200);
+ const body=await result.json();
+ assert.equal(body.rawArchived,14);
+ assert.deepEqual(e.DB.rawBatchSizes,[6,6,2]);
+ assert.equal(e.DB.rawRows.size,14);
+});
+test('failed raw sub-batch cannot discard other raw records or normal events',async()=>{
+ const base=db(),original=base.batch.bind(base);
+ let failed=false;
+ base.batch=async items=>{
+  if(items[0]?._raw&&!failed){failed=true;throw Error('SIMULATED_RAW_CAPACITY');}
+  return original(items);
+ };
+ const e=env(base),input=Array.from({length:8},(_,i)=>({
+  ...tx,signature:'123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[i+1].repeat(88)
+ }));
+ const result=await serveSmartWalletWebhook(req(input),e,now);
+ assert.equal(result.status,200);
+ const body=await result.json();
+ assert.equal(body.accepted,16);
+ assert.equal(body.rawArchived,2);
+ assert.equal(body.rawArchiveStatus,'PARTIAL_OR_FAILED_RAW_BATCHES');
+ assert.equal(e.DB.rawRows.size,2);
 });
