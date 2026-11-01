@@ -64,3 +64,15 @@ The Helius **webhook** cohort is enlarged from 3 to **15 unvetted research walle
 The separate hourly provider credit guard queries D1. If it finds at least 350 stored webhook records in the last hour or 2,200 attempted webhook storage reservations in the UTC day, it **deletes only the GOGET-owned Helius webhook** to avoid further event credits. No other provider webhooks may be altered. GitHub Actions schedules can be delayed, so this is a soft operational guard, **not a hard billing cap**. Cloudflare Worker itself continues with an independent 5,000 attempted reservation/day cap and stops at 8 November UTC unless explicitly renewed.
 
 This cohort is intended to collect enough evidence to *test whether each wallet is worth tracking*, rather than presupposing that all activity is profitable. Once a first 24-hour rate sample is measured, introduce 25 or more addresses only after an actual Helius credit-usage audit and explicit risk-cap review.
+
+## 1 November 2026 — Workers Paid raw-source accumulation buffer
+
+Cloudflare Workers Paid is now available in the user's account. The existing Helius webhook Worker is being extended to save a second, original-source **valid JSON event payload** per exact transaction signature alongside normalized parsed hints:
+- `smart_wallet_webhook_raw`: `signature` primary key, `slot`, UTC receipt time, original byte length and original JSON (up to 32,000 bytes/event).
+- `smart_wallet_webhook_raw_budget`: UTC day and attempted bytes reserved, bounded at **20 million raw bytes/day**. Worst-case new raw data for the pilot's remaining week is approximately 140 MB.
+- The inbound HTTP body remains capped at 512 KB, 64 events/batch, and 5,000 normalized row reservations/day; raw storage does not increase Helius RPC/webhook calls or monitored wallets.
+- Valid raw events are stored once regardless of how many monitored wallets appear in the same transaction. Retry duplicates are idempotent. Overlarge raw records are skipped with explicit counts; parsed evidence remains available.
+- A separate D1 read-only capacity audit counts successfully archived raw events and payload bytes. It must verify **real live provider deliveries after deployment** before anyone claims raw archival is operational.
+- Retention of the existing 4,200 historical webhook observations before this feature was added cannot reconstruct the discarded original raw payloads. No backfill is claimed.
+- This D1 buffer is a **bridge** until an R2 bucket is enabled and tested. It is not a substitute for immutable, compressed object storage at scale. Retention, downstream validation and total Workers Paid account usage must still be monitored.
+- Trading permissions, wallet signing, paper fill claims, and Helius provider limits are unchanged.
