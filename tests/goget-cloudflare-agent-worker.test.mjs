@@ -15,9 +15,9 @@ const row=i=>({
 });
 function mockDb(count=5){
   const events=Array.from({length:count},(_,i)=>({...row(i),
-    signature:'1'.repeat(83)+String(i).padStart(5,'1')}));
-  // The signature generated here contains only Base58 digits; it is exactly 88 chars.
-  const rows=events.map(x=>({...x,signature:x.signature.replace(/0/g,'1')}));
+    signature:'1'.repeat(83)+String(i).padStart(5,'Z').replaceAll('0','a')}));
+  // Unique base58-safe 88-character mock signatures, preserving exact identities.
+  const rows=events;
   const state={lease:'',until:0,rows,reviews:new Map(),runs:[],writes:[],queries:[]};
   const db={
     state,
