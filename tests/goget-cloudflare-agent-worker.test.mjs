@@ -66,6 +66,7 @@ function mockDb(count=5){
 test('200-record max and five-minute schedule, no LLM or Helius tools',()=>{
  assert.equal(WORKER_BOUNDS.maxSourceRows,200);
  assert.equal(WORKER_BOUNDS.scheduleMinutes,5);
+ assert.equal(WORKER_BOUNDS.cpuCeilingMs,2000);
  assert.equal(WORKER_BOUNDS.modelCalls,0);
  assert.equal(WORKER_BOUNDS.heliusCalls,0);
 });

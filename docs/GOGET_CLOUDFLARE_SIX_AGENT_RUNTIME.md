@@ -12,7 +12,7 @@ Cloudflare docs:
 ## Code
 
 - `src/goget-cloudflare-agent-worker.mjs`: independent Worker named `goget-six-agent`, with `scheduled()` (5-minute interval), `GET /health` and bearer-protected `POST /run`.
-- `wrangler.six-agent.toml`: D1 binding, schedule and explicit CPU cap. Uses deployment-time database ID substitution; never commits account IDs, API tokens or keys.
+- `wrangler.six-agent.toml`: D1 binding, schedule and explicit 2-second CPU cap. Uses deployment-time database ID substitution; never commits account IDs, API tokens or keys.
 - `sql/goget-six-agent-worker.sql`: additive idempotent tables. Existing `smart_wallet_six_agent_reviews` is reused; `smart_wallet_agent_lease` serializes runs with a three-minute TTL, and `smart_wallet_agent_runs` records the processed/inserted/backlog counts and specialist findings.
 - `.github/workflows/deploy-goget-cloudflare-agents.yml`: test, migrate, deploy, install private HMAC-derived control token and verify a real remote run.
 - `tests/goget-cloudflare-agent-worker.test.mjs`: lease, 200-event bounding, repeat-safe writes, authenticated control, fake-buy refusal, no external calls.
@@ -21,6 +21,7 @@ Cloudflare docs:
 
 - At most **200 new historical source rows** per invocation; max **20** bound parameterized D1 insert statements (10 rows each) plus status/lease writes.
 - Five-minute cron = 288 potential invocations/day. Even a hypothetical sustained max of 57,600 review rows/day is far below the Paid plan's included 50 million D1 rows written/month. It is not a hard total account budget; actual data, extra indexes, and any other GOGET Workers also contribute.
+- Cloudflare's per-invocation CPU ceiling is now **2,000 ms**. At 288 Cron invocations/day for a 31-day month, the absolute scheduled-run CPU ceiling would be ~17.9 million CPU-ms before other Workers, below the plan's 30 million CPU-ms included. Typical processing should use far less CPU; D1 waits are wall time rather than CPU time.
 - Workers request and CPU overages are separately metered beyond the included monthly allowances. This workload does not need a GPU, remote AI inference, or additional Helius network requests.
 - No finance permissions, paper execution, code deployment tools, web-browsing tools, wallet signing, or secrets provided to the six agents.
 - D1 work is idempotent on `(wallet, signature)`; overlapping cron and manual run calls are blocked by a three-minute expiring D1 lease.

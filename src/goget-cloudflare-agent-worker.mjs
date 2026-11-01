@@ -6,7 +6,7 @@ import {REVIEW_BATCH_LIMIT,makeReviewBatch} from './goget-six-agent-batching.mjs
 
 export const WORKER_BOUNDS=Object.freeze({
   maxSourceRows:200,leaseMs:180000,maxD1Statements:40,maxTraceBytes:12000,
-  scheduleMinutes:5,modelCalls:0,heliusCalls:0,realTrades:0
+  scheduleMinutes:5,cpuCeilingMs:2000,modelCalls:0,heliusCalls:0,realTrades:0
 });
 const eventSelect=[
   'SELECT e.wallet,e.signature,e.slot,e.observed_at,e.block_time,e.classification,e.evidence_json',
