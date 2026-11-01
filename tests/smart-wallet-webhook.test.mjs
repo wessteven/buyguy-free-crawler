@@ -14,13 +14,19 @@ const tx={
   tokenTransfers:[{mint:'B'.repeat(44),fromUserAccount:other,toUserAccount:wallet}]
 };
 function db(){
-  const rows=new Map();let used=0,limit=WEBHOOK_LIMITS.storedEventsPerDay;
+  const rows=new Map(),rawRows=new Map();let used=0,rawUsed=0;
+  const limit=WEBHOOK_LIMITS.storedEventsPerDay,rawLimit=WEBHOOK_LIMITS.rawBytesPerUtcDay;
   return {
-    rows,limit,
+    rows,rawRows,limit,
     prepare(sql){
       return {bind(...values){
         return {
           async run(){
+            if(sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw_budget'))return {success:true,meta:{changes:1}};
+            if(sql.includes('UPDATE smart_wallet_webhook_raw_budget')){
+              if(rawUsed+values[0]>rawLimit)return {success:true,meta:{changes:0}};
+              rawUsed+=values[0];return {success:true,meta:{changes:1}};
+            }
             if(sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_budget'))return {success:true,meta:{changes:1}};
             if(sql.includes('UPDATE smart_wallet_webhook_budget')){
               if(used+values[0]>limit)return {success:true,meta:{changes:0}};
@@ -28,12 +34,18 @@ function db(){
             }
             throw Error('UNEXPECTED_SQL');
           },
-          _row:sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_events')?values:null
+          _row:sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_events')?values:null,
+          _raw:sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw(')?values:null
         };
       }};
     },
     async batch(statements){
       return statements.map(s=>{
+        if(s._raw){
+          const id=s._raw[0],existing=rawRows.has(id);
+          if(!existing)rawRows.set(id,s._raw);
+          return {success:true,meta:{changes:existing?0:1}};
+        }
         if(!s._row)throw Error('UNEXPECTED_BATCH');
         const id=s._row[0]+':'+s._row[1];
         const existing=rows.has(id);if(!existing)rows.set(id,s._row);
@@ -70,9 +82,14 @@ test('authenticated enhanced SWAP stored as unverified evidence and deduplicated
   assert.equal(a.status,200);const body=await a.json();
   assert.equal(body.accepted,2); // fee payer plus transfer source wallet
   assert.equal(body.tradeEligible,false);
+  assert.equal(body.rawArchived,1);
+  assert.equal(body.rawArchiveStatus,'OK');
+  assert.equal(e.DB.rawRows.size,1);
+  assert.equal(JSON.parse([...e.DB.rawRows.values()][0][4]).signature,tx.signature);
   const dup=await serveSmartWalletWebhook(req(),e,now);
   assert.equal((await dup.json()).duplicates,2);
   assert.equal(e.DB.rows.size,2);
+  assert.equal(e.DB.rawRows.size,1);
   const evidence=JSON.parse([...e.DB.rows.values()][0][8]);
   assert.match(evidence.caveat,/NOT_EXECUTABLE/);
 });
@@ -132,4 +149,16 @@ test('v2 bounded source observation handles large data and remains parseable',()
   assert.equal(result.truncatedSource.tokenTransfers,true);
   assert.ok(JSON.stringify(result).length<14000);
   assert.equal(WEBHOOK_LIMITS.storedEventsPerDay,5000);
+});
+
+test('overlarge raw record stays unarchived while bounded parsed evidence is retained',async()=>{
+  const big={...tx,signature:'6'.repeat(88),description:'Q'.repeat(WEBHOOK_LIMITS.rawPerEventBytes+1000)};
+  const e=env();const res=await serveSmartWalletWebhook(req([big]),e,now);
+  assert.equal(res.status,200);
+  const out=await res.json();
+  assert.equal(out.accepted,2);
+  assert.equal(out.rawArchived,0);
+  assert.equal(out.rejected.RAW_EVENT_EXCEEDS_ARCHIVE_CAP,1);
+  assert.equal(e.DB.rawRows.size,0);
+  assert.equal(e.DB.rows.size,2);
 });
