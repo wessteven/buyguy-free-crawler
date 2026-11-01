@@ -91,7 +91,7 @@ const outcomeSQL=[
   'ORDER BY due_at ASC,mint ASC LIMIT ?'
 ].join(' ');
 
-export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual',runId=null}={}){
+export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual',runId=null,quoteClock=()=>Date.now()}={}){
   if(!Number.isSafeInteger(now)||now<0)throw Error('INVALID_CLOCK');
   if(env?.PRE_SIGNAL_ENABLED!=='true')return {status:'DISABLED'};
   if(!env?.DB)throw Error('D1_UNAVAILABLE');
@@ -201,7 +201,7 @@ export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual'
           if(mints.length){
             const data=await request('https://api.dexscreener.com/tokens/v1/solana/'+mints.join(','));
             if(data){
-              const takenAt=new Date().toISOString();
+              const takenAt=new Date(quoteClock()).toISOString();
               const quotes=chooseMarketPairs(data,mints,takenAt);
               const quoteRows=quotes.map(q=>[q.mint,base.bucket,q.pool,q.quoteReceivedAt,
                 q.priceUsd,q.liquidityUsd,q.marketCapUsd,0]);
@@ -230,7 +230,7 @@ export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual'
             const pools=[...new Set(dueMarket.map(x=>x.pool))].slice(0,MARKET_BOUNDS.maxOutcomePairs);
             const answer=await request('https://api.dexscreener.com/latest/dex/pairs/solana/'+pools.join(','));
             if(answer){
-              const quoteTime=new Date().toISOString(),match=chooseExactPoolOutcomes(answer?.pairs||[],pools,quoteTime);
+              const quoteTime=new Date(quoteClock()).toISOString(),match=chooseExactPoolOutcomes(answer?.pairs||[],pools,quoteTime);
               for(const o of dueMarket){
                 const dueMs=Date.parse(o.due_at),quote=match.get(o.pool);
                 const valid=quote&&quote.mint===o.mint&&Date.parse(quoteTime)>=dueMs&&
