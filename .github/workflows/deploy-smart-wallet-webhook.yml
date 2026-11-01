@@ -77,7 +77,48 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.smart-wallet.toml
+      - name: Verify own Helius credit budget before any subscription registration
+        id: provider_budget
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          node --input-type=module - <<'JS'
+          import {appendFileSync} from 'node:fs';
+          import {assessWebhookBudget} from './src/smart-wallet-budget.mjs';
+          const required=n=>{const x=process.env[n];if(!x)throw Error('MISSING_'+n);return x;};
+          const account=required('CF_ACCOUNT_ID'),db=required('CF_DATABASE_ID'),token=required('CF_D1_API_TOKEN');
+          const endpoint='https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account)+'/d1/database/'+encodeURIComponent(db)+'/query';
+          async function query(sql,params){
+            const r=await fetch(endpoint,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},
+              body:JSON.stringify({sql,params}),signal:AbortSignal.timeout(12000)});
+            if(!r.ok)throw Error('BUDGET_D1_HTTP_'+r.status);
+            const data=await r.json();
+            if(data?.success!==true||data?.result?.[0]?.success!==true)throw Error('BUDGET_D1_REJECTED');
+            return data.result[0].results||[];
+          }
+          const start=new Date(Date.now()-3600000).toISOString(),day=new Date().toISOString().slice(0,10);
+          const [hour,usage]=await Promise.all([
+            query('SELECT COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=?',[start]),
+            query('SELECT reserved FROM smart_wallet_webhook_budget WHERE day=?',[day])
+          ]);
+          const policy=assessWebhookBudget({lastHour:hour[0]?.n,dayAttempted:usage[0]?.reserved??0});
+          if(policy.action==='UNKNOWN_DATA_MANUAL_REVIEW')throw Error('BUDGET_UNVERIFIED');
+          if(!process.env.GITHUB_OUTPUT)throw Error('GITHUB_OUTPUT_MISSING');
+          appendFileSync(process.env.GITHUB_OUTPUT,`safe=${policy.safe}\n`);
+          console.log('GOGET_HELIUS_DEPLOY_BUDGET_GATE',{action:policy.action,reasons:policy.reasons});
+          JS
+      - name: Respect existing Helius credit suspension after a code deployment
+        if: steps.provider_budget.outputs.safe == 'false'
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: node scripts/provision-smart-wallet-webhook.mjs guard
       - name: Set isolated bearer token and activate Helius SWAP webhook
+        if: steps.provider_budget.outputs.safe == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -85,6 +126,7 @@ jobs:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: node scripts/provision-smart-wallet-webhook.mjs sync
       - name: Confirm webhook listed after registration
+        if: steps.provider_budget.outputs.safe == 'true'
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
         run: node scripts/provision-smart-wallet-webhook.mjs verify
