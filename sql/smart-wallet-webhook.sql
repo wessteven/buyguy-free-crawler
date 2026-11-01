@@ -22,3 +22,16 @@ CREATE INDEX IF NOT EXISTS smart_wallet_webhook_raw_recent
 CREATE TABLE IF NOT EXISTS smart_wallet_webhook_raw_budget (
  day TEXT PRIMARY KEY,bytes_reserved INTEGER NOT NULL DEFAULT 0
 );
+
+-- Compact daily diagnostics for degraded raw archive attempts; no source
+-- payloads, signatures, wallet addresses, provider keys or exception text.
+CREATE TABLE IF NOT EXISTS smart_wallet_webhook_raw_health (
+ day TEXT PRIMARY KEY,
+ degraded_requests INTEGER NOT NULL DEFAULT 0,
+ attempted_records INTEGER NOT NULL DEFAULT 0,
+ recovered_records INTEGER NOT NULL DEFAULT 0,
+ still_failed_records INTEGER NOT NULL DEFAULT 0,
+ failed_batches INTEGER NOT NULL DEFAULT 0,
+ last_error_code TEXT NOT NULL DEFAULT 'NONE',
+ last_at TEXT NOT NULL
+);
