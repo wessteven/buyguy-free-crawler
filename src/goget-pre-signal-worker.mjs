@@ -1,10 +1,11 @@
 // GOGET prospective signal lab: independent 24/7 evidence collection on existing D1.
 // No Helius requests, no LLM, no wallet signing, no order execution.
 import {detectSignalWindows,attachAsOfQuotes,SIGNAL_LIMITS} from './goget-pre-signal-features.mjs';
+import {selectMarketResearchMints,chooseMarketPairs,chooseExactPoolOutcomes,readBoundedJson,MARKET_BOUNDS} from './goget-pre-signal-market.mjs';
 
 export const SIGNAL_WORKER_LIMITS=Object.freeze({
   cronMinutes:5,leaseMs:240000,maxOutcomeChecks:20,
-  maxWritesPerInvocation:50,maxQuoteCandidates:40,
+  maxWritesPerInvocation:90,maxQuoteCandidates:40,maxFreeDexRequests:2,
   horizonsMinutes:[5,60,360,1440],modelCalls:0,heliusCalls:0,tradeCalls:0
 });
 const MIN=60000;
@@ -67,13 +68,30 @@ const sourceSQL=[
   'FROM smart_wallet_webhook_events WHERE observed_at>=? AND observed_at<=?',
   'ORDER BY observed_at DESC LIMIT ?'
 ].join(' ');
+const marketQuoteColumns=['mint','bucket','pool','received_at',
+  'price_usd','liquidity_usd','market_cap_usd','route_proof'];
+const marketOutcomeColumns=['mint','bucket','horizon_min','due_at','pool','reference_price_usd','status'];
+const marketDueSQL=[
+  'SELECT mint,bucket,horizon_min,due_at,pool,reference_price_usd',
+  'FROM goget_pre_signal_market_outcomes WHERE status=? AND due_at<=?',
+  'ORDER BY due_at ASC,mint ASC LIMIT ?'
+].join(' ');
+const sharedCooldownSQL="SELECT name,expires_at FROM leases WHERE name IN ('discovery-provider:dex','fast-radar:dex-quotes')";
+async function dexJson(url,fetcher){
+  const response=await fetcher(url,{headers:{accept:'application/json'},
+    signal:AbortSignal.timeout(MARKET_BOUNDS.requestTimeoutMs)});
+  if(response.status===429)return {kind:'RATE_LIMITED'};
+  if(!response.ok)return {kind:'UNAVAILABLE',status:response.status};
+  const data=await readBoundedJson(response);
+  return {kind:'OK',data};
+}
 const outcomeSQL=[
   'SELECT mint,bucket,horizon_min,due_at,pool,reference_price_sol',
   'FROM goget_pre_signal_outcomes WHERE status=? AND due_at<=?',
   'ORDER BY due_at ASC,mint ASC LIMIT ?'
 ].join(' ');
 
-export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual',runId=null}={}){
+export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual',runId=null,quoteClock=()=>Date.now()}={}){
   if(!Number.isSafeInteger(now)||now<0)throw Error('INVALID_CLOCK');
   if(env?.PRE_SIGNAL_ENABLED!=='true')return {status:'DISABLED'};
   if(!env?.DB)throw Error('D1_UNAVAILABLE');
@@ -143,6 +161,99 @@ export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual'
         o.mint,o.bucket,o.horizon_min,'PENDING');
       if(updated===1){if(matched)labeled++;else missingCoverage++;}
     }
+    // Separate free/public aggregate quote research. No credential, no trade API,
+    // maximum one batch of token mints and one batch of exact outcome pools per cycle.
+    // Never bypass a 429/provider cooldown from the existing GOGET scanner.
+    const market={enabled:env.PRE_SIGNAL_MARKET_ENABLED==='true',
+      status:env.PRE_SIGNAL_MARKET_ENABLED==='true'?'SKIPPED':'DISABLED',
+      requests:0,asOfQuotes:0,forwardJobs:0,outcomes:0,unknown:0};
+    if(market.enabled){
+      try{
+        const [localState,sharedLeases]=await Promise.all([
+          read(db,'SELECT until_ms FROM goget_pre_signal_provider_state WHERE name=?','dex'),
+          read(db,sharedCooldownSQL)
+        ]);
+        const localUntil=Number(localState[0]?.until_ms)||0;
+        const blocked=localUntil>now||sharedLeases.some(x=>Number(x.expires_at)>now);
+        if(blocked)market.status='COOLDOWN';
+        else{
+          const fetcher=env.PRE_SIGNAL_FETCH||fetch;
+          let stop=false;
+          const request=async url=>{
+            if(stop||market.requests>=SIGNAL_WORKER_LIMITS.maxFreeDexRequests)return null;
+            market.requests++;
+            try{
+              const result=await dexJson(url,fetcher);
+              if(result.kind==='OK')return result.data;
+              const next=now+(result.kind==='RATE_LIMITED'?MARKET_BOUNDS.backoff429Ms:MARKET_BOUNDS.backoffErrorMs);
+              await boundedWrite(
+                'UPDATE goget_pre_signal_provider_state SET until_ms=? WHERE name=?',
+                next,'dex');
+              market.status=result.kind;stop=true;return null;
+            }catch{
+              try{await boundedWrite(
+                'UPDATE goget_pre_signal_provider_state SET until_ms=? WHERE name=?',
+                now+MARKET_BOUNDS.backoffErrorMs,'dex');}catch{}
+              market.status='ERROR_OR_OVERSIZE';stop=true;return null;
+            }
+          };
+          const mints=incomplete?[]:selectMarketResearchMints(enriched);
+          if(mints.length){
+            const data=await request('https://api.dexscreener.com/tokens/v1/solana/'+mints.join(','));
+            if(data){
+              const takenAt=new Date(quoteClock()).toISOString();
+              const quotes=chooseMarketPairs(data,mints,takenAt);
+              const quoteRows=quotes.map(q=>[q.mint,base.bucket,q.pool,q.quoteReceivedAt,
+                q.priceUsd,q.liquidityUsd,q.marketCapUsd,0]);
+              for(const group of batches(quoteRows,8)){
+                const q=boundInsert('goget_pre_signal_market_quotes',marketQuoteColumns,group);
+                market.asOfQuotes+=await boundedWrite(q.sql,...q.params);
+              }
+              const jobs=[];
+              for(const q of quotes){
+                const start=Date.parse(q.quoteReceivedAt);
+                for(const h of SIGNAL_WORKER_LIMITS.horizonsMinutes)
+                  jobs.push([q.mint,base.bucket,h,new Date(start+h*MIN).toISOString(),
+                    q.pool,q.priceUsd,'PENDING']);
+              }
+              for(const group of batches(jobs,10)){
+                const q=boundInsert('goget_pre_signal_market_outcomes',marketOutcomeColumns,group);
+                market.forwardJobs+=await boundedWrite(q.sql,...q.params);
+              }
+              market.status='OBSERVED_AGGREGATE_QUOTES';
+            }
+          }
+          // One batched exact-pool lookup for due outcomes, with the originally
+          // chosen pool identity and no retroactive replacement by another pool.
+          const dueMarket=await read(db,marketDueSQL,'PENDING',stamp,MARKET_BOUNDS.maxOutcomePairs);
+          if(dueMarket.length&&!stop){
+            const pools=[...new Set(dueMarket.map(x=>x.pool))].slice(0,MARKET_BOUNDS.maxOutcomePairs);
+            const answer=await request('https://api.dexscreener.com/latest/dex/pairs/solana/'+pools.join(','));
+            if(answer){
+              const quoteTime=new Date(quoteClock()).toISOString(),match=chooseExactPoolOutcomes(answer?.pairs||[],pools,quoteTime);
+              for(const o of dueMarket){
+                const dueMs=Date.parse(o.due_at),quote=match.get(o.pool);
+                const valid=quote&&quote.mint===o.mint&&Date.parse(quoteTime)>=dueMs&&
+                  Date.parse(quoteTime)<=dueMs+10*MIN;
+                const over=Date.parse(quoteTime)>=dueMs+10*MIN;
+                if(!valid&&!over)continue;
+                const status=valid?'OBSERVED_SAME_POOL_USD_PRICE':'MISSING_FUTURE_USD_QUOTE_COVERAGE';
+                const delta=valid?(quote.priceUsd/Number(o.reference_price_usd)-1)*100:null;
+                const wrote=await boundedWrite(
+                  'UPDATE goget_pre_signal_market_outcomes SET status=?,checked_at=?,future_price_usd=?,change_pct=? WHERE mint=? AND bucket=? AND horizon_min=? AND status=?',
+                  status,quoteTime,valid?quote.priceUsd:null,
+                  Number.isFinite(delta)?Math.round(delta*10000)/10000:null,
+                  o.mint,o.bucket,o.horizon_min,'PENDING');
+                if(wrote===1){if(valid)market.outcomes++;else market.unknown++;}
+              }
+            }
+          }
+        }
+      }catch{
+        console.error('GOGET_PRE_SIGNAL_MARKET_RESEARCH_DEGRADED');
+        market.status='DEGRADED';
+      }
+    }
     const summary={status:incomplete?'INCOMPLETE_SOURCE_WINDOW':'OK',
       runId:id,trigger:trigger==='cron'?'cron':'manual',at:stamp,
       observedSourceRows:rows.length,observedMints:base.observedTokenMints,
@@ -152,6 +263,7 @@ export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual'
       freshExactPoolQuotes:enriched.filter(x=>x.quote).length,
       prospectiveOutcomeJobsCreated:createdJobs,observedOutcomes:labeled,
       missingFuturePriceCoverage:missingCoverage,
+      market,
       modelCalls:0,heliusCalls:0,trades:0,paidModelCalls:0};
     await boundedWrite(
       'INSERT INTO goget_pre_signal_runs(run_id,at,trigger,status,observed_rows,stored_snapshots,summary_json) VALUES(?,?,?,?,?,?,?)',
