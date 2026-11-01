@@ -43,6 +43,7 @@ async function main(){
     ['webhook_wallets',"SELECT wallet,COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=? GROUP BY wallet ORDER BY n DESC LIMIT 30",[new Date(Date.now()-86400000).toISOString()]],
     ['preSignalRecent',"SELECT category,sample_kind,COUNT(*) AS samples,MAX(bucket) AS latest_bucket FROM goget_pre_signal_snapshots WHERE bucket>=? GROUP BY category,sample_kind ORDER BY samples DESC LIMIT 10",[new Date(Date.now()-86400000).toISOString()]],
     ['preSignalMarketQuotes',"SELECT COUNT(*) AS n,COUNT(DISTINCT mint) AS mints,MAX(received_at) AS latest_at FROM goget_pre_signal_market_quotes WHERE received_at>=?",[new Date(Date.now()-86400000).toISOString()]],
+    ['preSignalProviderStatus',"SELECT name,until_ms FROM goget_pre_signal_provider_state ORDER BY name LIMIT 4",[]],
     ['preSignalMarketOutcomes',"SELECT horizon_min,status,COUNT(*) AS n FROM goget_pre_signal_market_outcomes GROUP BY horizon_min,status ORDER BY horizon_min,status LIMIT 20",[]],
     ['preSignalOutcomes',"SELECT horizon_min,status,COUNT(*) AS n FROM goget_pre_signal_outcomes GROUP BY horizon_min,status ORDER BY horizon_min,status LIMIT 20",[]],
     ['preSignalRuns',"SELECT trigger,status,COUNT(*) AS n,MAX(at) AS latest_at FROM goget_pre_signal_runs WHERE at>=? GROUP BY trigger,status ORDER BY n DESC",[new Date(Date.now()-86400000).toISOString()]],
