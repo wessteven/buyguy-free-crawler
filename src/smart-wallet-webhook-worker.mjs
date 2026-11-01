@@ -195,13 +195,22 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
           'UPDATE smart_wallet_webhook_raw_budget SET bytes_reserved=bytes_reserved+? WHERE day=? AND bytes_reserved+?<=?'
         ).bind(bytes,day,bytes,WEBHOOK_LIMITS.rawBytesPerUtcDay).run();
         if((budget.meta?.changes??0)===1){
-          const writes=batch.rawRecords.map(r=>env.DB.prepare(
-            'INSERT OR IGNORE INTO smart_wallet_webhook_raw(signature,slot,observed_at,byte_length,raw_json) VALUES(?,?,?,?,?)'
-          ).bind(r.signature,r.slot,r.observedAt,r.bytes,r.rawJson));
-          const saved=await env.DB.batch(writes);
-          if(!saved.every(x=>x.success===true))throw Error('RAW_PERSISTENCE_UNVERIFIED');
-          rawArchived=saved.reduce((n,r)=>n+(r.meta?.changes??0),0);
-          rawArchiveStatus='OK';
+          // Split raw JSON writes into small atomic batches. One oversized or
+          // provider-specific observation must not invalidate unrelated receipts.
+          let failedChunks=0;
+          for(let i=0;i<batch.rawRecords.length;i+=6){
+            const part=batch.rawRecords.slice(i,i+6);
+            const writes=part.map(r=>env.DB.prepare(
+              'INSERT OR IGNORE INTO smart_wallet_webhook_raw(signature,slot,observed_at,byte_length,raw_json) VALUES(?,?,?,?,?)'
+            ).bind(r.signature,r.slot,r.observedAt,r.bytes,r.rawJson));
+            try{
+              const saved=await env.DB.batch(writes);
+              if(!saved.every(x=>x.success===true))throw Error('RAW_PERSISTENCE_UNVERIFIED');
+              rawArchived+=saved.reduce((n,r)=>n+(r.meta?.changes??0),0);
+            }catch{failedChunks++;}
+          }
+          rawArchiveStatus=failedChunks?'PARTIAL_OR_FAILED_RAW_BATCHES':'OK';
+          if(failedChunks)console.error('GOGET_WEBHOOK_RAW_BATCH_REJECTED',failedChunks);
         }else rawArchiveStatus='DAILY_RAW_BYTE_CAP';
       }catch{
         // Parsed research observations are already committed. Do not trigger
