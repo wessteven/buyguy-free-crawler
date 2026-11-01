@@ -2,7 +2,7 @@
 // GOGET WATCH-ONLY live pilot. Reads public Solana data and writes isolated D1 evidence.
 // No signing, no real transactions, no automatic paper entries.
 import {readFile,writeFile} from 'node:fs/promises';
-import {WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,selectWindow,classifyObservedTransaction} from '../src/smart-wallet-live-probe.mjs';
+import {WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,selectWindow,cursorAfterPersisted,classifyObservedTransaction} from '../src/smart-wallet-live-probe.mjs';
 
 const usage={rpc:0,transactions:0,d1:0};
 const now=()=>new Date().toISOString();
@@ -52,7 +52,7 @@ async function run(){
   const report={mode:'WATCH_ONLY_LIVE_NO_COPY_TRADING',startedAt:start,
     finishedAt:null,cohort:'UNVETTED_PILOT_NOT_PROFITABLE_WALLETS',
     limits:WATCH_LIMITS,wallets:[],events:[],errors:[],
-    totals:{newCandidates:0,baselineSamples:0,gaps:0,verifiedTradeSignals:0}};
+    totals:{newCandidates:0,baselineSamples:0,gaps:0,deferredWindows:0,verifiedTradeSignals:0}};
   try{
     const end=Date.parse(process.env.SMART_WALLET_LIVE_END_UTC||'');
     if(!Number.isFinite(end))throw Error('PILOT_END_MISSING');
@@ -74,17 +74,22 @@ async function run(){
     const rpc=rpcFactory(key),d1=d1Factory(...vars);
     await d1(cursorSchema);await d1(eventSchema);
     for(const {wallet} of cohort){
-      const w={wallet,status:'UNKNOWN',processed:0,gap:false,errors:[]};
+      const w={wallet,status:'UNKNOWN',processed:0,gap:false,deferred:false,errors:[]};
       report.wallets.push(w);
       try{
         const prev=(await d1('SELECT last_signature FROM smart_wallet_live_cursors WHERE wallet=? LIMIT 1',[wallet]))[0]?.last_signature||null;
         const signatures=await rpc('getSignaturesForAddress',[wallet,{limit:WATCH_LIMITS.signaturesPerWallet,commitment:'confirmed'}]);
         const selection=selectWindow(signatures,prev,{limit:WATCH_LIMITS.decodePerWallet,baseline:!prev});
-        w.gap=selection.gap||selection.truncated;
+        // A truncated bounded decode is pending work, NOT necessarily missing data.
+        // Only a cursor falling beyond the 16-signature page is a real gap.
+        w.gap=selection.gap;
+        w.deferred=selection.truncated;
         if(w.gap)report.totals.gaps++;
+        if(w.deferred)report.totals.deferredWindows++;
+        const committed=[];
         for(const sig of [...selection.selected].reverse()){
           if(usage.transactions>=WATCH_LIMITS.maxDecodesPerRun){
-            w.gap=true;w.errors.push('GLOBAL_DECODE_BUDGET');break;
+            w.deferred=true;w.errors.push('GLOBAL_DECODE_BUDGET');break;
           }
           usage.transactions++;
           const tx=await rpc('getTransaction',[sig.signature,{encoding:'jsonParsed',maxSupportedTransactionVersion:MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,commitment:'confirmed'}]);
@@ -97,16 +102,20 @@ async function run(){
             '(wallet,signature,observed_at,block_time,slot,classification,baseline,evidence_json)',
             'VALUES(?,?,?,?,?,?,?,?)'
           ].join(' '),[wallet,e.signature,e.observedAt,e.blockTime,e.slot,e.classification,e.baseline?1:0,JSON.stringify(e).slice(0,3000)]);
+          // Commit progress only after the corresponding D1 insert succeeded.
+          committed.push(sig.signature);
           if(e.baseline)report.totals.baselineSamples++;
           else if(e.classification==='AMM_INVOCATION_WITH_TOKEN_INCREASE_UNPRICED')report.totals.newCandidates++;
         }
-        w.status=w.gap?'INCOMPLETE_WINDOW':selection.baseline?'BASELINED':selection.head?'OBSERVED':'NO_SIGNATURES';
+        w.status=w.gap?'INCOMPLETE_WINDOW':w.deferred?'PENDING_BACKFILL':
+          selection.baseline?'BASELINED':committed.length?'OBSERVED':'NO_NEW_SIGNATURES';
+        const cursor=cursorAfterPersisted(prev,committed);
         await d1([
           'INSERT INTO smart_wallet_live_cursors(wallet,last_signature,last_polled_at,status,gaps) VALUES(?,?,?,?,?)',
           'ON CONFLICT(wallet) DO UPDATE SET last_signature=excluded.last_signature,',
           'last_polled_at=excluded.last_polled_at,status=excluded.status,',
           'gaps=smart_wallet_live_cursors.gaps+excluded.gaps'
-        ].join(' '),[wallet,selection.head||prev,start,w.status,w.gap?1:0]);
+        ].join(' '),[wallet,cursor,start,w.status,w.gap?1:0]);
       }catch(err){
         w.status='FAILED';
         const code=/^(HTTP_[0-9]+|RPC_-?[0-9]+|RPC_[A-Z_]+|D1_QUERY_FAILED)$/.test(err?.message)?err.message:'PROVIDER_OR_STORAGE_ERROR';
