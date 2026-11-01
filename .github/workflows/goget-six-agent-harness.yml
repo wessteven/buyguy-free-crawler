@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/goget-six-agent-harness.yml'
       - 'src/goget-six-agent-harness.mjs'
+      - 'src/goget-six-agent-batching.mjs'
+      - 'tests/goget-six-agent-batching.test.mjs'
       - 'scripts/goget-six-agent-replay.mjs'
       - 'tests/goget-six-agent-harness.test.mjs'
   schedule:
@@ -27,7 +29,7 @@ jobs:
       - name: Verify six-agent harness, contracts and zero-trade guardrails
         run: |
           node --check scripts/goget-six-agent-replay.mjs
-          node --test tests/goget-six-agent-harness.test.mjs
+          node --test tests/goget-six-agent-harness.test.mjs tests/goget-six-agent-batching.test.mjs
           node --test tests/smart-wallet-webhook.test.mjs
       - name: Process bounded unreviewed D1 webhook evidence into a separate research ledger
         env:
