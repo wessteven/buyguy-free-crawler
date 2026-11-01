@@ -1,5 +1,5 @@
 -- Isolated, idempotent GOGET six-agent Worker tables (same existing D1 DB).
--- Reviews table already exists in current production; no data is deleted or modified.
+-- Reviews table already exists in current production. No data is deleted or modified.
 CREATE TABLE IF NOT EXISTS smart_wallet_six_agent_reviews (
   wallet TEXT NOT NULL,signature TEXT NOT NULL,
   source_observed_at TEXT NOT NULL,reviewed_at TEXT NOT NULL,
