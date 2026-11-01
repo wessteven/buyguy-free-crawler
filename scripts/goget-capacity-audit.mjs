@@ -42,6 +42,8 @@ async function main(){
     ['webhook_daily',"SELECT day,reserved FROM smart_wallet_webhook_budget ORDER BY day DESC LIMIT 7",[]],
     ['webhook_wallets',"SELECT wallet,COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=? GROUP BY wallet ORDER BY n DESC LIMIT 30",[new Date(Date.now()-86400000).toISOString()]],
     ['preSignalRecent',"SELECT category,sample_kind,COUNT(*) AS samples,MAX(bucket) AS latest_bucket FROM goget_pre_signal_snapshots WHERE bucket>=? GROUP BY category,sample_kind ORDER BY samples DESC LIMIT 10",[new Date(Date.now()-86400000).toISOString()]],
+    ['preSignalMarketQuotes',"SELECT COUNT(*) AS n,COUNT(DISTINCT mint) AS mints,MAX(received_at) AS latest_at FROM goget_pre_signal_market_quotes WHERE received_at>=?",[new Date(Date.now()-86400000).toISOString()]],
+    ['preSignalMarketOutcomes',"SELECT horizon_min,status,COUNT(*) AS n FROM goget_pre_signal_market_outcomes GROUP BY horizon_min,status ORDER BY horizon_min,status LIMIT 20",[]],
     ['preSignalOutcomes',"SELECT horizon_min,status,COUNT(*) AS n FROM goget_pre_signal_outcomes GROUP BY horizon_min,status ORDER BY horizon_min,status LIMIT 20",[]],
     ['preSignalRuns',"SELECT trigger,status,COUNT(*) AS n,MAX(at) AS latest_at FROM goget_pre_signal_runs WHERE at>=? GROUP BY trigger,status ORDER BY n DESC",[new Date(Date.now()-86400000).toISOString()]],
     ['agentRunTypes',"SELECT COALESCE(json_extract(summary_json,'$.trigger'),'manual_before_tagging') AS trigger, COUNT(*) AS runs,COALESCE(SUM(persisted_rows),0) AS persisted,MAX(started_at) AS latest_at FROM smart_wallet_agent_runs WHERE started_at>=? GROUP BY trigger ORDER BY runs DESC",[new Date(Date.now()-86400000).toISOString()]],
