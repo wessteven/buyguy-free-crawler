@@ -18,7 +18,7 @@ function db(){
  const state={lease:'',until:0,source:[
    source(1,12,walletA),source(2,7,walletB),source(3,2,walletA),
    source(4,39,walletB)
- ],snapshots:new Map(),outcomes:new Map(),runs:[]};
+ ],snapshots:new Map(),outcomes:new Map(),runs:[],marketQuotes:new Map(),marketOutcomes:new Map(),dexUntil:0};
  const database={state,prepare(sql){return {bind(...params){return {
   async all(){
     if(sql.startsWith('SELECT until_ms FROM goget_pre_signal_provider_state'))
