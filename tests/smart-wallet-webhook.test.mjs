@@ -14,14 +14,23 @@ const tx={
   tokenTransfers:[{mint:'B'.repeat(44),fromUserAccount:other,toUserAccount:wallet}]
 };
 function db(){
-  const rows=new Map(),rawRows=new Map(),rawBatchSizes=[];let used=0,rawUsed=0;
+  const rows=new Map(),rawRows=new Map(),rawBatchSizes=[],rawHealth=[];let used=0,rawUsed=0;
   const limit=WEBHOOK_LIMITS.storedEventsPerDay,rawLimit=WEBHOOK_LIMITS.rawBytesPerUtcDay;
   return {
-    rows,rawRows,rawBatchSizes,limit,
+    rows,rawRows,rawBatchSizes,rawHealth,limit,
     prepare(sql){
       return {bind(...values){
         return {
           async run(){
+            if(sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw_health'))return {success:true,meta:{changes:1}};
+            if(sql.includes('UPDATE smart_wallet_webhook_raw_health')){
+              rawHealth.push(values);return {success:true,meta:{changes:1}};
+            }
+            if(sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw(')){
+              const id=values[0],existing=rawRows.has(id);
+              if(!existing)rawRows.set(id,values);
+              return {success:true,meta:{changes:existing?0:1}};
+            }
             if(sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw_budget'))return {success:true,meta:{changes:1}};
             if(sql.includes('UPDATE smart_wallet_webhook_raw_budget')){
               if(rawUsed+values[0]>rawLimit)return {success:true,meta:{changes:0}};
@@ -190,7 +199,46 @@ test('failed raw sub-batch cannot discard other raw records or normal events',as
  assert.equal(result.status,200);
  const body=await result.json();
  assert.equal(body.accepted,16);
- assert.equal(body.rawArchived,2);
- assert.equal(body.rawArchiveStatus,'PARTIAL_OR_FAILED_RAW_BATCHES');
- assert.equal(e.DB.rawRows.size,2);
+ assert.equal(body.rawArchived,8);
+ assert.equal(body.rawFallbackRecovered,6);
+ assert.equal(body.rawFailedWrites,0);
+ assert.equal(body.rawArchiveStatus,'RECOVERED_FROM_BATCH_ERRORS');
+ assert.equal(e.DB.rawRows.size,8);
+ assert.equal(e.DB.rawHealth.length,1);
+ assert.deepEqual(e.DB.rawHealth[0].slice(0,4),[8,6,0,1]);
 });
+test('single toxic source row cannot discard its valid batch neighbors',async()=>{
+ const base=db(),batch=base.batch.bind(base),prepare=base.prepare.bind(base);
+ const poisoned='4'.repeat(88);
+ base.batch=async items=>{
+   if(items[0]?._raw&&items.some(x=>x._raw[0]===poisoned))
+     throw Error('SQLITE_TOOBIG');
+   return batch(items);
+ };
+ base.prepare=sql=>{
+   const statement=prepare(sql);
+   if(!sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw('))return statement;
+   return {bind(...values){
+     const bound=statement.bind(...values);
+     if(values[0]!==poisoned)return bound;
+     return {...bound,async run(){throw Error('SQLITE_TOOBIG');}};
+   }};
+ };
+ const events=Array.from({length:8},(_,i)=>({
+   ...tx,signature:i===2?poisoned:'123456789ABCDEFGHJKLMNPQRSTUVWXYZ'[i+1].repeat(88)
+ }));
+ const result=await serveSmartWalletWebhook(req(events),env(base),now);
+ assert.equal(result.status,200);
+ const output=await result.json();
+ assert.equal(output.accepted,16);
+ assert.equal(output.rawArchived,7);
+ assert.equal(output.rawFailedWrites,1);
+ assert.equal(output.rawFallbackRecovered,5);
+ assert.equal(output.rawArchiveStatus,'PARTIAL_OR_FAILED_RAW_BATCHES');
+ assert.equal(base.rawRows.size,7);
+ assert.equal(base.rows.size,16);
+ assert.equal(base.rawHealth.length,1);
+ assert.deepEqual(base.rawHealth[0].slice(0,4),[8,5,1,1]);
+ assert.equal(base.rawHealth[0][4],'SIZE_LIMIT');
+});
+
