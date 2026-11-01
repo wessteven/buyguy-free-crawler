@@ -20,11 +20,26 @@ for(let attempt=0;attempt<6;attempt++){
   if(attempt<5)await new Promise(r=>setTimeout(r,4000));
 }
 if(!ready)throw Error('AGENT_WORKER_HEALTH_UNVERIFIED_'+code);
-const response=await fetch(url+'/run',{method:'POST',
-  headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(50000)});
-const state=await response.json().catch(()=>null);
-if(response.status!==200||!state||
-  !['OK','LEASE_BUSY','DISABLED'].includes(state.status))throw Error('AGENT_RUN_UNVERIFIED_'+response.status);
+let response=null,state=null,last='UNAVAILABLE';
+for(let attempt=0;attempt<6;attempt++){
+  try{
+    response=await fetch(url+'/run',{method:'POST',
+      headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(50000)});
+    state=await response.json().catch(()=>null);
+    if(response.status===200&&state&&['OK','LEASE_BUSY','DISABLED'].includes(state.status))break;
+    const safe=['CONTROL_NOT_CONFIGURED','DB_READ_UNVERIFIED','DB_WRITE_UNVERIFIED',
+      'DB_BINDING_MISSING','REVIEW_TOO_LARGE','REVIEW_BATCH_LIMIT',
+      'DB_CHANGE_COUNT_UNVERIFIED','D1_BUDGET_EXCEEDED','SCHEDULED_RESEARCH_FAILED'];
+    const reason=safe.includes(state?.error)?state.error:'UNKNOWN';
+    last=String(response.status)+'_'+reason;
+    // Only repeat brief transient version/secret propagation, never persistent D1 failure.
+    if(response.status!==503||reason!=='CONTROL_NOT_CONFIGURED')break;
+  }catch{last='NETWORK_FAILURE';}
+  if(attempt<5)await new Promise(r=>setTimeout(r,4000));
+}
+if(response?.status!==200||!state||
+  !['OK','LEASE_BUSY','DISABLED'].includes(state.status))
+  throw Error('AGENT_RUN_UNVERIFIED_'+last);
 if(state.status==='DISABLED')throw Error('AGENT_RUN_DISABLED');
 if(state.status==='LEASE_BUSY'){
   console.log('GOGET_CLOUDFLARE_AGENT_SMOKE',{status:'LEASE_BUSY_SCHEDULED_RUN_MAY_BE_ACTIVE'});
