@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectWindow,classifyObservedTransaction,WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,WSOL} from '../src/smart-wallet-live-probe.mjs';
+import {selectWindow,cursorAfterPersisted,classifyObservedTransaction,WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,WSOL} from '../src/smart-wallet-live-probe.mjs';
 import {PUMPSWAP} from '../src/pumpswap.mjs';
 
 const wallet='A'.repeat(44),mint='B'.repeat(44),sig='5'.repeat(88);
@@ -59,4 +59,48 @@ test('invalid account-owner mapping or amount cannot be counted as safe',()=>{
 
 test('Helius JSON-RPC reader supports Solana v1 transactions',()=>{
  assert.equal(MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,1);
+});
+
+test('bounded multi-cycle polling replays all new signatures rather than skipping the middle',()=>{
+ const sigs=Array.from({length:8},(_,i)=>({signature:String(i+1).repeat(88),err:null}));
+ const first=selectWindow(sigs,sigs[5].signature);
+ assert.equal(first.observedCount,5);
+ assert.equal(first.truncated,true);
+ assert.equal(first.gap,false);
+ // newest-first selection but intentionally the OLDEST pending two.
+ assert.deepEqual(first.selected.map(x=>x.signature),
+   [sigs[3].signature,sigs[4].signature]);
+ const doneFirst=first.selected.map(x=>x.signature).reverse();
+ const afterFirst=cursorAfterPersisted(sigs[5].signature,doneFirst);
+ assert.equal(afterFirst,sigs[3].signature);
+ const second=selectWindow(sigs,afterFirst);
+ assert.deepEqual(second.selected.map(x=>x.signature),
+   [sigs[1].signature,sigs[2].signature]);
+ const doneSecond=second.selected.map(x=>x.signature).reverse();
+ const afterSecond=cursorAfterPersisted(afterFirst,doneSecond);
+ const third=selectWindow(sigs,afterSecond);
+ assert.deepEqual(third.selected.map(x=>x.signature),[sigs[0].signature]);
+ const doneThird=third.selected.map(x=>x.signature).reverse();
+ const afterThird=cursorAfterPersisted(afterSecond,doneThird);
+ assert.equal(afterThird,sigs[0].signature);
+ assert.equal(selectWindow(sigs,afterThird).selected.length,0);
+ assert.deepEqual([...doneFirst,...doneSecond,...doneThird],[
+   sigs[4].signature,sigs[3].signature,
+   sigs[2].signature,sigs[1].signature,sigs[0].signature]);
+});
+test('cursor never moves to newest receipt when a write was not confirmed',()=>{
+ const previous='5'.repeat(88),older='4'.repeat(88),newer='3'.repeat(88);
+ assert.equal(cursorAfterPersisted(previous,[]),previous);
+ assert.equal(cursorAfterPersisted(previous,[older]),older);
+ assert.equal(cursorAfterPersisted(previous,[older,newer]),newer);
+ assert.equal(cursorAfterPersisted(null,[]),null);
+ assert.throws(()=>cursorAfterPersisted(previous,['BAD']),/INVALID_PROCESSED_SIGNATURE/);
+ assert.throws(()=>cursorAfterPersisted(previous,Array(7).fill(older)),
+   /INVALID_PROCESSED_SIGNATURES/);
+});
+test('invalid or zero decode limit cannot select any unprocessed transaction',()=>{
+ const list=Array.from({length:3},(_,i)=>({signature:String(i+1).repeat(88),err:null}));
+ assert.equal(selectWindow(list,null,{limit:0}).selected.length,0);
+ assert.equal(selectWindow(list,null,{limit:-1}).selected.length,0);
+ assert.equal(selectWindow(list,null,{limit:100}).selected.length,WATCH_LIMITS.decodePerWallet);
 });

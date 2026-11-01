@@ -51,11 +51,30 @@ export function selectWindow(raw,lastSignature,{limit=WATCH_LIMITS.decodePerWall
   const ix=lastSignature?raw.findIndex(x=>x?.signature===lastSignature):-1;
   const allNew=lastSignature?(ix>=0?raw.slice(0,ix):raw):raw;
   const count=allNew.length;
-  const selected=allNew.filter(x=>signature(x?.signature)&&x.err===null)
-    .slice(0,Math.max(0,limit));
+  // The Helius page is newest-first. Decode the oldest eligible unprocessed
+  // receipts first, so a bounded cycle can resume from its last saved record
+  // rather than leaping over all older new signatures.
+  const eligible=allNew.filter(x=>signature(x?.signature)&&x.err===null);
+  const capacity=Number.isSafeInteger(limit)?Math.max(0,Math.min(limit,WATCH_LIMITS.decodePerWallet)):0;
+  const selected=capacity?eligible.slice(-capacity):[];
   return {head,selected,observedCount:count,
     gap:!!lastSignature&&ix<0&&raw.length>=WATCH_LIMITS.signaturesPerWallet,
     truncated:count>selected.length,baseline:baseline||!lastSignature};
+}
+
+
+// Only the signatures actually committed to D1 may advance the cursor.
+// passed array order is ascending chain observation age (oldest first).
+export function cursorAfterPersisted(previousSignature,persistedSignatures){
+  if(!Array.isArray(persistedSignatures)||
+    persistedSignatures.length>WATCH_LIMITS.maxDecodesPerRun)
+    throw Error('INVALID_PROCESSED_SIGNATURES');
+  let last=signature(previousSignature)?previousSignature:null;
+  for(const sig of persistedSignatures){
+    if(!signature(sig))throw Error('INVALID_PROCESSED_SIGNATURE');
+    last=sig;
+  }
+  return last;
 }
 
 export function classifyObservedTransaction({wallet,signature:txsig,tx,observedAt,baseline=false}) {
