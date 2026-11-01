@@ -62,7 +62,8 @@ jobs:
           account,database,token=[os.environ[k] for k in ('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')]
           if not all((account,database,token)):raise SystemExit('D1_CREDENTIALS_MISSING')
           url=f'https://api.cloudflare.com/client/v4/accounts/{account}/d1/database/{database}/query'
-          stmts=[x.strip() for x in Path('sql/smart-wallet-webhook.sql').read_text().split(';') if x.strip()]
+          sql='\n'.join(line for line in Path('sql/smart-wallet-webhook.sql').read_text().splitlines() if not line.lstrip().startswith('--'))
+          stmts=[x.strip() for x in sql.split(';') if x.strip()]
           for s in stmts:
             req=Request(url,data=json.dumps({'sql':s,'params':[]}).encode(),
               headers={'authorization':'Bearer '+token,'content-type':'application/json'},method='POST')
