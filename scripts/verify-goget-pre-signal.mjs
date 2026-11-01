@@ -43,6 +43,9 @@ else{
   potentialSignals:x.potentialSignalCount,controls:x.controlCount,
   snapshots:x.storedSnapshots,quotes:x.freshExactPoolQuotes,
   forwardLabels:x.observedOutcomes,missingCoverage:x.missingFuturePriceCoverage,
+  marketStatus:x.market?.status,publicMarketCalls:x.market?.requests,
+  publicMarketQuotes:x.market?.asOfQuotes,publicMarketJobs:x.market?.forwardJobs,
+  publicMarketOutcomes:x.market?.outcomes,
   modelCalls:x.modelCalls,heliusCalls:x.heliusCalls,trades:x.trades
  }));
 }
