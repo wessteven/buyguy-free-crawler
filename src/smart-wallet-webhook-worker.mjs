@@ -154,51 +154,10 @@ export function summarizeHeliusBatch(body,watched,receivedAt){
   return {ok:true,rows,rawRecords,reasonCounts,received:body.length};
 }
 
-export async function serveSmartWalletWebhook(request,env,now=Date.now()){
-  const path=new URL(request.url).pathname;
-  if(path==='/health'&&request.method==='GET')return json({service:'goget-wallet-webhook',state:'watch_only'});
-  if(path!=='/webhook'&&path!=='/ready')return json({error:'NOT_FOUND'},404);
-  if(path==='/webhook'&&request.method!=='POST')return json({error:'METHOD_NOT_ALLOWED'},405);
-  if(path==='/ready'&&request.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405);
-  if(!env||typeof env.WALLET_WEBHOOK_SECRET!=='string'||env.WALLET_WEBHOOK_SECRET.length<40)
-    return json({error:'RECEIVER_NOT_CONFIGURED'},503);
-  if(!await verifyBearer(request.headers.get('authorization'),env.WALLET_WEBHOOK_SECRET))
-    return json({error:'UNAUTHORIZED'},401);
-  if(path==='/ready')return json({ready:!!env.DB,mode:'WATCH_ONLY',tradeEligible:false,
-    build:WEBHOOK_BUILD},env.DB?200:503);
-  // Expiration blocks new events even if Helius webhook disablement lags.
-  const deadline=Date.parse(env.WALLET_WEBHOOK_STOP_AT||WEBHOOK_LIMITS.deadline);
-  if(!Number.isFinite(deadline)||now>=deadline||env.WALLET_WEBHOOK_ENABLED!=='true')
-    return json({error:'RECEIVER_DISABLED_OR_EXPIRED'},410);
-  if(!env.DB)return json({error:'DATABASE_UNAVAILABLE'},503);
-  if(!(request.headers.get('content-type')||'').toLowerCase().startsWith('application/json'))
-    return json({error:'UNSUPPORTED_CONTENT_TYPE'},415);
-  const watched=normalizeList((env.WALLET_WATCHED_ADDRESSES||'').split(',').filter(Boolean));
-  if(!watched)return json({error:'WATCHLIST_NOT_CONFIGURED'},503);
-  let body;
-  try{
-    const read=await boundedText(request);
-    if(!read.ok)return json({error:read.reason},413);
-    body=JSON.parse(read.text);
-  }catch{return json({error:'BAD_JSON_OR_ENCODING'},400);}
-  const receivedAt=new Date(now).toISOString();
-  const batch=summarizeHeliusBatch(body,watched,receivedAt);
-  if(!batch.ok)return json({error:batch.error},413);
-  if(!batch.rows.length)return json({ok:true,accepted:0,duplicates:0,rejected:batch.reasonCounts,tradeEligible:false});
-  const day=receivedAt.slice(0,10);
-  try{
-    await env.DB.prepare('INSERT OR IGNORE INTO smart_wallet_webhook_budget(day,reserved) VALUES(?,0)').bind(day).run();
-    const quota=await env.DB.prepare('UPDATE smart_wallet_webhook_budget SET reserved=reserved+? WHERE day=? AND reserved+?<=?')
-      .bind(batch.rows.length,day,batch.rows.length,WEBHOOK_LIMITS.storedEventsPerDay).run();
-    if((quota.meta?.changes??0)!==1)return json({error:'DAILY_PERSISTENCE_BUDGET_EXHAUSTED'},429);
-    const statements=batch.rows.map(row=>env.DB.prepare(
-      'INSERT OR IGNORE INTO smart_wallet_webhook_events(wallet,signature,observed_at,block_time,slot,classification,delay_ms,fee_payer_observed,evidence_json) VALUES(?,?,?,?,?,?,?,?,?)'
-    ).bind(row.wallet,row.signature,row.observedAt,row.blockTime,row.slot,row.status,
-      row.delayMs,row.feePayerObserved?1:0,row.evidence));
-    const persisted=await env.DB.batch(statements);
-    // All statements must succeed or fail request; event identity is idempotent.
-    if(!persisted.every(v=>v.success===true))return json({error:'PERSISTENCE_UNVERIFIED'},503);
-    const inserted=persisted.reduce((n,r)=>n+(r.meta?.changes??0),0);
+// Runs only after normalized source receipts are committed. This is optional
+// replay research data; Helius must not be forced to retry when raw storage
+// encounters a slow D1 response. The Worker registers this on ctx.waitUntil.
+export async function archiveRawEvidence(env,batch,day,receivedAt){
     let rawArchived=0,rawArchiveStatus='NO_ELIGIBLE_RAW_EVENTS';
     let rawFallbackRecovered=0,rawFailedWrites=0,rawFailedChunks=0;
     let rawStage='NONE',rawWriteCode='NONE';
@@ -288,9 +247,77 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
           console.error('GOGET_RAW_PREFLIGHT_FINISH_UNVERIFIED');
       }catch{console.error('GOGET_WEBHOOK_RAW_HEALTH_UNAVAILABLE');}
     }
+    return {rawArchived,rawArchiveStatus,rawFallbackRecovered,rawFailedWrites};
+}
+
+export async function serveSmartWalletWebhook(request,env,now=Date.now(),ctx=null){
+  const path=new URL(request.url).pathname;
+  if(path==='/health'&&request.method==='GET')return json({service:'goget-wallet-webhook',state:'watch_only'});
+  if(path!=='/webhook'&&path!=='/ready')return json({error:'NOT_FOUND'},404);
+  if(path==='/webhook'&&request.method!=='POST')return json({error:'METHOD_NOT_ALLOWED'},405);
+  if(path==='/ready'&&request.method!=='GET')return json({error:'METHOD_NOT_ALLOWED'},405);
+  if(!env||typeof env.WALLET_WEBHOOK_SECRET!=='string'||env.WALLET_WEBHOOK_SECRET.length<40)
+    return json({error:'RECEIVER_NOT_CONFIGURED'},503);
+  if(!await verifyBearer(request.headers.get('authorization'),env.WALLET_WEBHOOK_SECRET))
+    return json({error:'UNAUTHORIZED'},401);
+  if(path==='/ready')return json({ready:!!env.DB,mode:'WATCH_ONLY',tradeEligible:false,
+    build:WEBHOOK_BUILD},env.DB?200:503);
+  // Expiration blocks new events even if Helius webhook disablement lags.
+  const deadline=Date.parse(env.WALLET_WEBHOOK_STOP_AT||WEBHOOK_LIMITS.deadline);
+  if(!Number.isFinite(deadline)||now>=deadline||env.WALLET_WEBHOOK_ENABLED!=='true')
+    return json({error:'RECEIVER_DISABLED_OR_EXPIRED'},410);
+  if(!env.DB)return json({error:'DATABASE_UNAVAILABLE'},503);
+  if(!(request.headers.get('content-type')||'').toLowerCase().startsWith('application/json'))
+    return json({error:'UNSUPPORTED_CONTENT_TYPE'},415);
+  const watched=normalizeList((env.WALLET_WATCHED_ADDRESSES||'').split(',').filter(Boolean));
+  if(!watched)return json({error:'WATCHLIST_NOT_CONFIGURED'},503);
+  let body;
+  try{
+    const read=await boundedText(request);
+    if(!read.ok)return json({error:read.reason},413);
+    body=JSON.parse(read.text);
+  }catch{return json({error:'BAD_JSON_OR_ENCODING'},400);}
+  const receivedAt=new Date(now).toISOString();
+  const batch=summarizeHeliusBatch(body,watched,receivedAt);
+  if(!batch.ok)return json({error:batch.error},413);
+  if(!batch.rows.length)return json({ok:true,accepted:0,duplicates:0,rejected:batch.reasonCounts,tradeEligible:false});
+  const day=receivedAt.slice(0,10);
+  try{
+    await env.DB.prepare('INSERT OR IGNORE INTO smart_wallet_webhook_budget(day,reserved) VALUES(?,0)').bind(day).run();
+    const quota=await env.DB.prepare('UPDATE smart_wallet_webhook_budget SET reserved=reserved+? WHERE day=? AND reserved+?<=?')
+      .bind(batch.rows.length,day,batch.rows.length,WEBHOOK_LIMITS.storedEventsPerDay).run();
+    if((quota.meta?.changes??0)!==1)return json({error:'DAILY_PERSISTENCE_BUDGET_EXHAUSTED'},429);
+    const statements=batch.rows.map(row=>env.DB.prepare(
+      'INSERT OR IGNORE INTO smart_wallet_webhook_events(wallet,signature,observed_at,block_time,slot,classification,delay_ms,fee_payer_observed,evidence_json) VALUES(?,?,?,?,?,?,?,?,?)'
+    ).bind(row.wallet,row.signature,row.observedAt,row.blockTime,row.slot,row.status,
+      row.delayMs,row.feePayerObserved?1:0,row.evidence));
+    const persisted=await env.DB.batch(statements);
+    // All statements must succeed or fail request; event identity is idempotent.
+    if(!persisted.every(v=>v.success===true))return json({error:'PERSISTENCE_UNVERIFIED'},503);
+    const inserted=persisted.reduce((n,r)=>n+(r.meta?.changes??0),0);
+    // The essential normalized source rows are already committed. Helius
+    // receives an ACK without waiting on optional original JSON archival.
+    // Cloudflare can keep the D1 archive task alive after client disconnect.
+    const archiveTask=archiveRawEvidence(env,batch,day,receivedAt);
+    if(ctx&&typeof ctx.waitUntil==='function'){
+      ctx.waitUntil(archiveTask.catch(error=>{
+        // A rejected background task must not trigger another provider
+        // delivery, leak raw JSON, or become an unhandled rejection.
+        console.error('GOGET_WEBHOOK_ASYNC_ARCHIVE_FAILED',rawWriteErrorCode(error));
+      }));
+      return json({ok:true,received:batch.received,accepted:inserted,
+        duplicates:batch.rows.length-inserted,rejected:batch.reasonCounts,
+        rawArchived:null,rawArchiveStatus:batch.rawRecords.length?
+          'BACKGROUND_PENDING':'NO_ELIGIBLE_RAW_EVENTS',
+        rawArchiveCompletionVerified:false,mode:'WATCH_ONLY',tradeEligible:false});
+    }
+    // Unit-test/direct-invocation fallback: wait for optional raw persistence
+    // so its historical tests can assert exact stored record counts.
+    const archive=await archiveTask;
     return json({ok:true,received:batch.received,accepted:inserted,
       duplicates:batch.rows.length-inserted,rejected:batch.reasonCounts,
-      rawArchived,rawArchiveStatus,rawFallbackRecovered,rawFailedWrites,mode:'WATCH_ONLY',tradeEligible:false});
+      ...archive,rawArchiveCompletionVerified:true,
+      mode:'WATCH_ONLY',tradeEligible:false});
   }catch{return json({error:'PERSISTENCE_UNAVAILABLE'},503);}
 }
-export default {fetch:(request,env)=>serveSmartWalletWebhook(request,env)};
+export default {fetch:(request,env,ctx)=>serveSmartWalletWebhook(request,env,Date.now(),ctx)};
