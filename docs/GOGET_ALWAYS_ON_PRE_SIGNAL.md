@@ -45,3 +45,19 @@ Verification:
 - Read-only data audit `https://github.com/wessteven/buyguy-free-crawler/actions/workflows/goget-capacity-audit.yml`
 
 The project is for market research and paper-only learning, not financial advice.
+
+## Public market-price enrichment added after the first live test
+
+The first prospective Cloudflare test on 2026-11-01 (GitHub Actions #41261635313) examined 30 webhook records, persisted one early-activity research candidate plus 18 weak/control observations, but matched zero existing onchain pool snapshots. That missing-price problem prevented genuine forward outcome measurement for that first cohort.
+
+To improve *evidence coverage* without using Helius credits, a strictly optional public DEX Screener quote lane is enabled:
+- At most **one batched request for 8 priority mints plus 4 controls** and **one batched exact-pool outcomes request** per five-minute Cron execution; max **2 free public API requests per cycle**.
+- Uses documented **GET /tokens/v1/solana/{tokenAddresses}** (up to 30 per batch) and **GET /latest/dex/pairs/solana/{poolIds}**, subject to 300 requests/minute API limits: https://docs.dexscreener.com/api/reference .
+- Rate limited HTTP 429 immediately triggers a **30-minute local provider cooldown**, and existing GOGET Dex cooldown leases are respected. Non-429 errors back off five minutes, with no immediate retry loop. The existing crawler is unchanged.
+- A source quote is the highest-liquidity **explicitly named Solana pool**, with base token address exactly equal to the signal mint. Its origin, receipt timestamp, USD price and liquidity are stored; it is **not proof that the wallet transaction used that pool** and not an executable price.
+- Forward 5m, 1h, 6h and 24h price studies are queued from the actual *quote receipt time* and compare only the **same exact pool**, avoiding substitutions with later, more liquid pools.
+- Missing future quote coverage stays **unknown**, not zero return. The sampled controls are retained to estimate false positives and provide a reference distribution.
+- New isolated D1 tables: `goget_pre_signal_market_quotes`, `goget_pre_signal_market_outcomes`, and `goget_pre_signal_provider_state`.
+- There is **no paid Dex API key**, no new Helius calls, no AI-model charges, no buy or paper fill, and no change to the core GOGET scanner. This is a low-volume public-data research adapter, subject to provider throttling or access changes.
+
+Correct efficacy still requires market coverage rates, genuine causal ordering, unseen failed cases, liquidity and exact execution verification. The dashboard must not display these observations as certified profitable trades.
