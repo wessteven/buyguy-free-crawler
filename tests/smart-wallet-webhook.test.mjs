@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {serveSmartWalletWebhook,verifyBearer,summarizeHeliusBatch,buildResearchEvidence,WEBHOOK_LIMITS}
+import {serveSmartWalletWebhook,verifyBearer,summarizeHeliusBatch,buildResearchEvidence,WEBHOOK_LIMITS,WEBHOOK_BUILD}
   from '../src/smart-wallet-webhook-worker.mjs';
 
 const wallet='8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4';
@@ -85,7 +85,9 @@ test('health and readiness are watch-only; nothing can trigger a trade',async()=
   assert.equal(health.status,200);assert.equal((await health.json()).state,'watch_only');
   const ready=await serveSmartWalletWebhook(new Request('https://hook.test/ready',{headers:{
     authorization:'Bearer '+key}}),e,now);
-  assert.equal((await ready.json()).tradeEligible,false);
+  const readyBody=await ready.json();
+  assert.equal(readyBody.tradeEligible,false);
+  assert.equal(readyBody.build,WEBHOOK_BUILD);
 });
 test('authenticated enhanced SWAP stored as unverified evidence and deduplicated',async()=>{
   const e=env();const a=await serveSmartWalletWebhook(req(),e,now);
@@ -204,8 +206,9 @@ test('failed raw sub-batch cannot discard other raw records or normal events',as
  assert.equal(body.rawFailedWrites,0);
  assert.equal(body.rawArchiveStatus,'RECOVERED_FROM_BATCH_ERRORS');
  assert.equal(e.DB.rawRows.size,8);
- assert.equal(e.DB.rawHealth.length,1);
- assert.deepEqual(e.DB.rawHealth[0].slice(0,4),[0,8,6,0]);
+ assert.equal(e.DB.rawHealth.length,2);
+ assert.equal(e.DB.rawHealth[0][0],8);
+ assert.deepEqual(e.DB.rawHealth[1].slice(0,4),[0,6,0,1]);
 });
 test('single toxic source row cannot discard its valid batch neighbors',async()=>{
  const base=db(),batch=base.batch.bind(base),prepare=base.prepare.bind(base);
@@ -237,9 +240,10 @@ test('single toxic source row cannot discard its valid batch neighbors',async()=
  assert.equal(output.rawArchiveStatus,'PARTIAL_OR_FAILED_RAW_BATCHES');
  assert.equal(base.rawRows.size,7);
  assert.equal(base.rows.size,16);
- assert.equal(base.rawHealth.length,1);
- assert.deepEqual(base.rawHealth[0].slice(0,4),[1,8,5,1]);
- assert.equal(base.rawHealth[0][6],'PARTIAL_OR_FAILED_RAW_BATCHES');
+ assert.equal(base.rawHealth.length,2);
+ assert.equal(base.rawHealth[0][0],8);
+ assert.deepEqual(base.rawHealth[1].slice(0,4),[1,5,1,1]);
+ assert.equal(base.rawHealth[1][5],'PARTIAL_OR_FAILED_RAW_BATCHES');
 });
 
 
@@ -260,8 +264,8 @@ test('daily raw diagnostics identify pre-batch budget errors without losing pars
  assert.equal(body.rawArchiveStatus,'CAP_OR_WRITE_UNAVAILABLE');
  assert.equal(base.rows.size,2);
  assert.equal(base.rawRows.size,0);
- assert.equal(base.rawHealth.length,1);
+ assert.equal(base.rawHealth.length,2);
  assert.equal(base.rawHealth[0][0],1);
- assert.equal(base.rawHealth[0][1],1);
- assert.equal(base.rawHealth[0][6],'RESERVE_UPDATE_DATABASE_BUSY');
+ assert.equal(base.rawHealth[1][0],1);
+ assert.equal(base.rawHealth[1][5],'RESERVE_UPDATE_DATABASE_BUSY');
 });

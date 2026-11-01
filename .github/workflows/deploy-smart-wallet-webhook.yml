@@ -88,6 +88,33 @@ jobs:
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
         run: node scripts/provision-smart-wallet-webhook.mjs verify
+      - name: Prove exact deployed webhook Worker revision using authenticated read-only readiness
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          node --input-type=module - <<'JS'
+          import {createHmac} from 'node:crypto';
+          const admin=process.env.ADMIN_TOKEN,helius=process.env.HELIUS_API_KEY;
+          if(!admin||!helius)throw Error('READINESS_CREDENTIAL_UNAVAILABLE');
+          const token=createHmac('sha256',admin).update('GOGET:WEBHOOK:BEARER:v1:').update(helius).digest('base64url');
+          const url='https://goget-smart-wallet-hook.wessteven.workers.dev/ready';
+          let verified=false;
+          for(let i=0;i<6;i++){
+            try{
+              const r=await fetch(url,{headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(8000)});
+              if(r.status===200){
+                const p=await r.json();
+                if(p?.build==='RAW_PREFLIGHT_2026_11_01_V1'&&p?.ready===true&&p?.tradeEligible===false){
+                  verified=true;break;
+                }
+              }
+            }catch{}
+            if(i<5)await new Promise(resolve=>setTimeout(resolve,1800));
+          }
+          if(!verified)throw Error('GOGET_LIVE_WORKER_REVISION_UNVERIFIED');
+          console.log('GOGET_LIVE_WORKER_REVISION_VERIFIED');
+          JS
   cleanup:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest

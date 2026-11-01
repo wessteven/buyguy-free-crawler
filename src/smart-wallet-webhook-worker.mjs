@@ -7,6 +7,7 @@ export const WEBHOOK_LIMITS=Object.freeze({
   rawPerEventBytes:32000,rawBytesPerUtcDay:20000000,
   maxWallets:32,deadline:'2026-11-08T00:00:00Z'
 });
+export const WEBHOOK_BUILD='RAW_PREFLIGHT_2026_11_01_V1';
 const enc=new TextEncoder();
 // Only report fixed, non-sensitive failure categories. Never log provider JSON,
 // auth headers, D1 parameters or full exception messages.
@@ -163,7 +164,8 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
     return json({error:'RECEIVER_NOT_CONFIGURED'},503);
   if(!await verifyBearer(request.headers.get('authorization'),env.WALLET_WEBHOOK_SECRET))
     return json({error:'UNAUTHORIZED'},401);
-  if(path==='/ready')return json({ready:!!env.DB,mode:'WATCH_ONLY',tradeEligible:false},env.DB?200:503);
+  if(path==='/ready')return json({ready:!!env.DB,mode:'WATCH_ONLY',tradeEligible:false,
+    build:WEBHOOK_BUILD},env.DB?200:503);
   // Expiration blocks new events even if Helius webhook disablement lags.
   const deadline=Date.parse(env.WALLET_WEBHOOK_STOP_AT||WEBHOOK_LIMITS.deadline);
   if(!Number.isFinite(deadline)||now>=deadline||env.WALLET_WEBHOOK_ENABLED!=='true')
@@ -201,6 +203,18 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
     let rawFallbackRecovered=0,rawFailedWrites=0,rawFailedChunks=0;
     let rawStage='NONE',rawWriteCode='NONE';
     if(batch.rawRecords.length){
+      // Persist proof BEFORE optional archiving, so a failed write path or
+      // terminated request cannot masquerade as zero intake.
+      try{
+        const preflight=await env.DB.prepare(
+          'INSERT OR IGNORE INTO smart_wallet_webhook_raw_health(day,last_at) VALUES(?,?)'
+        ).bind(day,receivedAt).run();
+        const start=await env.DB.prepare(
+          'UPDATE smart_wallet_webhook_raw_health SET attempted_records=attempted_records+?,last_at=? WHERE day=?'
+        ).bind(batch.rawRecords.length,receivedAt,day).run();
+        if(preflight?.success!==true||start?.success!==true||
+          (start.meta?.changes??0)!==1)console.error('GOGET_RAW_PREFLIGHT_UNVERIFIED');
+      }catch{console.error('GOGET_RAW_PREFLIGHT_WRITE_FAILED');}
       rawArchiveStatus='CAP_OR_WRITE_UNAVAILABLE';
       try{
         const bytes=batch.rawRecords.reduce((n,r)=>n+r.bytes,0);
@@ -266,13 +280,12 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
         const reason=rawArchived===0&&rawArchiveStatus==='OK'?'ZERO_NEW_ROWS':
           rawArchiveStatus==='CAP_OR_WRITE_UNAVAILABLE'?
             rawStage+'_'+rawWriteCode:rawArchiveStatus;
-        await env.DB.prepare(
-          'INSERT OR IGNORE INTO smart_wallet_webhook_raw_health(day,last_at) VALUES(?,?)'
-        ).bind(day,receivedAt).run();
-        await env.DB.prepare(
-          'UPDATE smart_wallet_webhook_raw_health SET degraded_requests=degraded_requests+?,attempted_records=attempted_records+?,recovered_records=recovered_records+?,still_failed_records=still_failed_records+?,failed_batches=failed_batches+?,last_error_code=CASE WHEN ?=1 THEN ? ELSE last_error_code END,last_at=? WHERE day=?'
-        ).bind(degraded,batch.rawRecords.length,rawFallbackRecovered,rawFailedWrites,
+        const end=await env.DB.prepare(
+          'UPDATE smart_wallet_webhook_raw_health SET degraded_requests=degraded_requests+?,recovered_records=recovered_records+?,still_failed_records=still_failed_records+?,failed_batches=failed_batches+?,last_error_code=CASE WHEN ?=1 THEN ? ELSE last_error_code END,last_at=? WHERE day=?'
+        ).bind(degraded,rawFallbackRecovered,rawFailedWrites,
           rawFailedChunks,degraded,reason,receivedAt,day).run();
+        if(end?.success!==true||(end.meta?.changes??0)!==1)
+          console.error('GOGET_RAW_PREFLIGHT_FINISH_UNVERIFIED');
       }catch{console.error('GOGET_WEBHOOK_RAW_HEALTH_UNAVAILABLE');}
     }
     return json({ok:true,received:batch.received,accepted:inserted,
