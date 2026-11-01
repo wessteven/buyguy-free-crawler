@@ -3,7 +3,8 @@
 // D1 writes are a separate research ledger; no trading endpoints or private keys.
 import {writeFile} from 'node:fs/promises';
 import {runSixAgentTeam,TEAM_LIMITS} from '../src/goget-six-agent-harness.mjs';
-const MAX_ROWS=60;
+import {REVIEW_BATCH_LIMIT,makeReviewBatch} from '../src/goget-six-agent-batching.mjs';
+const MAX_ROWS=400;
 const field=name=>{const v=process.env[name];if(!v)throw Error('MISSING_'+name);return v;};
 async function main(){
   const account=field('CF_ACCOUNT_ID'),database=field('CF_DATABASE_ID'),token=field('CF_D1_API_TOKEN');
@@ -33,24 +34,25 @@ async function main(){
     'WHERE a.wallet=e.wallet AND a.signature=e.signature)',
     'ORDER BY e.observed_at ASC LIMIT ?'
   ].join(' '),[MAX_ROWS])).results||[];
-  const now=Date.now(),report=runSixAgentTeam(rows,{now});
-  let persisted=0,duplicates=0;
-  for(const item of report.items){
-    if(!item.wallet||!item.signature)continue;
-    const view={schemaVersion:item.schemaVersion,mode:item.mode,processedAt:item.processedAt,
-      status:item.status,decision:item.decision,trace:item.trace,findings:item.findings,
-      nextTasks:item.nextTasks,paperEntries:0,realTrades:0,modelCalls:0};
-    const blob=JSON.stringify(view);
-    if(blob.length>12000)throw Error('REVIEW_TOO_LARGE');
-    const result=await query([
-      'INSERT OR IGNORE INTO smart_wallet_six_agent_reviews',
-      '(wallet,signature,source_observed_at,reviewed_at,verdict,trace_json)',
-      'VALUES(?,?,?,?,?,?)'
-    ].join(' '),[item.wallet,item.signature,item.sourceObservedAt||new Date(now).toISOString(),
-      item.processedAt,item.decision,blob]);
-    if(result.meta?.changes===1)persisted++;
-    else duplicates++;
+  const now=Date.now(),items=[],counts={};
+  for(let offset=0;offset<rows.length;offset+=TEAM_LIMITS.maxEvents){
+    const block=runSixAgentTeam(rows.slice(offset,offset+TEAM_LIMITS.maxEvents),{now});
+    items.push(...block.items);
+    for(const [key,n] of Object.entries(block.decisionCounts))
+      counts[key]=(counts[key]||0)+n;
   }
+  let persisted=0,duplicates=0;
+  for(let offset=0;offset<items.length;offset+=REVIEW_BATCH_LIMIT){
+    const group=items.slice(offset,offset+REVIEW_BATCH_LIMIT)
+      .filter(x=>x.wallet&&x.signature);
+    if(!group.length)continue;
+    const batch=makeReviewBatch(group);
+    const inserted=(await query(batch.sql,batch.params)).meta?.changes;
+    if(!Number.isSafeInteger(inserted)||inserted<0||inserted>group.length)
+      throw Error('D1_WRITE_COUNT_INVALID');
+    persisted+=inserted;duplicates+=group.length-inserted;
+  }
+  const report={items,decisionCounts:counts,mode:'SIX_SPECIALISTS_ZERO_LLM_PAPER_ONLY'};
   const pending=await query([
     'SELECT COUNT(*) AS n FROM smart_wallet_webhook_events e WHERE NOT EXISTS(',
     'SELECT 1 FROM smart_wallet_six_agent_reviews a',
