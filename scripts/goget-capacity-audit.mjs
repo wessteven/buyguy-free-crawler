@@ -32,6 +32,9 @@ async function main(){
   const tasks=[
     ['webhook',"SELECT COUNT(*) AS n,COALESCE(SUM(length(evidence_json)),0) AS evidence_bytes,MIN(observed_at) AS first_at,MAX(observed_at) AS latest_at FROM smart_wallet_webhook_events",[]],
     ['webhook24h',"SELECT COUNT(*) AS n,COUNT(DISTINCT wallet) AS wallets FROM smart_wallet_webhook_events WHERE observed_at>=?",[new Date(Date.now()-86400000).toISOString()]],
+    ['rawArchive',"SELECT COUNT(*) AS n,COALESCE(SUM(byte_length),0) AS payload_bytes,MAX(observed_at) AS latest_at FROM smart_wallet_webhook_raw",[]],
+    ['rawArchiveDays',"SELECT day,bytes_reserved FROM smart_wallet_webhook_raw_budget ORDER BY day DESC LIMIT 7",[]],
+
     ['webhookSchemaVersions',"SELECT COALESCE(json_extract(evidence_json, '$.schemaVersion'), 1) AS schema_version, COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=? GROUP BY schema_version ORDER BY schema_version",[new Date(Date.now()-86400000).toISOString()]],
     ['expandedWebhook',"SELECT COUNT(*) AS n,COUNT(DISTINCT wallet) AS wallets,MAX(observed_at) AS last_at FROM smart_wallet_webhook_events WHERE observed_at>=?",['2026-10-31T04:24:53.000Z']],
     ['wallet_polling',"SELECT COUNT(*) AS n,MIN(observed_at) AS first_at,MAX(observed_at) AS latest_at FROM smart_wallet_live_events",[]],
