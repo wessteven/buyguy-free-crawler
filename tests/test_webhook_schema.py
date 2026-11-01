@@ -7,6 +7,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class WebhookSchemaDeploymentTests(unittest.TestCase):
+    def test_deployment_never_reactivates_above_existing_helius_guard(self):
+        workflow = (ROOT / '.github/workflows/deploy-smart-wallet-webhook.yml').read_text()
+        budget = (ROOT / 'src/smart-wallet-budget.mjs').read_text()
+        self.assertIn('maxRecentHourEvents:350', budget)
+        self.assertIn('maxUtcDayAttemptedReservations:2200', budget)
+        self.assertIn("import {assessWebhookBudget}", workflow)
+        self.assertIn('id: provider_budget', workflow)
+        self.assertIn("if: steps.provider_budget.outputs.safe == 'false'", workflow)
+        self.assertEqual(workflow.count("if: steps.provider_budget.outputs.safe == 'true'"), 2)
+        self.assertLess(workflow.index('id: provider_budget'), workflow.index('run: node scripts/provision-smart-wallet-webhook.mjs sync'))
+        self.assertIn('run: node scripts/provision-smart-wallet-webhook.mjs guard', workflow)
+        self.assertIn('GOGET_LIVE_WORKER_REVISION_VERIFIED', workflow)
+
     def test_schema_parser_ignores_semicolons_in_sql_comments(self):
         workflow = (ROOT / ".github/workflows/deploy-smart-wallet-webhook.yml").read_text()
         self.assertIn("if not line.lstrip().startswith('--')", workflow)
