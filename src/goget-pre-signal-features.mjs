@@ -1,6 +1,7 @@
 // GOGET forward-only early-activity study. This is an anomaly journal, NOT trade certification.
 // No network calls, no wallets, no future data, no model calls.
 const ADDR=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const SIGNATURE=/^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
 const MIN=60000;
 export const SIGNAL_LIMITS=Object.freeze({
   lookbackMinutes:90,recentMinutes:15,sourceLimit:1200,
@@ -34,7 +35,7 @@ export function detectSignalWindows(rows,{now=Date.now()}={}){
   for(const row of rows){
     const when=Date.parse(row?.observed_at||'');
     if(!Number.isFinite(when)||when<horizonStart||when>now||
-      !ADDR.test(row?.wallet||'')||typeof row?.signature!=='string'){
+      !ADDR.test(row?.wallet||'')||!SIGNATURE.test(row?.signature||'')){
       invalidSourceRows++;continue;
     }
     let d;
@@ -92,7 +93,7 @@ export function detectSignalWindows(rows,{now=Date.now()}={}){
     .slice(0,SIGNAL_LIMITS.topCount);
   const selected=new Set(candidates.map(x=>x.mint));
   // Keep a deterministic subset of weak/negative cases; not only apparent winners.
-  const controls=all.filter(x=>!selected.has(x.mint)).sort((a,b)=>
+  const controls=all.filter(x=>!selected.has(x.mint)&&x.category==='LOW_EVIDENCE_ACTIVITY').sort((a,b)=>
     stableMintHash(a.mint)-stableMintHash(b.mint)||a.mint.localeCompare(b.mint))
     .slice(0,SIGNAL_LIMITS.controlCount);
   const snapshots=[...candidates.map(x=>({...x,sampleKind:'POTENTIAL_SIGNAL'})),
@@ -100,7 +101,7 @@ export function detectSignalWindows(rows,{now=Date.now()}={}){
   return {
     asOf:new Date(now).toISOString(),bucket:new Date(Math.floor(now/(5*MIN))*(5*MIN)).toISOString(),
     observedTokenMints:all.length,eligibleSourceRows,invalidSourceRows,
-    sourceCoverage:'BOUNDED_FULL_90M_WINDOW_IF_FEWER_THAN_1200_ROWS',
+    sourceCoverage:rows.length===SIGNAL_LIMITS.sourceLimit?'AT_CAP_CANNOT_ASSERT_COMPLETE_WINDOW':'BOUNDED_90M_SAMPLE',
     unrecordedMintCount:all.length-snapshots.length,
     snapshots,modelCalls:0,heliusCalls:0,tradeOrders:0,
     caution:'NO_INDEPENDENT_OWNER_VERIFICATION;NO_PROFIT_FORECAST;MINTS_ARE_TRANSFER_HINTS'
