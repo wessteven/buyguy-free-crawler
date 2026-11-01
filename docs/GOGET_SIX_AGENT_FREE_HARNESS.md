@@ -19,7 +19,7 @@ Microsoft AutoGen is archived and not recommended for new production work. An op
 
 - `src/goget-six-agent-harness.mjs`: six distinct deterministic research specialists with restricted capabilities and bounded handoffs. Inference calls: ZERO.
 - `tests/goget-six-agent-harness.test.mjs`: checks hostile claimed approvals, valid identities, duplicate inputs, timestamps, task limits, and refusal to invent P&L.
-- `scripts/goget-six-agent-replay.mjs`: reads at most 60 unreviewed webhook records from existing Cloudflare D1 and appends idempotent analysis into separate `smart_wallet_six_agent_reviews` ledger, key = exact wallet+signature. No Helius RPC requests.
+- `scripts/goget-six-agent-replay.mjs`: reads at most 400 unreviewed webhook records from existing Cloudflare D1 and appends idempotent analysis into separate `smart_wallet_six_agent_reviews` ledger, key = exact wallet+signature. No Helius RPC requests.
 - `.github/workflows/goget-six-agent-harness.yml`: GitHub Actions best-effort six-hour cadence and push-triggered first run, 7-day evidence artifact. No new package dependencies, new cloud provider, LLM API keys or paid subscription.
 
 This is an authentic **agent orchestration harness** with six specialist processors and durable handoffs, but NOT six generative AI models. The distinction is essential: six LLM agents operating unattended require an actual inference runtime. Cloudflare Workers Free does not provide a free always-on GPU. We can add local Ollama reasoning only when a suitable always-on computer is available. The official local tool-calling API is https://docs.ollama.com/capabilities/tool-calling .
@@ -57,3 +57,9 @@ Define the six roles in a registry, assign each an independent input/output cont
 **Operating cost:** zero new paid LLM services, zero new paid plan actions. The scheduled job and D1 reads/writes still count against existing shared free quotas; if those limits are reached work must fail closed rather than upgrade or charge money.
 
 **Not yet achieved:** six inference-capable LLMs, profitable copy trades, near-live six-agent evaluation, guaranteed scheduled execution, or production raw-transaction replay. This stage is evidence-harness infrastructure, not a validated investment strategy.
+
+## First live execution evidence
+
+- Initial six-agent GitHub Actions run #41259478911: 60 real source records processed, 60 research reviews persisted, 4,140 unreviewed records remaining, 0 paid model calls, 0 verified paper buys.
+- Batched GitHub Actions run #41259683410: 400 additional real source records processed and 400 idempotent reviews persisted with 43 D1 requests, backlog 3,740. The data writes succeeded; the job exit status incorrectly returned failure due to an obsolete single-batch limit check, corrected in the following commit. This is historical analysis of retained events, not verified trading alpha.
+- Cloudflare D1 currently permits up to 100 bound parameters per query. The 10-row insert batch uses exactly 60, with no raw SQL substitution.
