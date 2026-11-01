@@ -8,6 +8,18 @@ export const WEBHOOK_LIMITS=Object.freeze({
   maxWallets:32,deadline:'2026-11-08T00:00:00Z'
 });
 const enc=new TextEncoder();
+// Only report fixed, non-sensitive failure categories. Never log provider JSON,
+// auth headers, D1 parameters or full exception messages.
+function rawWriteErrorCode(error){
+  const message=String(error?.message||'').toUpperCase();
+  if(/TOOBIG|TOO_BIG|TOO.LARGE|EXCEEDS.*LIMIT|MAXIMUM.*SIZE/.test(message))return 'SIZE_LIMIT';
+  if(/CONSTRAINT/.test(message))return 'CONSTRAINT';
+  if(/TIMEOUT|TIMED OUT|DEADLINE|CPU LIMIT/.test(message))return 'TIMEOUT';
+  if(/BUSY|LOCKED/.test(message))return 'DATABASE_BUSY';
+  if(/RESULT_UNVERIFIED/.test(message))return 'RESULT_UNVERIFIED';
+  if(/SQLITE|D1_ERROR|DATABASE/.test(message))return 'DATABASE_ERROR';
+  return 'UNCLASSIFIED';
+}
 const json=(obj,status=200)=>new Response(JSON.stringify(obj),{
   status,headers:{'content-type':'application/json','cache-control':'no-store',
   'x-content-type-options':'nosniff'}});
@@ -186,6 +198,7 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
     if(!persisted.every(v=>v.success===true))return json({error:'PERSISTENCE_UNVERIFIED'},503);
     const inserted=persisted.reduce((n,r)=>n+(r.meta?.changes??0),0);
     let rawArchived=0,rawArchiveStatus='NO_ELIGIBLE_RAW_EVENTS';
+    let rawFallbackRecovered=0,rawFailedWrites=0;
     if(batch.rawRecords.length){
       rawArchiveStatus='CAP_OR_WRITE_UNAVAILABLE';
       try{
@@ -195,22 +208,55 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
           'UPDATE smart_wallet_webhook_raw_budget SET bytes_reserved=bytes_reserved+? WHERE day=? AND bytes_reserved+?<=?'
         ).bind(bytes,day,bytes,WEBHOOK_LIMITS.rawBytesPerUtcDay).run();
         if((budget.meta?.changes??0)===1){
-          // Split raw JSON writes into small atomic batches. One oversized or
-          // provider-specific observation must not invalidate unrelated receipts.
-          let failedChunks=0;
+          // Small batches remain fast in the normal path. If one bad record
+          // rejects an atomic batch, retry each idempotent insert separately;
+          // never let one malformed provider observation discard five others.
+          const insertSql='INSERT OR IGNORE INTO smart_wallet_webhook_raw(signature,slot,observed_at,byte_length,raw_json) VALUES(?,?,?,?,?)';
+          let failedChunks=0,lastErrorCode='NONE';
           for(let i=0;i<batch.rawRecords.length;i+=6){
             const part=batch.rawRecords.slice(i,i+6);
-            const writes=part.map(r=>env.DB.prepare(
-              'INSERT OR IGNORE INTO smart_wallet_webhook_raw(signature,slot,observed_at,byte_length,raw_json) VALUES(?,?,?,?,?)'
-            ).bind(r.signature,r.slot,r.observedAt,r.bytes,r.rawJson));
+            const writes=part.map(r=>env.DB.prepare(insertSql)
+              .bind(r.signature,r.slot,r.observedAt,r.bytes,r.rawJson));
             try{
               const saved=await env.DB.batch(writes);
-              if(!saved.every(x=>x.success===true))throw Error('RAW_PERSISTENCE_UNVERIFIED');
+              if(!Array.isArray(saved)||!saved.every(x=>x.success===true))
+                throw Error('RAW_BATCH_RESULT_UNVERIFIED');
               rawArchived+=saved.reduce((n,r)=>n+(r.meta?.changes??0),0);
-            }catch{failedChunks++;}
+            }catch(batchError){
+              failedChunks++;
+              lastErrorCode=rawWriteErrorCode(batchError);
+              for(const r of part){
+                try{
+                  const one=await env.DB.prepare(insertSql)
+                    .bind(r.signature,r.slot,r.observedAt,r.bytes,r.rawJson).run();
+                  if(one?.success!==true)throw Error('RAW_SINGLE_RESULT_UNVERIFIED');
+                  const count=one.meta?.changes??0;
+                  rawArchived+=count;
+                  rawFallbackRecovered+=count;
+                }catch(singleError){
+                  rawFailedWrites++;
+                  lastErrorCode=rawWriteErrorCode(singleError);
+                }
+              }
+            }
           }
-          rawArchiveStatus=failedChunks?'PARTIAL_OR_FAILED_RAW_BATCHES':'OK';
-          if(failedChunks)console.error('GOGET_WEBHOOK_RAW_BATCH_REJECTED',failedChunks);
+          rawArchiveStatus=rawFailedWrites?'PARTIAL_OR_FAILED_RAW_BATCHES':
+            failedChunks?'RECOVERED_FROM_BATCH_ERRORS':'OK';
+          if(failedChunks){
+            console.error('GOGET_WEBHOOK_RAW_FALLBACK',JSON.stringify({
+              failedChunks,rawFallbackRecovered,rawFailedWrites,errorCode:lastErrorCode}));
+            // Bounded, read-only-auditable daily diagnostics. Do not store raw
+            // source payloads, signatures, wallet addresses or exceptions here.
+            try{
+              await env.DB.prepare(
+                'INSERT OR IGNORE INTO smart_wallet_webhook_raw_health(day,last_at) VALUES(?,?)'
+              ).bind(day,receivedAt).run();
+              await env.DB.prepare(
+                'UPDATE smart_wallet_webhook_raw_health SET degraded_requests=degraded_requests+1,attempted_records=attempted_records+?,recovered_records=recovered_records+?,still_failed_records=still_failed_records+?,failed_batches=failed_batches+?,last_error_code=?,last_at=? WHERE day=?'
+              ).bind(batch.rawRecords.length,rawFallbackRecovered,rawFailedWrites,
+                failedChunks,lastErrorCode,receivedAt,day).run();
+            }catch{console.error('GOGET_WEBHOOK_RAW_HEALTH_UNAVAILABLE');}
+          }
         }else rawArchiveStatus='DAILY_RAW_BYTE_CAP';
       }catch{
         // Parsed research observations are already committed. Do not trigger
@@ -220,7 +266,7 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now()){
     }
     return json({ok:true,received:batch.received,accepted:inserted,
       duplicates:batch.rows.length-inserted,rejected:batch.reasonCounts,
-      rawArchived,rawArchiveStatus,mode:'WATCH_ONLY',tradeEligible:false});
+      rawArchived,rawArchiveStatus,rawFallbackRecovered,rawFailedWrites,mode:'WATCH_ONLY',tradeEligible:false});
   }catch{return json({error:'PERSISTENCE_UNAVAILABLE'},503);}
 }
 export default {fetch:(request,env)=>serveSmartWalletWebhook(request,env)};
