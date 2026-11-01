@@ -32,3 +32,26 @@ CREATE TABLE IF NOT EXISTS goget_pre_signal_runs (
 );
 CREATE INDEX IF NOT EXISTS goget_pre_signal_runs_recent
   ON goget_pre_signal_runs(at DESC);
+
+-- Indicative, receipt-timestamped PUBLIC DEX aggregate quotes, not executions.
+CREATE TABLE IF NOT EXISTS goget_pre_signal_market_quotes (
+ mint TEXT NOT NULL,bucket TEXT NOT NULL,pool TEXT NOT NULL,
+ received_at TEXT NOT NULL,price_usd REAL NOT NULL,
+ liquidity_usd REAL,market_cap_usd REAL,route_proof INTEGER NOT NULL DEFAULT 0,
+ PRIMARY KEY(mint,bucket)
+);
+CREATE INDEX IF NOT EXISTS goget_pre_signal_market_quotes_recent
+ ON goget_pre_signal_market_quotes(received_at DESC);
+CREATE TABLE IF NOT EXISTS goget_pre_signal_market_outcomes (
+ mint TEXT NOT NULL,bucket TEXT NOT NULL,horizon_min INTEGER NOT NULL,
+ due_at TEXT NOT NULL,pool TEXT NOT NULL,reference_price_usd REAL NOT NULL,
+ status TEXT NOT NULL,checked_at TEXT,future_price_usd REAL,change_pct REAL,
+ PRIMARY KEY(mint,bucket,horizon_min)
+);
+CREATE INDEX IF NOT EXISTS goget_pre_signal_market_outcomes_due
+ ON goget_pre_signal_market_outcomes(status,due_at);
+CREATE TABLE IF NOT EXISTS goget_pre_signal_provider_state (
+ name TEXT PRIMARY KEY,until_ms INTEGER NOT NULL
+);
+INSERT OR IGNORE INTO goget_pre_signal_provider_state(name,until_ms)
+ VALUES('dex',0);
