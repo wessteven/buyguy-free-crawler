@@ -269,3 +269,55 @@ test('daily raw diagnostics identify pre-batch budget errors without losing pars
  assert.equal(base.rawHealth[1][0],1);
  assert.equal(base.rawHealth[1][5],'RESERVE_UPDATE_DATABASE_BUSY');
 });
+
+test('waitUntil acknowledges normalized receipts without waiting for stalled optional D1 raw archival',async()=>{
+ const base=db(),original=base.prepare.bind(base),pending=[];
+ let release;
+ const gate=new Promise(resolve=>{release=resolve;});
+ base.prepare=sql=>{
+   const statement=original(sql);
+   if(!sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw_health'))return statement;
+   return {bind(...values){
+     const bound=statement.bind(...values);
+     return {...bound,async run(){await gate;return bound.run();}};
+   }};
+ };
+ const context={waitUntil(promise){pending.push(promise);}};
+ try{
+   const result=await Promise.race([
+     serveSmartWalletWebhook(req(),env(base),now,context),
+     new Promise((_,reject)=>setTimeout(()=>reject(Error('ARCHIVE_BLOCKED_WEBHOOK_ACK')),1500))
+   ]);
+   assert.equal(result.status,200);
+   const output=await result.json();
+   assert.equal(output.accepted,2);
+   assert.equal(output.rawArchived,null);
+   assert.equal(output.rawArchiveStatus,'BACKGROUND_PENDING');
+   assert.equal(output.rawArchiveCompletionVerified,false);
+   assert.equal(output.tradeEligible,false);
+   assert.equal(base.rows.size,2);
+   assert.equal(base.rawRows.size,0);
+   assert.equal(pending.length,1);
+ }finally{release();}
+ await Promise.all(pending);
+ assert.equal(base.rawRows.size,1);
+ assert.equal(base.rawHealth.length,2);
+});
+test('async raw archival failure does not retroactively turn acknowledged source into provider retry',async()=>{
+ const base=db(),prepare=base.prepare.bind(base),pending=[];
+ base.prepare=sql=>{
+   const statement=prepare(sql);
+   if(!sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw_health'))return statement;
+   return {bind(...values){
+     const bound=statement.bind(...values);
+     return {...bound,async run(){throw Error('SIMULATED_D1_BLOCK');}};
+   }};
+ };
+ const context={waitUntil(promise){pending.push(promise);}};
+ const result=await serveSmartWalletWebhook(req(),env(base),now,context);
+ assert.equal(result.status,200);
+ assert.equal((await result.json()).rawArchiveStatus,'BACKGROUND_PENDING');
+ await Promise.all(pending);
+ assert.equal(base.rows.size,2);
+ assert.equal(base.rawRows.size,1);
+});
