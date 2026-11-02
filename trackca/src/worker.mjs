@@ -9,27 +9,66 @@ import {finite,validPools,pairRow,normalizeCandles,coverage} from './normalize.m
  export async function fetchJson(url,fetcher=fetch,timeout=8000){
   const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeout);
   try {
-   const r=await fetcher(url,{signal:ctrl.signal,headers:{accept:'application/json'}});
+   const r=await fetcher(url,{signal:ctrl.signal,headers:{accept:'application/json','user-agent':'trackca-readonly-collector/0.2'}});
    if(!r.ok)throw Error('HTTP '+r.status+' '+new URL(url).hostname);
    return await r.json();
   } finally {clearTimeout(timer);}
  }
  async function batch(db,statements){for(let n=0;n<statements.length;n+=50)await db.batch(statements.slice(n,n+50));}
+ const throttle=(ms)=>new Promise(done=>setTimeout(done,ms));
+ // GeckoTerminal relationships, not token symbols, provide independent exact-contract identity.
+ async function geoPairs(json,a){
+  const out=[];
+  for(const item of (Array.isArray(json?.data)?json.data:[])){
+   const at=item?.attributes||{},rel=item?.relationships||{};
+   const tokenId=k=>{const id=rel[k]?.data?.id||'';return id.startsWith(a.chain+'_')?id.slice(a.chain.length+1):null;};
+   const base=tokenId('base_token'),quote=tokenId('quote_token');
+   if(!base||!quote||!((a.chain==='solana'?base===a.address:base.toLowerCase()===a.address.toLowerCase())||(a.chain==='solana'?quote===a.address:quote.toLowerCase()===a.address.toLowerCase())))continue;
+   const address=at.address||(item.id?.startsWith(a.chain+'_')?item.id.slice(a.chain.length+1):null);
+   if(typeof address!=='string'||!(/^[a-zA-Z0-9]{20,}$/.test(address)))continue;
+   const price=(a.chain==='solana'?base===a.address:base.toLowerCase()===a.address.toLowerCase())?at.base_token_price_usd:at.quote_token_price_usd;
+   out.push({chainId:a.chain,pairAddress:address,dexId:rel.dex?.data?.id||'gecko',baseToken:{address:base},quoteToken:{address:quote},
+    priceUsd:price,liquidity:{usd:at.reserve_in_usd},volume:at.volume_usd||{},txns:at.transactions||{},priceChange:at.price_change_percentage||{},source:'geckoterminal'});
+  }
+  return validPools(out,a);
+ }
  async function market(chain,assets,ts,runId,db,fetcher,errors){
   const known=assets.filter(a=>a.address),map=new Map();
-  try {
-   const url=DEX+'/tokens/v1/'+chain+'/'+known.map(a=>a.address).join(',');
-   const all=await fetchJson(url,fetcher);
+  if(!known.length)return {map,count:0};
+  let dexBlocked=false;
+  try{
+   const all=await fetchJson(DEX+'/tokens/v1/'+chain+'/'+known.map(a=>a.address).join(','),fetcher);
    if(!Array.isArray(all))throw Error('invalid batch response');
    for(const a of known)map.set(a.id,validPools(all,a));
-  }catch(e){errors.push(chain+' batch '+short(e));}
+  }catch(e){errors.push(chain+' dex batch '+short(e));dexBlocked=/HTTP 429|HTTP 403/.test(short(e));}
+  if(!dexBlocked)for(const a of known){
+   if(map.get(a.id)?.length)continue;
+   try{const result=await fetchJson(DEX+'/token-pairs/v1/'+chain+'/'+a.address,fetcher);map.set(a.id,validPools(result,a));}
+   catch(e){errors.push(a.id+' dex pool '+short(e));if(/HTTP 429|HTTP 403/.test(short(e))){dexBlocked=true;break;}}
+  }
+  // One batch for previously grounded non-v4 pool IDs; unknown or v4 IDs get address-specific lookup.
+  const missing=known.filter(a=>!map.get(a.id)?.length),seeds=missing.filter(a=>a.pool&&a.pool_kind!=='v4_pool_id');
+  let geckoBlocked=false;
+  if(seeds.length)try{
+   const addresses=[...new Set(seeds.map(a=>a.pool))];
+   const j=await fetchJson(GECKO+'/networks/'+chain+'/pools/multi/'+addresses.join(',')+'?include=base_token,quote_token,dex',fetcher);
+   for(const a of seeds){const pairs=await geoPairs(j,a);if(pairs.length)map.set(a.id,pairs);}
+  }catch(e){errors.push(chain+' gecko multi-pool '+short(e));geckoBlocked=/HTTP 429|HTTP 403/.test(short(e));}
+  // Respect the 30/min public rate limit; stop immediately on 429/403 instead of retry storms.
+  let previous=0;
+  const pace=fetcher===fetch?2800:0;
+  if(!geckoBlocked)for(const a of missing){
+   if(map.get(a.id)?.length)continue;
+   if(pace&&previous){await throttle(Math.max(0,pace-(Date.now()-previous)));}
+   previous=Date.now();
+   try{
+    const j=await fetchJson(GECKO+'/networks/'+chain+'/tokens/'+encodeURIComponent(a.address)+'/pools?include=base_token,quote_token,dex',fetcher);
+    const pairs=await geoPairs(j,a);map.set(a.id,pairs);
+   }catch(e){errors.push(a.id+' gecko pool '+short(e));if(/HTTP 429|HTTP 403/.test(short(e))){geckoBlocked=true;break;}}
+  }
   const stmts=[];
-  for(const a of known) {
-   let pools=map.get(a.id)||[];
-   if(!pools.length)try{
-    const data=await fetchJson(DEX+'/token-pairs/v1/'+chain+'/'+a.address,fetcher);
-    pools=validPools(data,a);
-   }catch(e){errors.push(a.id+' market '+short(e));}
+  for(const a of known){
+   const pools=map.get(a.id)||[];
    map.set(a.id,pools);
    for(const p of pools){
     const row=pairRow(p,a,ts,runId);
@@ -71,14 +110,16 @@ import {finite,validPools,pairRow,normalizeCandles,coverage} from './normalize.m
  };
  async function chainEvidence(env,ts,fetcher,db,errors){
   const statuses=new Map();if(env.TRACKCA_BLOCKSCOUT_ENABLED==='false')return statuses;
+  let blocked=false;
   for(const a of PRIORITIES) {
+   if(blocked){statuses.set(a.id,{holder:'PROVIDER_BLOCKED',transfer:'PROVIDER_BLOCKED'});continue;}
    let holder='UNAVAILABLE',transfer='UNAVAILABLE';
    try{
     const [a1,a2]=await Promise.all([fetchJson(BS+'/tokens/'+a.address,fetcher),fetchJson(BS+'/tokens/'+a.address+'/counters',fetcher)]);
     const n=holderNumber(a1,a2);holder=n===null?'UNAVAILABLE':'EXPLORER_SNAPSHOT';
     await db.prepare('INSERT OR REPLACE INTO trackca_holder_snapshots (asset_id,observed_at,holders_count,source,status) VALUES (?,?,?,?,?)')
     .bind(a.id,ts,n,'blockscout',holder).run();
-   }catch(e){errors.push(a.id+' holder '+short(e));}
+    }catch(e){errors.push(a.id+' holder '+short(e));if(/HTTP 403|HTTP 429/.test(short(e))){blocked=true;statuses.set(a.id,{holder:'PROVIDER_BLOCKED',transfer:'PROVIDER_BLOCKED'});continue;}}
    try{
     const j=await fetchJson(BS+'/tokens/'+a.address+'/transfers',fetcher);
     if(!Array.isArray(j.items))throw Error('no transfers array');
@@ -93,7 +134,7 @@ import {finite,validPools,pairRow,normalizeCandles,coverage} from './normalize.m
     }
     if(stmts.length)await batch(db,stmts);
     transfer='BOUNDED_TRANSFERS_NOT_VERIFIED_TRADES';
-   }catch(e){errors.push(a.id+' transfers '+short(e));}
+    }catch(e){errors.push(a.id+' transfers '+short(e));if(/HTTP 403|HTTP 429/.test(short(e)))blocked=true;}
    statuses.set(a.id,{holder,transfer});
   }
   return statuses;
@@ -115,7 +156,7 @@ import {finite,validPools,pairRow,normalizeCandles,coverage} from './normalize.m
     const evidence=holder.get(a.id);
     const c=coverage(a,map.get(a.id)||[],evidence?.holder||'NOT_REFETCHED_THIS_RUN',evidence?.transfer||'NOT_REFETCHED_THIS_RUN');
     statements.push(env.DB.prepare('INSERT OR REPLACE INTO trackca_coverage (run_id,asset_id,token_address,identity_status,market_status,five_min_status,hour_status,day_status,unique_buyer_status,holder_status,wallet_status,whale_status,sell_depth_status,note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-      .bind(runId,c.id,c.address,c.identity,c.market,c.five_min,c.hour,c.day,c.unique_buyers,c.holder,c.wallet,c.whales,c.executable_depth,c.note));
+      .bind(runId,c.id,c.address,c.identity,c.market,c.five_min,c.hour,c.day,c.unique_buyers,c.holder,c.wallets,c.whales,c.executable_depth,c.note));
    }
    await batch(env.DB,statements);
    const known=ASSETS.filter(a=>a.address).length,covered=[...map.values()].filter(p=>p.length).length,count=rh.count+sol.count;

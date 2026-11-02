@@ -44,7 +44,7 @@ test('HTTP 429 is an explicit provider error',async()=>{
 });
 class FakeDB {
  constructor(){this.rows=[];this.seen=new Set();}
- prepare(sql){const db=this;return {bind(...params){return {async run(){
+ prepare(sql){const db=this;return {bind(...params){if(params.some(p=>p===undefined))throw Error('D1_TYPE_ERROR undefined parameter');return {async run(){
   db.rows.push({sql,params});
   if(sql.startsWith('INSERT OR IGNORE INTO trackca_runs')){
    const duplicate=db.seen.has(params[0]);db.seen.add(params[0]);
@@ -84,4 +84,51 @@ test('provisional Blockscout identities stay distinct from fully confirmed addre
  assert.equal(asset('ameme').identity_status,'PROVISIONAL_BLOCKSCOUT');
  assert.equal(coverage(asset('ameme'),[pair(asset('ameme'))],'UNAVAILABLE','UNAVAILABLE').identity,'PROVISIONAL_BLOCKSCOUT');
  assert.equal(asset('hoodfun').address,null);
+});
+
+test('D1 fake rejects undefined bindings and coverage wallet field is defined',async()=>{
+ const db=new FakeDB();
+ assert.throws(()=>db.prepare('INSERT INTO trackca_coverage').bind('x',undefined),/D1_TYPE_ERROR/);
+ const c=coverage(asset('injoh'),[],'UNAVAILABLE','UNAVAILABLE');
+ assert.equal(c.wallets,'UNVERIFIED');
+});
+test('MIHAO Solana address comparisons preserve base58 case',()=>{
+ const a=MIHAO,p=pair(a);
+ assert.equal(validPools([p],a).length,1);
+ assert.equal(validPools([pair(a,{baseToken:{address:a.address.toLowerCase()}})],a).length,0);
+});
+test('blocked market providers stop repeated 429 attempts, still write 22 coverage rows',async()=>{
+ const db=new FakeDB(),calls=[];
+ const fetcher=async url=>{
+  calls.push(url);
+  if(url.includes('dexscreener.com')||url.includes('geckoterminal.com'))return {ok:false,status:429};
+  if(url.includes('overview/dexs'))return {ok:true,json:async()=>({total24h:100,total7d:700})};
+  if(url.includes('/v2/chains'))return {ok:true,json:async()=>([{name:'Robinhood Chain',tvl:100}])};
+  return {ok:false,status:404};
+ };
+ const out=await collect({DB:db,TRACKCA_BLOCKSCOUT_ENABLED:'false'},{now:new Date('2026-11-02T08:25:00Z'),fetcher});
+ assert.equal(out.status,'INCOMPLETE');
+ assert.equal(out.covered,0);
+ assert.equal(db.rows.filter(x=>x.sql.startsWith('INSERT OR REPLACE INTO trackca_coverage')).length,22);
+ assert.ok(calls.filter(u=>u.includes('dexscreener.com')).length<=2);
+ assert.ok(calls.filter(u=>u.includes('geckoterminal.com')).length<=2);
+});
+test('Gecko pool identity requires actual token contract relationship',async()=>{
+ const a=asset('pons'),db=new FakeDB();
+ const fetcher=async url=>{
+  if(url.includes('dexscreener.com'))return {ok:false,status:429};
+  if(url.includes('geckoterminal.com')){
+   const p={id:'robinhood_'+a.pool,attributes:{address:a.pool,base_token_price_usd:'0.23',reserve_in_usd:'200000',volume_usd:{m5:12,h1:40,h24:900}},
+    relationships:{base_token:{data:{id:'robinhood_'+a.address.toLowerCase()}},quote_token:{data:{id:'robinhood_0x0000000000000000000000000000000000000001'}},dex:{data:{id:'uniswap_v3'}}}};
+   return {ok:true,json:async()=>({data:[p]})};
+  }
+  if(url.includes('overview/dexs'))return {ok:true,json:async()=>({total24h:100,total7d:700})};
+  if(url.includes('/v2/chains'))return {ok:true,json:async()=>([{name:'Robinhood Chain',tvl:100}])};
+  return {ok:false,status:404};
+ };
+ const out=await collect({DB:db,TRACKCA_BLOCKSCOUT_ENABLED:'false'},{now:new Date('2026-11-02T08:30:00Z'),fetcher});
+ assert.equal(out.status,'INCOMPLETE');
+ assert.ok(out.covered>=1);
+ const rows=db.rows.filter(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackca_pair_snapshots'));
+ assert.ok(rows.some(x=>x.params[1]==='pons'&&x.params[21]==='geckoterminal'));
 });
