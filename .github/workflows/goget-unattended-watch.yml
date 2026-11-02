@@ -6,6 +6,8 @@ on:
       - '.github/workflows/goget-unattended-watch.yml'
       - 'src/goget-collection-health.mjs'
       - 'src/goget-source-control.mjs'
+      - 'src/goget-unattended-acceptance.mjs'
+      - 'tests/goget-unattended-acceptance.test.mjs'
       - 'scripts/goget-unattended-status.mjs'
       - 'scripts/goget-source-control-audit.mjs'
   schedule:
@@ -25,6 +27,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Prove reporting gate fails closed for missing or contradictory evidence
+        run: node --test tests/goget-unattended-acceptance.test.mjs
       - name: Check provider registration and available credit evidence without mutations
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
