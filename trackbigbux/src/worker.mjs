@@ -1,5 +1,5 @@
 import {WALLETS,ROSTER_VERSION,EXPECTED_WALLET_COUNT,assertRoster} from './wallets.mjs';
-import {solanaDelta,evmDelta,normalizeSignature,normalizeEvmTx,classifyHelius,boundedError,exact} from './normalize.mjs';
+import {solanaDelta,evmDelta,normalizeSignature,normalizeEvmTx,classifyHelius,boundedError,evmEqual} from './normalize.mjs';
 
 const BS='https://robinhoodchain.blockscout.com/api/v2';
 const MAX_SOL=300,MAX_EVM_PAGES=4,MAX_PARSE=60;
@@ -65,7 +65,7 @@ async function collectEvmWallet(wallet,checkpoint,fetcher,record){
     }catch(e){record('blockscout','address_transactions','FAILED',0,boundedError(e));throw e;}
     calls++;
     all.push(...data.items);
-    const matched=checkpoint?.newest_tx_id && data.items.some(x=>exact(x.hash,checkpoint.newest_tx_id));
+    const matched=checkpoint?.newest_tx_id && data.items.some(x=>evmEqual(x.hash,checkpoint.newest_tx_id));
     cursor=data.next_page_params||null;
     hasMore=!!cursor;
     if(!cursor||!checkpoint?.newest_tx_id||matched)break;
@@ -219,13 +219,14 @@ export default {
       const id=u.searchParams.get('wallet');
       if(!WALLETS.some(w=>w.id===id))return respond({error:'KNOWN_WALLET_ID_REQUIRED'},400);
       const limit=Math.max(1,Math.min(200,Number(u.searchParams.get('limit')||50)||50));
-      const before=u.searchParams.get('before');
+      const before=u.searchParams.get('before'),beforeTx=u.searchParams.get('before_tx');
       try{
-        const q=before?
-          env.DB.prepare('SELECT * FROM trackbigbux_activity WHERE wallet_id=? AND observed_at<? ORDER BY observed_at DESC LIMIT ?').bind(id,before,limit):
-          env.DB.prepare('SELECT * FROM trackbigbux_activity WHERE wallet_id=? ORDER BY observed_at DESC LIMIT ?').bind(id,limit);
-        const data=await q.all();
-        return respond({project:'trackBIGBUX',wallet:id,events:data.results||[],limit});
+        const q=before&&beforeTx?
+          env.DB.prepare('SELECT * FROM trackbigbux_activity WHERE wallet_id=? AND (observed_at<? OR (observed_at=? AND tx_id<?)) ORDER BY observed_at DESC,tx_id DESC LIMIT ?').bind(id,before,before,beforeTx,limit):
+          env.DB.prepare('SELECT * FROM trackbigbux_activity WHERE wallet_id=? ORDER BY observed_at DESC,tx_id DESC LIMIT ?').bind(id,limit);
+        const data=await q.all(),events=data.results||[],last=events[events.length-1];
+        return respond({project:'trackBIGBUX',wallet:id,events,limit,
+          next_cursor:events.length===limit?{before:last.observed_at,before_tx:last.tx_id}:null});
       }catch(e){return respond({status:'STORAGE_ERROR'},503);}
     }
     return new Response('Not Found',{status:404});
