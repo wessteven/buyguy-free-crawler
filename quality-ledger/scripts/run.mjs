@@ -1,6 +1,6 @@
 // Independent GitHub Actions audit. Reads source D1 rows; writes only quality_ledger_* tables.
 import {readFileSync,appendFileSync} from 'node:fs';
-import {auditTrackCA} from '../src/audit.mjs';
+import {auditTrackCA,evidenceBatches} from '../src/audit.mjs';
 const required=name=>{
   const v=process.env[name];if(!v)throw Error('MISSING_REQUIRED_CREDENTIAL_'+name);return v;
 };
@@ -40,8 +40,7 @@ async function persist(a){
   const result=await query(q,values);
   if(result.changes===0)console.log('QUALITY_EXISTING_RUN_RECONCILE_CHECKS',a.auditId);
   const cols='audit_id,requirement_key,asset_id,requirement,status,evidence_ref,note';
-  for(let start=0;start<a.checks.length;start+=35){
-    const batch=a.checks.slice(start,start+35);
+  for(const batch of evidenceBatches(a.checks)){
     const fields=batch.map(()=> '('+Array(7).fill('?').join(',')+')').join(',');
     const params=batch.flatMap(c=>[a.auditId,c.key,c.asset,c.requirement,c.status,c.ref,c.note]);
     await query('INSERT OR IGNORE INTO quality_ledger_checks ('+cols+') VALUES '+fields,params);
