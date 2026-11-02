@@ -152,6 +152,7 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
   let attempted=0,complete=0,baselines=0,partial=0,seen=0,staged=0,parsed=0,pending=0;
   const warnings=[];
   let rpcHead=null,rpcHeadError=null,rpcCohort=null,rpcCohortError=null;
+  const rpcCohortReceipts=[];
   if(env.TRACKBIGBUX_RH_MODE==='rpc_transfer_only') {
     try{rpcHead=await readHead(fetcher);}
     catch(e){rpcHeadError=e;warnings.push('ROBINHOOD_RPC_HEAD:'+boundedError(e));}
@@ -178,8 +179,7 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
             for(const w of wallets)checkpoints.set(w.id,await loadCheckpoint(env.DB,w.id));
             try {
               rpcCohort=await collectRpcCohort(wallets,checkpoints,rpcHead,fetcher,
-                (source,kind,status,count,details)=>warnings.push(
-                  'COHORT_RECEIPT:'+kind+':'+status+':'+count+':'+details),iso());
+                (source,kind,status,count,details)=>rpcCohortReceipts.push({source,kind,status,count,details}),iso());
             }catch(e){rpcCohortError=e;}
           }
           if(rpcCohortError) {
@@ -188,10 +188,10 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
           }
           result=rpcCohort.get(wallet.id);
           if(!result)throw Error('RPC_COHORT_WALLET_MISSING');
-          record('robinhood_public_rpc','eth_getLogs_batch_OUT','OK',result.fetched,
-            'shared_cohort=7;two_total_rpc_calls');
-          record('robinhood_public_rpc','eth_getLogs_batch_IN','OK',result.fetched,
-            'shared_cohort=7;two_total_rpc_calls');
+          for(const receipt of rpcCohortReceipts){
+            record(receipt.source,receipt.kind,receipt.status,receipt.count,
+              receipt.details+';shared_cohort=7;wallet_matches='+result.fetched);
+          }
         } else {
           result=await collectEvmWallet(wallet,checkpoint,fetcher,record);
         }
