@@ -119,3 +119,77 @@ export async function collectRpcWallet(wallet,checkpoint,head,fetcher,record,obs
    provider:'robinhood_public_rpc',blockWindow:win
  };
 }
+
+// Two network requests for the entire seven-wallet cohort. Provenance and exact wallet
+// membership remain independently recorded; no token receipt is interpreted as a buy.
+export async function collectRpcCohort(wallets,checkpoints,head,fetcher,record,observedAt){
+ if(wallets.length!==7)throw Error('RPC_COHORT_DENOMINATOR_NOT_7');
+ const idset=new Set(),addressToWallet=new Map(),windows=new Map();
+ for(const wallet of wallets){
+   if(wallet.chain!=='robinhood'||!addressRe.test(wallet.address))throw Error('RPC_INVALID_COHORT_WALLET');
+   if(idset.has(wallet.id)||addressToWallet.has(wallet.address.toLowerCase()))
+     throw Error('RPC_DUPLICATE_COHORT_IDENTITY');
+   idset.add(wallet.id);addressToWallet.set(wallet.address.toLowerCase(),wallet);
+   windows.set(wallet.id,flowWindow(checkpoints.get(wallet.id)?.newest_tx_id,head));
+ }
+ const from=Math.min(...[...windows.values()].map(x=>x.from));
+ const to=Math.max(...[...windows.values()].map(x=>x.to));
+ if(to-from>=MAX_BLOCK_WINDOW)throw Error('RPC_COHORT_RANGE_EXCEEDS_BUDGET');
+ const addresses=wallets.map(w=>topicAddress(w.address));
+ const all=[],receipts=[];
+ // Filter either transfer sender OR recipient to the frozen cohort.
+ // Two queries, not one query per wallet, to respect the rate-limited public RPC.
+ for(const [direction,topics] of [
+   ['OUT',[ERC20_TRANSFER_TOPIC,addresses]],
+   ['IN',[ERC20_TRANSFER_TOPIC,null,addresses]]
+ ]){
+   try{
+     const results=await rpcCall('eth_getLogs',[{
+       fromBlock:'0x'+from.toString(16),toBlock:'0x'+to.toString(16),topics
+     }],fetcher);
+     if(!Array.isArray(results))throw Error('ROBINHOOD_RPC_BATCH_SCHEMA');
+     record('robinhood_public_rpc','eth_getLogs_batch_'+direction,'OK',results.length,
+       'wallets=7;from='+from+';to='+to);
+     receipts.push({direction,records:results.length});
+     all.push(...results);
+   }catch(e){
+     record('robinhood_public_rpc','eth_getLogs_batch_'+direction,'FAILED',0,String(e.message||e).slice(0,180));
+     throw e;
+   }
+ }
+ if(all.length>MAX_LOGS_PER_WALLET*wallets.length)throw Error('RPC_COHORT_LOG_CAP');
+ const now=observedAt||new Date().toISOString(),perWallet=new Map();
+ for(const wallet of wallets)perWallet.set(wallet.id,new Map());
+ let bad=0;
+ for(const log of all){
+   if(!Array.isArray(log?.topics)||log.topics.length<3){bad++;continue;}
+   const send='0x'+String(log.topics[1]||'').slice(-40).toLowerCase();
+   const recv='0x'+String(log.topics[2]||'').slice(-40).toLowerCase();
+   const members=[...new Set([send,recv])].map(a=>addressToWallet.get(a)).filter(Boolean);
+   if(!members.length){bad++;continue;}
+   for(const wallet of members){
+     const normalized=normalizeFlow(wallet,log,now);
+     if(normalized)perWallet.get(wallet.id).set(normalized.tx_id,normalized);
+     else bad++;
+   }
+ }
+ if(bad)throw Error('RPC_COHORT_BAD_LOGS_'+bad);
+ const map=new Map();
+ for(const wallet of wallets){
+   const win=windows.get(wallet.id);
+   // Rows outside an individual lagging wallet's bounded window must not be
+   // silently attributed to that wallet's current scan.
+   const events=[...perWallet.get(wallet.id).values()].filter(e=>{
+     const block=Number(e.height);return block>=win.from&&block<=win.to;
+   });
+   map.set(wallet.id,{
+     events,status:win.baseline?'RPC_BASELINE_TRANSFER_ONLY':
+       win.backlog?'RPC_BACKLOG_TRANSFER_ONLY':'RPC_TRANSFER_ONLY',
+     checkpointMatched:!win.baseline,
+     latest:'rpc:'+String(win.empty?head:win.to),latestAt:now,
+     fetched:events.length,calls:2,provider:'robinhood_public_rpc',
+     sharedRequests:receipts.length,blockWindow:win
+   });
+ }
+ return map;
+}
