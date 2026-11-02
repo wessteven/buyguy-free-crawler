@@ -92,6 +92,11 @@ export async function main(){
     AUDIT_ROSTER_VERSION,12,result.observed,result.requestWallets,result.candidateEvents,
     result.persistedEvents,result.pending,JSON.stringify(result.failures),result.verdict
   ]);
+  // Print bounded persisted provider failure receipts, not AI recollections.
+  console.log('TRACKBIGBUX_SOURCE_DIAGNOSTICS',JSON.stringify(coverage
+    .filter(x=>x.status==='ERROR'||x.status==='CHECKPOINT_NOT_FOUND')
+    .map(x=>({wallet:x.wallet_id,status:x.status,error:String(x.error||'').slice(0,160),
+      fetch_calls:x.fetch_calls,received:x.rows_received})).slice(0,12)));
   const summary={project:'trackBIGBUX',external_audit:true,source_run:run?.run_id||null,
     verdict:result.verdict,expected:12,coverage:result.observed,
     requestWallets:result.requestWallets,persistedEvents:result.persistedEvents,
