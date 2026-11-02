@@ -1,0 +1,82 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {ERC20_TRANSFER_TOPIC,topicAddress,parseHexInt,flowWindow,normalizeFlow,readHead,collectRpcWallet}
+  from '../src/robinhood-rpc.mjs';
+import {WALLETS} from '../src/wallets.mjs';
+const wallet=WALLETS.find(w=>w.id==='rh-unipcs');
+const addr=topicAddress(wallet.address);
+function logFor({from=wallet.address,to='0x0000000000000000000000000000000000000001',idx='0x0',block='0x1fd4'}={}){
+ return {address:'0x39dbed3a2bd333467115de45665cc57f813c4571',
+   transactionHash:'0x'+'a'.repeat(64),blockNumber:block,logIndex:idx,
+   topics:[ERC20_TRANSFER_TOPIC,topicAddress(from),topicAddress(to)],
+   data:'0x'+(123n).toString(16).padStart(64,'0'),removed:false};
+}
+test('Robinhood frozen RPC identity and ERC20 Transfer topic',()=>{
+ assert.equal(addr.length,66);
+ assert.equal(addr.slice(-40),wallet.address.toLowerCase().slice(2));
+ assert.equal(parseHexInt('0x1237'),4663);
+ assert.throws(()=>topicAddress('fake'),/RPC_INVALID_ADDRESS/);
+});
+test('initial and incremental RPC block windows preserve bounded continuity',()=>{
+ const init=flowWindow(null,750000);
+ assert.equal(init.from,747000);assert.equal(init.to,750000);
+ assert.equal(init.baseline,true);
+ const next=flowWindow('rpc:748000',750000);
+ assert.equal(next.from,748001);assert.equal(next.to,750000);
+ assert.equal(next.backlog,false);
+ const bounded=flowWindow('rpc:740000',750000);
+ assert.equal(bounded.to,746000);assert.equal(bounded.backlog,true);
+});
+test('inbound and outbound must match exact wallet and are never called trades',()=>{
+ const out=normalizeFlow(wallet,logFor(), '2026-11-02T10:00:00Z');
+ assert.equal(out.category,'ERC20_TRANSFER_NOT_SWAP');
+ assert.equal(out.initiated,'UNVERIFIED');
+ assert.equal(JSON.parse(out.evidence_json).direction,'OUT');
+ assert.equal(JSON.parse(out.evidence_json).raw_value_hex,'0x'+(123n).toString(16).padStart(64,'0'));
+ const inn=normalizeFlow(wallet,logFor({from:'0x0000000000000000000000000000000000000001',to:wallet.address}),
+   '2026-11-02T10:00:00Z');
+ assert.equal(JSON.parse(inn.evidence_json).direction,'IN');
+ const wrong=normalizeFlow(wallet,logFor({from:'0x0000000000000000000000000000000000000001',to:'0x0000000000000000000000000000000000000002'}),
+   '2026-11-02T10:00:00Z');
+ assert.equal(wrong,null);
+});
+test('reject NFT lookalikes, wrong logs and removed events',()=>{
+ const a=logFor();
+ assert.equal(normalizeFlow(wallet,{...a,data:'0x'},new Date().toISOString()),null);
+ assert.equal(normalizeFlow(wallet,{...a,removed:true},new Date().toISOString()),null);
+ assert.equal(normalizeFlow(wallet,{...a,topics:a.topics.concat('0x'+'0'.repeat(64))},new Date().toISOString()),null);
+ assert.equal(normalizeFlow(wallet,{...a,topics:['0x'+'f'.repeat(64),...a.topics.slice(1)]},new Date().toISOString()),null);
+});
+test('head verifies official Robinhood chain ID, blocks a wrong chain',async()=>{
+ const fetcher=async (_url,options)=>{
+   const req=JSON.parse(options.body);
+   return {ok:true,json:async()=>({jsonrpc:'2.0',id:1,result:req.method==='eth_chainId'?'0x1237':'0x123456'})};
+ };
+ assert.equal(await readHead(fetcher),0x123456);
+ const invalid=async()=>({ok:true,json:async()=>({result:'0x1'})});
+ await assert.rejects(readHead(invalid),/WRONG_CHAIN/);
+});
+test('bounded transfers are persisted without trade attribution; 2 source receipts',async()=>{
+ const calls=[],fetcher=async(_url,options)=>{
+   const req=JSON.parse(options.body);
+   assert.equal(req.method,'eth_getLogs');
+   calls.push(req.params[0]);
+   const topics=req.params[0].topics;
+   const result=topics.length===2?[logFor()]:[];
+   return {ok:true,json:async()=>({jsonrpc:'2.0',id:1,result})};
+ };
+ const receipts=[],record=(...values)=>receipts.push(values);
+ const result=await collectRpcWallet(wallet,null,12000,fetcher,record,'2026-11-02T10:00:00Z');
+ assert.equal(result.status,'RPC_BASELINE_TRANSFER_ONLY');
+ assert.equal(result.events.length,1);
+ assert.equal(result.fetched,1);assert.equal(result.calls,2);
+ assert.equal(result.latest,'rpc:12000');
+ assert.equal(calls[0].fromBlock,'0x2328');
+ assert.equal(receipts.filter(x=>x[2]==='OK').length,2);
+});
+test('RPC failure is not treated as zero trading activity',async()=>{
+ const receipt=[];
+ const error=async()=>({ok:false,status:429});
+ await assert.rejects(collectRpcWallet(wallet,null,12000,error,(...args)=>receipt.push(args)),/HTTP_429/);
+ assert.equal(receipt.at(-1)[2],'FAILED');
+});
