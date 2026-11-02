@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { auditTrackCA,BASELINE_IDS,REQUIREMENTS } from '../src/audit.mjs';
+import { auditTrackCA,BASELINE_IDS,REQUIREMENTS,evidenceBatches,MAX_EVIDENCE_ROWS_PER_INSERT } from '../src/audit.mjs';
 import {ASSETS} from '../../trackca/src/watchlist.mjs';
 const NOW=Date.parse('2026-11-02T09:30:00Z');
 const stamp=(mins=0)=>new Date(NOW-mins*60000).toISOString();
@@ -53,4 +53,13 @@ test('a drop against a comparable prior measured audit is a regression, not succ
  assert.equal(second.regression,true);
  assert.equal(second.status,'REGRESSION');
  assert.equal(second.previousObserved,first.counts.SOURCE_RECORDED);
+});
+
+test('D1 evidence batches respect SQL binding budget without losing any mandatory checks',()=>{
+ const r=auditTrackCA({run:source,now:NOW});
+ const groups=[...evidenceBatches(r.checks)];
+ assert.ok(groups.length>1);
+ assert.ok(groups.every(g=>g.length>0&&g.length<=MAX_EVIDENCE_ROWS_PER_INSERT));
+ assert.ok(MAX_EVIDENCE_ROWS_PER_INSERT*7<=35);
+ assert.deepEqual(groups.flat().map(x=>x.key),r.checks.map(x=>x.key));
 });
