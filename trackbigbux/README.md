@@ -1,0 +1,43 @@
+# trackBIGBUX — independent public wallet research collector
+
+Independent source folder, Cloudflare Worker, five-minute cron, trackbigbux_-namespaced D1 tables, quality ledger and deployment workflow. Separate from GOGET and trackCA in code, runtime, data namespace and operation. This project never trades, signs, changes balances or updates those two systems.
+
+## Frozen v1 roster: 12 exact on-chain wallets
+
+5 Solana: G4, Polish Batman, Decu, Cented, end837.
+7 Robinhood Chain 4663: Unipcs, theveeman, ogle, 0xAvast, AvgJoesCrypto, The__Solstice, Frank DeGods.
+Exact IDs, chain and wallet addresses are in src/wallets.mjs. These are candidate identities, not guarantees of ownership or historical profitability. Never silently reduce the denominator.
+
+## Collection
+
+* Every five minutes: recent Solana Helius RPC address signatures and Robinhood Blockscout address transactions; wallet ID, chain, transaction ID, slot/block, source and time stamps.
+* Each wallet always gets an independent coverage row, including provider failures, baseline-only status, checkpoint overflow and unknown classification.
+* Every attempted provider request gets a bounded receipt with status, number of returned records and response observation time; API keys and full request URLs are never written.
+* Every hour: up to 60 Solana signatures are enriched via the Helius Enhanced Transactions parser. Undecoded signatures remain pending and explicitly counted.
+* Classification never equates an airdrop, incoming transfer, named profile or mere account participation with a trade. Solana WALLET_SWAP_EVIDENCE requires parsed SWAP and both owned inflow/outflow; Robinhood transactions remain TRANSACTION_NOT_VERIFIED_SWAP until transaction/log-level parsing proves economic exchange.
+* Exact-wallet confirmation and profitability reconstruction are independent later research stages. No fabricated P&L, 30/90-day win rates, copyable fills, token rankings or live trading conclusions.
+
+## Collection bounds and data integrity
+
+Solana RPC reads up to 301 signatures per address per scan; Robinhood reads up to four Blockscout pages per address. These caps protect provider budgets, but do not mean exhaustive high-frequency coverage. A prior checkpoint not found sets CHECKPOINT_NOT_FOUND and increments a persistent gap counter; the missing interval remains unverified. Initial baselines never qualify as complete history.
+
+The frozen monitoring denominator is always 12 per run. The worker appends trackbigbux_ events, run records, per-wallet source receipts, wallet watermarks and quality results to the pre-existing buyguy-free-v3 D1. No new database is needed. Do not imply writes succeeded until D1 is independently queried.
+
+## Deployment
+
+The standalone Cloudflare Worker is trackbigbux-collector. Configuration is in wrangler.toml. An independent GitHub Actions workflow runs tests on PR and deploys only on a tested push to main. Existing CI secrets CF_ACCOUNT_ID, CF_DATABASE_ID, CF_D1_API_TOKEN, CF_DEPLOY_API_TOKEN and HELIUS_API_KEY are used without copying any values into the repository.
+
+Tests: node --test trackbigbux/tests/*.test.mjs
+Syntax: node --check trackbigbux/src/worker.mjs
+D1 schema: trackbigbux/sql/001_trackbigbux.sql (idempotent, additive)
+
+## Read-only endpoints, available only after verified deployment
+
+Status: https://trackbigbux-collector.wessteven.workers.dev/api/status
+Health: https://trackbigbux-collector.wessteven.workers.dev/health
+Wallet events: https://trackbigbux-collector.wessteven.workers.dev/api/events?wallet=sol-g4&limit=100
+Dashboard: https://trackbigbux-collector.wessteven.workers.dev/
+
+Successful deployment does NOT prove persisted monitoring. Confirm a completed run, all 12 matching coverage rows, raw events or explicit no-activity receipts, and data freshness.
+
+The worker's internal quality rows are **not a separately independent audit**; an external read-only evaluator is needed to independently certify receipts and coverage. The user will request analysis after collection, so no unsolicited trading decisions should be made.
