@@ -1,0 +1,13 @@
+name = "trackca-collector"
+main = "src/worker.mjs"
+compatibility_date = "2026-10-18"
+workers_dev = true
+[[d1_databases]]
+binding = "DB"
+database_name = "buyguy-free-v3"
+database_id = "REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID"
+[triggers]
+crons = ["*/5 * * * *"]
+[vars]
+TRACKCA_VERSION = "0.1.0"
+TRACKCA_BLOCKSCOUT_ENABLED = "true"
