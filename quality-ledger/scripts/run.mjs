@@ -12,10 +12,11 @@ async function query(sql,params=[]){
     method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},
     body:JSON.stringify({sql,params}),signal:AbortSignal.timeout(18000)
   });
-  if(!response.ok)throw Error('D1_HTTP_'+response.status);
-  const body=await response.json();
-  if(body?.success!==true||body?.result?.[0]?.success!==true)
-    throw Error('D1_QUERY_FAILED_'+String(body?.errors?.[0]?.code||'UNKNOWN'));
+  const body=await response.json().catch(()=>null);
+  if(!response.ok||body?.success!==true||body?.result?.[0]?.success!==true){
+    const detail=String(body?.errors?.[0]?.message||body?.result?.[0]?.error||'UNKNOWN').slice(0,190);
+    throw Error('D1_QUERY_FAILED_HTTP_'+response.status+': '+detail);
+  }
   return {rows:body.result[0].results||[],changes:body.result[0].meta?.changes??null};
 }
 async function migrate(){
@@ -52,10 +53,22 @@ async function persist(a){
 async function main(){
   await migrate();
   const now=Date.now(),oldest=new Date(now-120*60000).toISOString();
-  const run=await first('SELECT run_id,started_at,completed_at,status,assets_total,assets_identified,assets_with_pools FROM trackca_runs ORDER BY bucket DESC LIMIT 1');
-  const coverage=run?await all('SELECT * FROM trackca_coverage WHERE run_id=? LIMIT 60',[run.run_id]):[];
-  const pairs=run?await all('SELECT * FROM trackca_pair_snapshots WHERE run_id=? ORDER BY liquidity_usd DESC LIMIT 120',[run.run_id]):[];
-  const holders=await all('SELECT asset_id,observed_at,holders_count,source,status FROM trackca_holder_snapshots WHERE observed_at>=? ORDER BY observed_at DESC LIMIT 200',[oldest]);
+  // An absent source table is itself a measurable failure, not permission to skip the audit.
+  // Ignore only a confirmed missing trackCA table; propagate permission and query errors.
+  const optionalSource=async(sql,params=[],one=false)=>{
+    try {return one?await first(sql,params):await all(sql,params);}
+    catch(e){
+      if(/no such table:\s*trackca_(runs|coverage|pair_snapshots|holder_snapshots)\b/i.test(e.message)){
+        console.warn('QUALITY_MISSING_SOURCE_TABLE',e.message.slice(0,150));
+        return one?null:[];
+      }
+      throw e;
+    }
+  };
+  const run=await optionalSource('SELECT run_id,started_at,completed_at,status,assets_total,assets_identified,assets_with_pools FROM trackca_runs ORDER BY bucket DESC LIMIT 1',[],true);
+  const coverage=run?await optionalSource('SELECT * FROM trackca_coverage WHERE run_id=? LIMIT 60',[run.run_id]):[];
+  const pairs=run?await optionalSource('SELECT * FROM trackca_pair_snapshots WHERE run_id=? ORDER BY liquidity_usd DESC LIMIT 120',[run.run_id]):[];
+  const holders=run?await optionalSource('SELECT asset_id,observed_at,holders_count,source,status FROM trackca_holder_snapshots WHERE observed_at>=? ORDER BY observed_at DESC LIMIT 200',[oldest]):[];
   const previous=await first("SELECT version,source_run_id,source_recorded FROM quality_ledger_runs WHERE task_key='trackca' ORDER BY audited_at DESC LIMIT 1");
   const audit=auditTrackCA({run,coverage,pairs,holders,previous,now});
   const written=await persist(audit);
