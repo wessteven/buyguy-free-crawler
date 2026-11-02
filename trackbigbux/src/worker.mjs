@@ -1,6 +1,6 @@
 import {WALLETS,ROSTER_VERSION,EXPECTED_WALLET_COUNT,assertRoster} from './wallets.mjs';
 import {solanaDelta,evmDelta,normalizeSignature,normalizeEvmTx,classifyHelius,boundedError,evmEqual} from './normalize.mjs';
-import {readHead,collectRpcWallet} from './robinhood-rpc.mjs';
+import {readHead,collectRpcCohort} from './robinhood-rpc.mjs';
 
 const BS='https://robinhoodchain.blockscout.com/api/v2';
 const MAX_SOL=300,MAX_EVM_PAGES=4,MAX_PARSE=60;
@@ -151,7 +151,8 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
   if(claim.meta?.changes===0)return {project:'trackBIGBUX',runId,already_run:true};
   let attempted=0,complete=0,baselines=0,partial=0,seen=0,staged=0,parsed=0,pending=0;
   const warnings=[];
-  let rpcHead=null,rpcHeadError=null;
+  let rpcHead=null,rpcHeadError=null,rpcCohort=null,rpcCohortError=null;
+  const rpcCohortReceipts=[];
   if(env.TRACKBIGBUX_RH_MODE==='rpc_transfer_only') {
     try{rpcHead=await readHead(fetcher);}
     catch(e){rpcHeadError=e;warnings.push('ROBINHOOD_RPC_HEAD:'+boundedError(e));}
@@ -173,7 +174,24 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
             record('robinhood_public_rpc','eth_blockNumber','FAILED',0,boundedError(rpcHeadError));
             throw rpcHeadError;
           }
-          result=await collectRpcWallet(wallet,checkpoint,rpcHead,fetcher,record,iso());
+          if(!rpcCohort&&!rpcCohortError){
+            const wallets=WALLETS.filter(w=>w.chain==='robinhood'),checkpoints=new Map();
+            for(const w of wallets)checkpoints.set(w.id,await loadCheckpoint(env.DB,w.id));
+            try {
+              rpcCohort=await collectRpcCohort(wallets,checkpoints,rpcHead,fetcher,
+                (source,kind,status,count,details)=>rpcCohortReceipts.push({source,kind,status,count,details}),iso());
+            }catch(e){rpcCohortError=e;}
+          }
+          if(rpcCohortError) {
+            record('robinhood_public_rpc','eth_getLogs_batch','FAILED',0,boundedError(rpcCohortError));
+            throw rpcCohortError;
+          }
+          result=rpcCohort.get(wallet.id);
+          if(!result)throw Error('RPC_COHORT_WALLET_MISSING');
+          for(const receipt of rpcCohortReceipts){
+            record(receipt.source,receipt.kind,receipt.status,receipt.count,
+              receipt.details+';shared_cohort=7;wallet_matches='+result.fetched);
+          }
         } else {
           result=await collectEvmWallet(wallet,checkpoint,fetcher,record);
         }
