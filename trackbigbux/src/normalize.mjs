@@ -1,6 +1,7 @@
 // Never interpret an incoming transfer/airdrop as a buy.
 // Parsing success, direct authorship, and economic swap evidence are distinct facts.
-export const exact = (a,b) => String(a||'').toLowerCase() === String(b||'').toLowerCase();
+export const exact = (a,b) => String(a||'') === String(b||'');
+export const evmEqual = (a,b) => String(a||'').toLowerCase() === String(b||'').toLowerCase();
 export function boundedError(e) {
   return String(e && e.message || e || 'unknown').replace(/https?:\/\/\S+/g,'[endpoint]').slice(0,180);
 }
@@ -18,7 +19,7 @@ export function solanaDelta(items, checkpoint, max=300) {
 }
 export function evmDelta(items, checkpoint, morePages=false, max=200) {
   if (!Array.isArray(items)) throw Error('EVM_RESPONSE_NOT_ARRAY');
-  const pos=checkpoint?items.findIndex(x=>exact(x.hash,checkpoint)):-1;
+  const pos=checkpoint?items.findIndex(x=>evmEqual(x.hash,checkpoint)):-1;
   const firstRun=!checkpoint;
   const rows=(pos>=0?items.slice(0,pos):items).slice(0,max);
   const complete=!morePages && (firstRun || pos>=0);
@@ -39,7 +40,7 @@ export function normalizeSignature(wallet,tx,observedAt) {
 }
 export function normalizeEvmTx(wallet,tx,observedAt) {
   if (!/^0x[0-9a-fA-F]{64}$/.test(String(tx?.hash||''))) return null;
-  const directlyFrom=exact(tx.from?.hash||tx.from,wallet.address);
+  const directlyFrom=evmEqual(tx.from?.hash||tx.from,wallet.address);
   return {
     wallet_id:wallet.id,chain:'robinhood',tx_id:tx.hash.toLowerCase(),
     occurred_at:/^\d{4}-\d\d-\d\dT/.test(tx.timestamp||'')?tx.timestamp:null,
