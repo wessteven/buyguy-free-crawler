@@ -127,6 +127,8 @@ jobs:
           if not run:
             print('TRACKCA_COLLECTION_PENDING_FIRST_CRON')
           else:
+            print('TRACKCA_DEBUG_RUN_STATUS',run.get('status'))
+            print('TRACKCA_DEBUG_ERRORS',str(run.get('warnings',''))[:2400])
             coverage=data.get('coverage') or []
             assert len(coverage)==22, f'TRACKCA_COVERAGE_NOT_COMPLETE_{len(coverage)}'
             print('TRACKCA_RUN',run['run_id'],run['status'])
