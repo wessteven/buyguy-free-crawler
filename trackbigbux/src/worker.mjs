@@ -45,8 +45,11 @@ function collectSolWallet(wallet,checkpoint,env,fetcher,record) {
     }catch(e){record('helius_rpc','getSignaturesForAddress','FAILED',0,boundedError(e));throw e;}
     const delta=solanaDelta(rows,checkpoint?.newest_tx_id,MAX_SOL);
     const now=iso();
-    return {events:delta.rows.map(x=>normalizeSignature(wallet,x,now)).filter(Boolean),
-      status:delta.status,checkpointMatched:delta.checkpointFound,latest:delta.newest,
+    const normalized=delta.rows.map(x=>normalizeSignature(wallet,x,now)).filter(Boolean);
+    const identityValid=normalized.length===delta.rows.length;
+    return {events:normalized,
+      status:identityValid?delta.status:'INVALID_TRANSACTION_IDS',
+      checkpointMatched:identityValid&&delta.checkpointFound,latest:delta.newest,
       latestAt:rows[0]?.blockTime?new Date(rows[0].blockTime*1000).toISOString():null,
       fetched:rows.length,calls:1};
   })();
@@ -72,8 +75,11 @@ async function collectEvmWallet(wallet,checkpoint,fetcher,record){
   }
   const delta=evmDelta(all,checkpoint?.newest_tx_id,hasMore&&!!checkpoint?.newest_tx_id,MAX_EVM_PAGES*50);
   const now=iso();
-  return {events:delta.rows.map(x=>normalizeEvmTx(wallet,x,now)).filter(Boolean),
-    status:delta.status,checkpointMatched:delta.status==='OK',
+  const normalized=delta.rows.map(x=>normalizeEvmTx(wallet,x,now)).filter(Boolean);
+  const identityValid=normalized.length===delta.rows.length;
+  return {events:normalized,
+    status:identityValid?delta.status:'INVALID_TRANSACTION_IDS',
+    checkpointMatched:identityValid&&delta.status==='OK',
     latest:delta.newest,latestAt:all[0]?.timestamp||null,
     fetched:all.length,calls};
 }
