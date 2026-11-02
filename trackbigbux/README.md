@@ -40,4 +40,4 @@ Dashboard: https://trackbigbux-collector.wessteven.workers.dev/
 
 Successful deployment does NOT prove persisted monitoring. Confirm a completed run, all 12 matching coverage rows, raw events or explicit no-activity receipts, and data freshness.
 
-The worker's internal quality rows are **not a separately independent audit**; an external read-only evaluator is needed to independently certify receipts and coverage. The user will request analysis after collection, so no unsolicited trading decisions should be made.
+An independent GitHub Actions auditor (trackbigbux-audit.yml, hourly) compares the frozen 12-wallet manifest against actual D1 coverage rows, receipts, timestamps, activity counts and prior verdicts. The in-worker quality claims alone never count as proof. This external audit verifies persisted execution records, not provider response authenticity or actual trading profitability. The user will request analysis after collection, so no unsolicited trading decisions should be made.
