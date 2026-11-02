@@ -12,6 +12,12 @@ export const REQUIREMENTS = Object.freeze([
   'holder_delta','independent_buyers','wallet_accumulation','whale_flows',
   'executable_sell_depth'
 ]);
+// D1 REST has a finite per-statement binding budget: 5 rows x 7 bindings = 35.
+export const MAX_EVIDENCE_ROWS_PER_INSERT=5;
+export function* evidenceBatches(checks){
+  for(let i=0;i<checks.length;i+=MAX_EVIDENCE_ROWS_PER_INSERT)
+    yield checks.slice(i,i+MAX_EVIDENCE_ROWS_PER_INSERT);
+}
 const statusList=['SOURCE_RECORDED','STALE','MISSING','UNVERIFIED','AMBIGUOUS'];
 const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.toLowerCase()===b.toLowerCase();
 const finite=n=>n!==null&&n!==undefined&&n!==''&&Number.isFinite(Number(n));
