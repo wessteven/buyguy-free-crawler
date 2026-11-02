@@ -26,7 +26,7 @@ export function normalizeCandles(j,a,pool){
  .map(x=>[a.id,a.chain,pool,Math.trunc(Number(x[0])),...x.slice(1,6).map(Number),'geckoterminal']);
 }
 export function coverage(a,pools,holder,transfer,error){
- return {id:a.id,address:a.address,identity:a.address?'ADDRESS_KNOWN':'AMBIGUOUS',
+ return {id:a.id,address:a.address,identity:a.address?(a.identity_status||'ADDRESS_KNOWN'):'AMBIGUOUS',
  market:pools.length?'PROVIDER_SNAPSHOT':'UNAVAILABLE',
  five_min:pools.length?'AGGREGATE_5M':'UNAVAILABLE',
  hour:pools.length?'AGGREGATE_1H':'UNAVAILABLE',

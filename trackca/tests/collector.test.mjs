@@ -13,7 +13,7 @@ const pair=(a,overrides={})=>({
 });
 test('all 22 watch identities retained, with MIHAO on Solana',()=>{
  assert.equal(ASSETS.length,22);assert.equal(ROBINHOOD.length,21);
- assert.equal(PRIORITIES.length,8);assert.equal(ROBINHOOD.filter(a=>!a.address).length,9);
+ assert.equal(PRIORITIES.length,8);assert.equal(ROBINHOOD.filter(a=>!a.address).length,1);
  assert.equal(MIHAO.address,'4CxjZyMNoF1p6eXHXHv1TWpS2X47CuUmLwtGe18spump');
  assert.equal(asset('injoh').holding,true);
 });
@@ -69,7 +69,7 @@ test('all 22 assets get coverage and no scan claims complete',async()=>{
  const env={DB:db,TRACKCA_BLOCKSCOUT_ENABLED:'false'};
  const at=new Date('2026-11-02T08:15:00Z');
  const out=await collect(env,{now:at,fetcher});
- assert.equal(out.status,'INCOMPLETE');assert.equal(out.assets,22);assert.equal(out.known,13);assert.equal(out.covered,13);assert.equal(out.snapshots,13);assert.equal(out.mihaoCandles,1);
+ assert.equal(out.status,'INCOMPLETE');assert.equal(out.assets,22);assert.equal(out.known,21);assert.equal(out.covered,21);assert.equal(out.snapshots,21);assert.equal(out.mihaoCandles,1);
  assert.equal(db.rows.filter(x=>x.sql.startsWith('INSERT OR REPLACE INTO trackca_coverage')).length,22);
  assert.equal((await collect(env,{now:at,fetcher})).already_run,true);
 });
@@ -78,4 +78,10 @@ test('all provider failures are logged and run remains incomplete',async()=>{
  const out=await collect({DB:db,TRACKCA_BLOCKSCOUT_ENABLED:'false'},{now:new Date('2026-11-02T08:20:00Z'),fetcher});
  assert.equal(out.status,'INCOMPLETE');assert.equal(out.covered,0);assert.ok(out.warnings.length>0);
  assert.equal(db.rows.filter(x=>x.sql.startsWith('INSERT OR REPLACE INTO trackca_coverage')).length,22);
+});
+
+test('provisional Blockscout identities stay distinct from fully confirmed address identities',()=>{
+ assert.equal(asset('ameme').identity_status,'PROVISIONAL_BLOCKSCOUT');
+ assert.equal(coverage(asset('ameme'),[pair(asset('ameme'))],'UNAVAILABLE','UNAVAILABLE').identity,'PROVISIONAL_BLOCKSCOUT');
+ assert.equal(asset('hoodfun').address,null);
 });
