@@ -35,7 +35,7 @@ jobs:
           python - <<'PY'
           import sqlite3
           from pathlib import Path
-          s=Path('trackbigbux/sql/001_trackbigbux.sql').read_text()
+          s='\n'.join(Path(p).read_text() for p in ('trackbigbux/sql/001_trackbigbux.sql','trackbigbux/sql/002_external_audit.sql'))
           statements=[x.strip() for x in '\n'.join(l for l in s.splitlines() if not l.lstrip().startswith('--')).split(';') if x.strip()]
           for x in statements:
             if not x.upper().startswith(('CREATE TABLE IF NOT EXISTS TRACKBIGBUX_','CREATE INDEX IF NOT EXISTS IX_TRACKBIGBUX_')):
@@ -44,7 +44,7 @@ jobs:
           conn.executescript(s)
           conn.executescript(s)
           rows=conn.execute("select name from sqlite_master where type='table' and name like 'trackbigbux_%'").fetchall()
-          assert len(rows)==6,rows
+          assert len(rows)==7,rows
           print('TRACKBIGBUX_SQL_ADDITIVE_OK',len(statements))
           PY
   deploy:
@@ -85,7 +85,7 @@ jobs:
           from urllib.request import Request,urlopen
           account,db,key=[os.environ.get(k,'') for k in ('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')]
           if not all((account,db,key)):raise SystemExit('TRACKBIGBUX_D1_CREDENTIALS_MISSING')
-          sql=Path('trackbigbux/sql/001_trackbigbux.sql').read_text()
+          sql='\n'.join(Path(p).read_text() for p in ('trackbigbux/sql/001_trackbigbux.sql','trackbigbux/sql/002_external_audit.sql'))
           statements=[x.strip() for x in '\n'.join(l for l in sql.splitlines() if not l.lstrip().startswith('--')).split(';') if x.strip()]
           url='https://api.cloudflare.com/client/v4/accounts/'+account+'/d1/database/'+db+'/query'
           for stmt in statements:
