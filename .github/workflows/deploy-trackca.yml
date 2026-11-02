@@ -112,3 +112,26 @@ jobs:
             time.sleep(10)
           else:raise SystemExit('TRACKCA_HEALTH_UNVERIFIED')
           PY
+
+      - name: Report persisted trackCA coverage and MIHAO candles
+        run: |
+          python - <<'PY'
+          import json,urllib.request
+          url='https://trackca-collector.wessteven.workers.dev/api/status'
+          req=urllib.request.Request(url,headers={'User-Agent':'trackca-release-verifier/1.0','Accept':'application/json'})
+          with urllib.request.urlopen(req,timeout=20) as response: data=json.load(response)
+          assert data.get('project')=='trackCA', 'TRACKCA_WRONG_SERVICE'
+          assets=data.get('assets') or []
+          assert len(assets)==22, f'TRACKCA_ROSTER_INCOMPLETE_{len(assets)}'
+          run=data.get('run')
+          if not run:
+            print('TRACKCA_COLLECTION_PENDING_FIRST_CRON')
+          else:
+            coverage=data.get('coverage') or []
+            assert len(coverage)==22, f'TRACKCA_COVERAGE_NOT_COMPLETE_{len(coverage)}'
+            print('TRACKCA_RUN',run['run_id'],run['status'])
+            print('TRACKCA_MARKET_POOLS',run['assets_with_pools'],'of',run['assets_total'])
+            print('TRACKCA_OBSERVATIONS_WRITTEN',run['snapshots_written'])
+            print('TRACKCA_MIHAO_1M_CANDLES',len(data.get('mihaoCandles') or []))
+            if run['status']=='ERROR':raise SystemExit('TRACKCA_COLLECTOR_RUN_ERROR')
+          PY
