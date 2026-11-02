@@ -1,0 +1,62 @@
+name: Independent Quality Ledger — audit execution evidence
+on:
+  pull_request:
+    paths:
+      - 'quality-ledger/**'
+      - '.github/workflows/quality-ledger.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'quality-ledger/**'
+      - '.github/workflows/quality-ledger.yml'
+  schedule:
+    - cron: '19 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: quality-ledger-d1
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute frozen-scope regression tests
+        run: |
+          node --check quality-ledger/src/audit.mjs
+          node --check quality-ledger/scripts/run.mjs
+          node --test quality-ledger/tests/*.test.mjs
+      - name: Verify isolated additive D1 schema twice
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          sql=Path('quality-ledger/sql/001_quality_ledger.sql').read_text()
+          db=sqlite3.connect(':memory:')
+          db.executescript(sql)
+          db.executescript(sql)
+          names={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          assert {'quality_ledger_runs','quality_ledger_checks'}<=names
+          print('QUALITY_SCHEMA_IDEMPOTENT_AND_ISOLATED')
+          PY
+  audit:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit persisted evidence from trackCA without editing trading systems
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node quality-ledger/scripts/run.mjs
