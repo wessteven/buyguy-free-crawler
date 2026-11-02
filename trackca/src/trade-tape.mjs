@@ -39,9 +39,9 @@ export function parseTradeWindow(body,asset,nowMs){
 
 export async function samplePriorityTrades({now,runId,db,fetchJson,fetcher,errors}){
  // The parent Cron runs every five minutes; this source runs once per UTC hour.
- if(now.getUTCMinutes()>=5)return 0;
+ if(now.getUTCMinutes()>=5)return new Set();
  const nowMs=now.getTime();
- let ok=0,blocked=false;
+ const ok=new Set();let blocked=false;
  for(const a of PRIORITIES){
   if(blocked){errors.push(a.id+' trade tape provider blocked');continue;}
   try{
@@ -53,7 +53,7 @@ export async function samplePriorityTrades({now,runId,db,fetchJson,fetcher,error
    await db.prepare(SNAP).bind(runId,a.id,now.toISOString(),s.from,s.to,s.status,s.buys,s.sells,
     s.uniqueBuyerTraders,s.uniqueSellerTraders,s.unattributed,s.buyUSD,s.sellUSD,
     s.largeSellUSD,s.largeSellerTraders,s.total,'crius').run();
-   ok++;
+   ok.add(a.id);
    if(s.status==='CAPPED_PAGE_NOT_EXHAUSTIVE')errors.push(a.id+' trade tape truncated to first 200');
   }catch(e){
    const reason=String(e?.message||e).slice(0,140);
