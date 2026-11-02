@@ -42,3 +42,18 @@ CREATE TABLE IF NOT EXISTS trackca_token_quotes (
  PRIMARY KEY(run_id, asset_id));
 CREATE INDEX IF NOT EXISTS ix_trackca_quotes_recent ON trackca_token_quotes(observed_at DESC);
 CREATE INDEX IF NOT EXISTS ix_trackca_quotes_asset_time ON trackca_token_quotes(asset_id, observed_at DESC);
+
+-- Research-only wallet attribution: provider trade actors are NOT independently funded buyers.
+CREATE TABLE IF NOT EXISTS trackca_attributed_trades (
+ asset_id TEXT NOT NULL, trade_id TEXT NOT NULL, observed_at TEXT NOT NULL, occurred_at_ms INTEGER NOT NULL,
+ tx_hash TEXT, pool_id TEXT, side TEXT NOT NULL, attributed_trader TEXT, signer TEXT, executor TEXT,
+ value_usd REAL, block_height INTEGER, provider TEXT NOT NULL,
+ PRIMARY KEY(asset_id,trade_id));
+CREATE INDEX IF NOT EXISTS ix_trackca_trades_recent ON trackca_attributed_trades(asset_id,occurred_at_ms DESC);
+CREATE INDEX IF NOT EXISTS ix_trackca_trader_address ON trackca_attributed_trades(attributed_trader,occurred_at_ms DESC);
+CREATE TABLE IF NOT EXISTS trackca_trade_windows (
+ run_id TEXT NOT NULL, asset_id TEXT NOT NULL, started_at TEXT NOT NULL, window_start_ms INTEGER NOT NULL, window_end_ms INTEGER NOT NULL,
+ status TEXT NOT NULL, buys INTEGER, sells INTEGER, unique_buyer_traders INTEGER, unique_seller_traders INTEGER, unattributed_count INTEGER,
+ buy_volume_usd REAL, sell_volume_usd REAL, large_sell_volume_usd REAL, large_seller_traders INTEGER, trade_rows INTEGER, provider TEXT NOT NULL,
+ PRIMARY KEY(run_id,asset_id));
+CREATE INDEX IF NOT EXISTS ix_trackca_windows_recent ON trackca_trade_windows(started_at DESC);
