@@ -1,0 +1,60 @@
+name: trackBIGBUX independent D1 evidence audit
+on:
+  push:
+    branches: [main, feature/trackbigbux-independent]
+    paths:
+      - 'trackbigbux/**'
+      - '.github/workflows/trackbigbux-audit.yml'
+  pull_request:
+    paths:
+      - 'trackbigbux/**'
+      - '.github/workflows/trackbigbux-audit.yml'
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: trackbigbux-independent-quality-audit
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify auditor code and exact independent identity manifest
+        run: |
+          node --check trackbigbux/scripts/audit.mjs
+          node --test trackbigbux/tests/audit.test.mjs
+      - name: Verify external audit schema can be re-applied
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          s=Path('trackbigbux/sql/002_external_audit.sql').read_text()
+          conn=sqlite3.connect(':memory:')
+          conn.executescript(s)
+          conn.executescript(s)
+          assert conn.execute("select count(*) from sqlite_master where type='table' and name='trackbigbux_external_audits'").fetchone()[0]==1
+          print('TRACKBIGBUX_EXTERNAL_AUDIT_SQL_OK')
+          PY
+  audit:
+    needs: test
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Independently read source D1, append audit verdict, fail incomplete coverage
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node trackbigbux/scripts/audit.mjs
