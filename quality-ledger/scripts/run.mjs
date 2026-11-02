@@ -37,7 +37,7 @@ async function persist(a){
     a.expected,a.counts.SOURCE_RECORDED,a.counts.STALE,a.counts.MISSING,a.counts.UNVERIFIED,
     a.counts.AMBIGUOUS,a.status,a.previousObserved,a.comparison,a.warning];
   const result=await query(q,values);
-  if(result.changes===0){console.log('QUALITY_DUPLICATE_RUN_UNCHANGED',a.auditId);return false;}
+  if(result.changes===0)console.log('QUALITY_EXISTING_RUN_RECONCILE_CHECKS',a.auditId);
   const cols='audit_id,requirement_key,asset_id,requirement,status,evidence_ref,note';
   for(let start=0;start<a.checks.length;start+=35){
     const batch=a.checks.slice(start,start+35);
