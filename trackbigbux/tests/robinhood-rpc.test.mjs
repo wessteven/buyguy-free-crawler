@@ -5,7 +5,7 @@ import {ERC20_TRANSFER_TOPIC,topicAddress,parseHexInt,flowWindow,normalizeFlow,r
 import {WALLETS} from '../src/wallets.mjs';
 const wallet=WALLETS.find(w=>w.id==='rh-unipcs');
 const addr=topicAddress(wallet.address);
-function logFor({from=wallet.address,to='0x0000000000000000000000000000000000000001',idx='0x0',block='0x1fd4'}={}){
+function logFor({from=wallet.address,to='0x0000000000000000000000000000000000000001',idx='0x0',block='0x2ee0'}={}){
  return {address:'0x39dbed3a2bd333467115de45665cc57f813c4571',
    transactionHash:'0x'+'a'.repeat(64),blockNumber:block,logIndex:idx,
    topics:[ERC20_TRANSFER_TOPIC,topicAddress(from),topicAddress(to)],
