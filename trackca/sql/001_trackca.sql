@@ -32,3 +32,13 @@ event_key TEXT PRIMARY KEY,asset_id TEXT NOT NULL,contract TEXT NOT NULL,tx_hash
 occurred_at TEXT,sender TEXT,recipient TEXT,raw_value TEXT,token_decimals INTEGER,
 source TEXT NOT NULL,classification TEXT NOT NULL DEFAULT 'TRANSFER_NOT_SWAP');
 CREATE INDEX IF NOT EXISTS ix_trackca_transfers_recent ON trackca_transfer_events(asset_id,occurred_at DESC);
+
+-- Separate token-level provider observations from exact DEX pool trades.
+CREATE TABLE IF NOT EXISTS trackca_token_quotes (
+ run_id TEXT NOT NULL, asset_id TEXT NOT NULL, chain TEXT NOT NULL, token_address TEXT NOT NULL,
+ observed_at TEXT NOT NULL, provider_asof TEXT, price_usd REAL, liquidity_usd REAL, change_24h_pct REAL,
+ aggregate_volume_m5_usd REAL, aggregate_volume_h1_usd REAL, aggregate_volume_h24_usd REAL,
+ source_pool TEXT, confidence TEXT, source TEXT NOT NULL, quality TEXT NOT NULL, block_height INTEGER,
+ PRIMARY KEY(run_id, asset_id));
+CREATE INDEX IF NOT EXISTS ix_trackca_quotes_recent ON trackca_token_quotes(observed_at DESC);
+CREATE INDEX IF NOT EXISTS ix_trackca_quotes_asset_time ON trackca_token_quotes(asset_id, observed_at DESC);

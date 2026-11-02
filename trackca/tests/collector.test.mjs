@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {ASSETS,ROBINHOOD,MIHAO,PRIORITIES} from '../src/watchlist.mjs';
 import {validPools,pairRow,normalizeCandles,coverage} from '../src/normalize.mjs';
 import {collect,fetchJson} from '../src/worker.mjs';
+import {parseCrius,parseMIHAO} from '../src/secondary-sources.mjs';
 const asset=id=>ASSETS.find(a=>a.id===id);
 const pair=(a,overrides={})=>({
  chainId:a.chain,pairAddress:a.pool||'TestPoolForMihao11111111111111111111111111',
@@ -131,4 +132,52 @@ test('Gecko pool identity requires actual token contract relationship',async()=>
  assert.ok(out.covered>=1);
  const rows=db.rows.filter(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackca_pair_snapshots'));
  assert.ok(rows.some(x=>x.params[1]==='pons'&&x.params[21]==='geckoterminal'));
+});
+
+test('Crius quotes use exact CA keys and provider block timestamp',()=>{
+ const a=asset('pons'),ts='2026-11-02T09:20:00.000Z';
+ const j={data:{[a.address.toLowerCase()]:{usd:0.1234,liquidity_usd:32000,source_pool:'0x'+'a'.repeat(64),confidence:'medium'},['0x'+'f'.repeat(40)]:{usd:666}},
+  meta:{block:103,block_ts:Date.parse(ts)-1500}};
+ const rows=parseCrius(j,[a,asset('injoh')],ts,'run-test');
+ assert.equal(rows.length,1);
+ assert.equal(rows[0][1],'pons');
+ assert.equal(rows[0][6],0.1234);
+ assert.equal(rows[0][15],'BLOCK_STAMPED_PROVIDER_PRICE');
+ assert.equal(rows[0][16],103);
+ assert.equal(parseCrius({...j,meta:{block_ts:Date.parse(ts)-7200000}},[a],ts,'run')[0][15],'STALE_BLOCK');
+});
+test('MIHAO secondary quote rejects any wrong Solana mint or chain',()=>{
+ const ts='2026-11-02T09:20:00Z';
+ const j={id:MIHAO.address,chain:'solana',summary:{price_usd:0.003,liquidity_usd:80000,'5m':{volume_usd:19},'1h':{volume_usd:200},'24h':{volume_usd:3000}},last_updated:ts};
+ assert.equal(parseMIHAO({...j,id:MIHAO.address.toLowerCase()},MIHAO,ts,'r'),null);
+ assert.equal(parseMIHAO({...j,chain:'ethereum'},MIHAO,ts,'r'),null);
+ const row=parseMIHAO(j,MIHAO,ts,'r');
+ assert.equal(row.length,17);
+ assert.equal(row[6],0.003);
+ assert.equal(row[9],19);
+ assert.equal(row[14],'dexpaprika');
+ assert.equal(row[15],'TOKEN_AGGREGATE_PROVIDER');
+});
+test('secondary prices never masquerade as exact-pool 5m volume',async()=>{
+ const db=new FakeDB(),a=asset('pons'),now=new Date('2026-11-02T09:20:00Z');
+ const fetcher=async url=>{
+  let body;
+  if(url.includes('api.crius.sh'))body={data:{[a.address.toLowerCase()]:{usd:0.5,liquidity_usd:40000}},meta:{block:123,block_ts:now.getTime()}};
+  else if(url.includes('api.dexpaprika.com'))body={id:MIHAO.address,chain:'solana',summary:{price_usd:0.006,liquidity_usd:30000,'5m':{volume_usd:75}}};
+  else if(url.includes('api.dexscreener.com')||url.includes('api.geckoterminal.com'))return {ok:false,status:429};
+  else if(url.includes('overview/dexs'))body={total24h:10,total7d:70};
+  else if(url.includes('/v2/chains'))body=[{name:'Robinhood Chain',tvl:50}];
+  else return {ok:false,status:404};
+  return {ok:true,json:async()=>body};
+ };
+ const result=await collect({DB:db,TRACKCA_BLOCKSCOUT_ENABLED:'false'},{now,fetcher});
+ assert.equal(result.status,'INCOMPLETE');
+ assert.equal(result.covered,0);
+ const quotes=db.rows.filter(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackca_token_quotes'));
+ assert.equal(quotes.length,2);
+ const cov=db.rows.filter(x=>x.sql.startsWith('INSERT OR REPLACE INTO trackca_coverage'));
+ assert.equal(cov.length,22);
+ assert.equal(cov.find(x=>x.params[1]==='pons').params[4],'TOKEN_PRICE_ONLY');
+ assert.equal(cov.find(x=>x.params[1]==='mihao').params[4],'TOKEN_AGGREGATE_ONLY');
+ assert.equal(cov.find(x=>x.params[1]==='mihao').params[5],'UNAVAILABLE');
 });

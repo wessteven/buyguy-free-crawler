@@ -20,3 +20,9 @@ No trading, no GOGET production changes, no guaranteed recovery, no alert on pri
 - DEX Screener 403/429 activates a run-wide cooldown rather than retrying every token.
 - GeckoTerminal exact-contract and exact-pool fallbacks are bounded to its public limits, and MIHAO's known PumpSwap pool is identity-validated before candle attribution.
 - Blockscout 403/429 stops further hourly attempts, marking wallet evidence unavailable; no fake unique-buyer or sell-depth claims.
+
+## Independent secondary quote sampler (v0.3)
+
+Every other five-minute run (at most 144 anonymous calls/day per provider) attempts one Crius batch request for every exact Robinhood Chain token and one DexPaprika exact-mint request for Solana MIHAO. Separate `trackca_token_quotes` observations store provider timestamps, provenance, price and token-aggregate metrics with quality markers.
+
+Neither token price nor token-aggregate 5m/1h/24h volume is represented as exact DEX-pool trading activity. The dashboard shows only exact-pool volume in the pool-volume columns; a token-only price is marked as such. Providers can remain rate-limited. Real-time unique buyers, actual swaps, wallet accumulation and realistic executable sell depth are not yet verified, and scan status remains INCOMPLETE.
