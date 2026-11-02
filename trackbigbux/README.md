@@ -10,7 +10,7 @@ Exact IDs, chain and wallet addresses are in src/wallets.mjs. These are candidat
 
 ## Collection
 
-* Every five minutes: recent Solana Helius RPC address signatures and Robinhood Blockscout address transactions; wallet ID, chain, transaction ID, slot/block, source and time stamps.
+* Every five minutes: Solana Helius RPC address signatures and a Robinhood Chain public-RPC fallback that gathers ERC-20 Transfer logs for the seven exact addresses (incoming and outgoing, bounded blocks, block height, contract and raw token amount). The public Robinhood explorer returned HTTP 403 from Cloudflare; its full transaction history is NOT monitored by the fallback. Every Robinhood flow is classified ERC20_TRANSFER_NOT_SWAP. Robinhood's keyless RPC is rate-limited and not production-grade; failed/rate-limited requests remain visible.
 * Each wallet always gets an independent coverage row, including provider failures, baseline-only status, checkpoint overflow and unknown classification.
 * Every attempted provider request gets a bounded receipt with status, number of returned records and response observation time; API keys and full request URLs are never written.
 * Every hour: up to 60 Solana signatures are enriched via the Helius Enhanced Transactions parser. Undecoded signatures remain pending and explicitly counted.
@@ -19,7 +19,7 @@ Exact IDs, chain and wallet addresses are in src/wallets.mjs. These are candidat
 
 ## Collection bounds and data integrity
 
-Solana RPC reads up to 301 signatures per address per scan; Robinhood reads up to four Blockscout pages per address. These caps protect provider budgets, but do not mean exhaustive high-frequency coverage. A prior checkpoint not found sets CHECKPOINT_NOT_FOUND and increments a persistent gap counter; the missing interval remains unverified. Initial baselines never qualify as complete history.
+Solana RPC reads up to 301 signatures per address per scan. Robinhood public RPC checks at most 6000 blocks per wallet per scan, with two exact-wallet Transfer-log queries and a 3500-log cap; each wallet gets a persisted numeric block watermark. Any RPC backlog is explicit; no checkpoint advances on malformed logs or failed requests. The old Blockscout transaction endpoint is retained in code but disabled in the deployed configuration due to HTTP 403. These caps protect provider budgets, but do not mean exhaustive high-frequency coverage. A prior checkpoint not found sets CHECKPOINT_NOT_FOUND and increments a persistent gap counter; the missing interval remains unverified. Initial baselines never qualify as complete history.
 
 The frozen monitoring denominator is always 12 per run. The worker appends trackbigbux_ events, run records, per-wallet source receipts, wallet watermarks and quality results to the pre-existing buyguy-free-v3 D1. No new database is needed. Do not imply writes succeeded until D1 is independently queried.
 
@@ -40,4 +40,4 @@ Dashboard: https://trackbigbux-collector.wessteven.workers.dev/
 
 Successful deployment does NOT prove persisted monitoring. Confirm a completed run, all 12 matching coverage rows, raw events or explicit no-activity receipts, and data freshness.
 
-An independent GitHub Actions auditor (trackbigbux-audit.yml, hourly) compares the frozen 12-wallet manifest against actual D1 coverage rows, receipts, timestamps, activity counts and prior verdicts. The in-worker quality claims alone never count as proof. This external audit verifies persisted execution records, not provider response authenticity or actual trading profitability. The user will request analysis after collection, so no unsolicited trading decisions should be made.
+An independent GitHub Actions auditor (trackbigbux-audit.yml, hourly) compares the frozen 12-wallet manifest against actual D1 coverage rows, receipts, timestamps, activity counts and prior verdicts. The in-worker quality claims alone never count as proof. This external audit verifies persisted execution records, not provider response authenticity or actual trading profitability. The user will request analysis after collection, so no unsolicited trading decisions should be made. The external independent auditor should report partial Robinhood transaction coverage until full on-chain transaction/receipt decoding is available; a successful ERC20 Transfer-log capture does not establish buy/sell decisions or profitable trades.

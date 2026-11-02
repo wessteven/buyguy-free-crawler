@@ -14,3 +14,4 @@ crons = ["*/5 * * * *"]
 [vars]
 TRACKBIGBUX_VERSION = "0.1.0"
 TRACKBIGBUX_MODE = "READ_ONLY_EVIDENCE"
+TRACKBIGBUX_RH_MODE = "rpc_transfer_only"
