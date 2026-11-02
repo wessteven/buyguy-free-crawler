@@ -1,5 +1,6 @@
 import {ASSETS,ROBINHOOD,MIHAO,PRIORITIES} from './watchlist.mjs';
 import {finite,validPools,pairRow,normalizeCandles,coverage} from './normalize.mjs';
+import {sampleQuotes} from './secondary-sources.mjs';
  const DEX='https://api.dexscreener.com';
  const GECKO='https://api.geckoterminal.com/api/v2';
  const BS='https://robinhoodchain.blockscout.com/api/v2';
@@ -150,11 +151,13 @@ import {finite,validPools,pairRow,normalizeCandles,coverage} from './normalize.m
    const map=new Map([...rh.map,...sol.map]);
    const candles=await mihaoCandles(map,env.DB,fetcher,errors);
    await chainMetrics(ts,runId,env.DB,fetcher,errors);
+   const secondary=await sampleQuotes({bucket,ts,runId,db:env.DB,fetchJson,fetcher,errors});
    const holder=now.getUTCMinutes()<5?await chainEvidence(env,ts,fetcher,env.DB,errors):new Map();
    const statements=[];
    for(const a of ASSETS){
     const evidence=holder.get(a.id);
     const c=coverage(a,map.get(a.id)||[],evidence?.holder||'NOT_REFETCHED_THIS_RUN',evidence?.transfer||'NOT_REFETCHED_THIS_RUN');
+    if(c.market==='UNAVAILABLE'&&secondary.has(a.id))c.market=secondary.get(a.id);
     statements.push(env.DB.prepare('INSERT OR REPLACE INTO trackca_coverage (run_id,asset_id,token_address,identity_status,market_status,five_min_status,hour_status,day_status,unique_buyer_status,holder_status,wallet_status,whale_status,sell_depth_status,note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
       .bind(runId,c.id,c.address,c.identity,c.market,c.five_min,c.hour,c.day,c.unique_buyers,c.holder,c.wallets,c.whales,c.executable_depth,c.note));
    }
@@ -178,10 +181,14 @@ import {finite,validPools,pairRow,normalizeCandles,coverage} from './normalize.m
   const pool=await db.prepare('SELECT asset_id,pool_id,dex,observed_at,price_usd,liquidity_usd,volume_m5_usd,volume_h1_usd,volume_h24_usd,quote_time_status FROM trackca_pair_snapshots WHERE run_id=? ORDER BY asset_id,liquidity_usd DESC LIMIT 100').bind(run.run_id).all();
   const chain=await db.prepare('SELECT * FROM trackca_chain_metrics WHERE run_id=?').bind(run.run_id).first();
   const candles=await db.prepare("SELECT minute_ts,pool_id,close_usd,volume_usd FROM trackca_ohlcv WHERE asset_id='mihao' ORDER BY minute_ts DESC LIMIT 20").all();
-  return {project:'trackCA',status:run.status,run,chain,coverage:cov.results||[],pools:pool.results||[],mihaoCandles:candles.results||[],
+  const cutoff=new Date(Date.now()-86400000).toISOString();
+  const qs=await db.prepare('SELECT asset_id,token_address,chain,observed_at,provider_asof,price_usd,liquidity_usd,change_24h_pct,aggregate_volume_m5_usd,aggregate_volume_h1_usd,aggregate_volume_h24_usd,source_pool,confidence,source,quality,block_height FROM trackca_token_quotes WHERE observed_at>=? ORDER BY observed_at DESC LIMIT 120').bind(cutoff).all();
+  const latestTokenQuotes=[...new Map((qs.results||[]).slice().reverse().map(q=>[q.asset_id,q])).values()];
+
+  return {project:'trackCA',status:run.status,run,chain,coverage:cov.results||[],pools:pool.results||[],mihaoCandles:candles.results||[],latestTokenQuotes,
    assets:ASSETS.map(a=>({id:a.id,name:a.name,chain:a.chain,address:a.address,priority:!!a.priority}))};
  }
- const HTML='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>trackCA</title><style>body{font:15px system-ui;background:#0c1824;color:#eff5fa;padding:20px}main{max-width:1200px;margin:auto}table{border-collapse:collapse;width:100%}td,th{padding:10px;border-bottom:1px solid #344354;text-align:left}a{color:#9df}.sub{color:#aab6c6}.scroll{overflow:auto}</style></head><body><main><h1>trackCA · token tracker</h1><p class="sub">Read-only · independent Cloudflare Worker · Robinhood Chain + Solana MIHAO · five-minute collection</p><p id="summary">Loading...</p><div class="scroll"><table><thead><tr><th>Asset</th><th>Chain</th><th>Identity</th><th>Price</th><th>5m volume</th><th>1h volume</th><th>24h volume</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table></div><p class="sub">DEX volume represents transactions, not distinct independent buyers. Quotes are observed snapshots, not executable exit estimates. Unverified risk checks remain incomplete.</p></main><script>const f=x=>x==null?"—":Number(x).toLocaleString(undefined,{maximumFractionDigits:6});async function load(){try{const d=await(await fetch("/api/status",{cache:"no-store"})).json();document.getElementById("summary").textContent="Last run: "+(d.run?.started_at||"none")+" · "+d.status+" · matched pools for "+(d.run?.assets_with_pools||0)+"/"+d.assets.length+" assets";document.getElementById("rows").innerHTML=d.assets.map(a=>{const p=d.pools?.find(x=>x.asset_id===a.id),c=d.coverage?.find(x=>x.asset_id===a.id);return "<tr><td>"+a.name+"</td><td>"+a.chain+"</td><td>"+(c?.identity_status|| (a.address?"known":"unresolved"))+"</td><td>"+f(p?.price_usd)+"</td><td>"+f(p?.volume_m5_usd)+"</td><td>"+f(p?.volume_h1_usd)+"</td><td>"+f(p?.volume_h24_usd)+"</td><td>"+(c?.market_status||"no run")+"</td></tr>"}).join("");}catch(e){document.getElementById("summary").textContent="Unavailable: "+e.message}}load();setInterval(load,60000);</script></body></html>';
+ const HTML='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>trackCA</title><style>body{font:15px system-ui;background:#0c1824;color:#eff5fa;padding:20px}main{max-width:1200px;margin:auto}table{border-collapse:collapse;width:100%}td,th{padding:10px;border-bottom:1px solid #344354;text-align:left}a{color:#9df}.sub{color:#aab6c6}.scroll{overflow:auto}</style></head><body><main><h1>trackCA · token tracker</h1><p class="sub">Read-only · independent Cloudflare Worker · Robinhood Chain + Solana MIHAO · five-minute collection</p><p id="summary">Loading...</p><div class="scroll"><table><thead><tr><th>Asset</th><th>Chain</th><th>Identity</th><th>Price</th><th>5m volume</th><th>1h volume</th><th>24h volume</th><th>Evidence</th></tr></thead><tbody id="rows"></tbody></table></div><p class="sub">DEX volume represents transactions, not distinct independent buyers. Quotes are observed snapshots, not executable exit estimates. Unverified risk checks remain incomplete.</p></main><script>const f=x=>x==null?"—":Number(x).toLocaleString(undefined,{maximumFractionDigits:6});async function load(){try{const d=await(await fetch("/api/status",{cache:"no-store"})).json();document.getElementById("summary").textContent="Last run: "+(d.run?.started_at||"none")+" · "+d.status+" · matched pools for "+(d.run?.assets_with_pools||0)+"/"+d.assets.length+" assets";document.getElementById("rows").innerHTML=d.assets.map(a=>{const p=d.pools?.find(x=>x.asset_id===a.id),q=d.latestTokenQuotes?.find(x=>x.asset_id===a.id),c=d.coverage?.find(x=>x.asset_id===a.id);return "<tr><td>"+a.name+"</td><td>"+a.chain+"</td><td>"+(c?.identity_status|| (a.address?"known":"unresolved"))+"</td><td>"+f(p?.price_usd??q?.price_usd)+"</td><td>"+f(p?.volume_m5_usd)+"</td><td>"+f(p?.volume_h1_usd)+"</td><td>"+f(p?.volume_h24_usd)+"</td><td>"+(p?"POOL "+p.quote_time_status:q?"TOKEN "+q.source+" "+q.quality:"unavailable")+"</td></tr>"}).join("");}catch(e){document.getElementById("summary").textContent="Unavailable: "+e.message}}load();setInterval(load,60000);</script></body></html>';
  export default {
   async scheduled(_event,env,ctx){ctx.waitUntil(collect(env).then(r=>console.log('trackCA',JSON.stringify(r))).catch(e=>console.error('trackCA_error',short(e))));},
   async fetch(request,env){
