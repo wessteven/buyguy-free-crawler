@@ -21,6 +21,15 @@ function db(){
  ],snapshots:new Map(),outcomes:new Map(),runs:[],marketQuotes:new Map(),marketOutcomes:new Map(),dexUntil:0};
  const database={state,prepare(sql){return {bind(...params){return {
   async all(){
+    if(sql.startsWith('SELECT e.signature,e.observed_at,'))
+      return {success:true,results:state.source.map(x=>({signature:x.signature,
+        observed_at:x.observed_at,raw_archived:1})).filter(x=>x.observed_at<=params[0]).slice(0,params[1])};
+    if(sql.startsWith('SELECT at,status,summary_json FROM goget_pre_signal_runs')){
+      const r=state.runs.filter(x=>x[2]==='cron').at(-1);
+      return {success:true,results:r?[{at:r[1],status:r[3],summary_json:r[6]}]:[]};
+    }
+    if(sql.startsWith('SELECT run_id,at,trigger,status,summary_json'))
+      return {success:true,results:state.runs.map(r=>({run_id:r[0],at:r[1],trigger:r[2],status:r[3],summary_json:r[6]}))};
     if(sql.startsWith('SELECT until_ms FROM goget_pre_signal_provider_state'))
       return {success:true,results:[{until_ms:state.dexUntil}]};
     if(sql.startsWith('SELECT name,expires_at FROM leases'))return {success:true,results:[]};
@@ -177,6 +186,29 @@ test('source truncation refuses to publish confident signals',async()=>{
  assert.equal(r.status,'INCOMPLETE_SOURCE_WINDOW');
  assert.equal(r.storedSnapshots,0);
  assert.equal(d.state.snapshots.size,0);
+});
+test('an executing scheduler records a stale source without claiming collection success',async()=>{
+ const d=db();d.state.source=[];
+ const r=await processPreSignalCycle({DB:d,PRE_SIGNAL_ENABLED:'true'},{now,runId:'empty',trigger:'cron'});
+ assert.equal(r.status,'SOURCE_NOT_FRESH');
+ assert.ok(r.collectionHealth.reasons.includes('NO_SOURCE_RECEIPTS'));
+ assert.equal(d.state.runs[0][3],'SOURCE_NOT_FRESH');
+ assert.equal(r.potentialSignalCount,0);
+});
+test('collection status fails closed; detailed 72h evidence requires authentication',async()=>{
+ const d=db(),env={DB:d,PRE_SIGNAL_ENABLED:'true',PRE_SIGNAL_CONTROL_TOKEN:'t'.repeat(64)};
+ const health=await worker.fetch(new Request('https://test/collection-health'),env);
+ assert.equal(health.status,503);
+ const text=await health.text();
+ assert.ok(!text.includes(walletA));assert.ok(!text.includes(mint));
+ const denied=await worker.fetch(new Request('https://test/status'),env);
+ assert.equal(denied.status,401);
+ const allowed=await worker.fetch(new Request('https://test/status',{
+   headers:{authorization:'Bearer '+env.PRE_SIGNAL_CONTROL_TOKEN}}),env);
+ assert.equal(allowed.status,200);
+ const body=await allowed.json();assert.equal(body.window.expectedSlots,864);
+ assert.equal(body.window.observationGate,'INCOMPLETE');
+ assert.equal(d.state.runs.length,0); // reading status never starts a scan
 });
 
 test('free public quote lane stores as-of USD reference and later same-pool outcome only',async()=>{

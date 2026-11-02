@@ -1,0 +1,47 @@
+name: GOGET Unattended Collection Watch (read only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-unattended-watch.yml'
+      - 'src/goget-collection-health.mjs'
+      - 'src/goget-source-control.mjs'
+      - 'scripts/goget-unattended-status.mjs'
+      - 'scripts/goget-source-control-audit.mjs'
+  schedule:
+    - cron: '37 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-unattended-read-only-watch
+  cancel-in-progress: false
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check provider registration and available credit evidence without mutations
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          HELIUS_PROJECT_ID: ${{ vars.HELIUS_PROJECT_ID }}
+        run: node scripts/goget-source-control-audit.mjs
+      - name: Check saved source freshness and bounded 72-hour evidence
+        if: always()
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: node scripts/goget-unattended-status.mjs
+      - name: Preserve collection and control evidence, including failed checks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-unattended-evidence
+          path: |
+            goget-source-control.json
+            goget-unattended-status.json
+          retention-days: 14
+          if-no-files-found: warn

@@ -7,6 +7,8 @@ on:
       - 'src/goget-pre-signal-features.mjs'
       - 'src/goget-pre-signal-market.mjs'
       - 'src/goget-pre-signal-worker.mjs'
+      - 'src/goget-collection-health.mjs'
+      - 'tests/goget-collection-health.test.mjs'
       - 'tests/goget-pre-signal-features.test.mjs'
       - 'tests/goget-pre-signal-market.test.mjs'
       - 'tests/goget-pre-signal-worker.test.mjs'
@@ -32,8 +34,10 @@ jobs:
         run: |
           node --check src/goget-pre-signal-features.mjs
           node --check src/goget-pre-signal-worker.mjs
+          node --check src/goget-collection-health.mjs
           node --check scripts/verify-goget-pre-signal.mjs
           node --test tests/*.test.mjs
+          python -m unittest discover -s tests -v
       - name: Install existing Wrangler dependency
         run: npm install --no-audit --no-fund
       - name: Replace D1 placeholder only during deployment
