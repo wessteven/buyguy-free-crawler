@@ -13,3 +13,10 @@ Test: `node --test trackca/tests/*.test.mjs`.
 Dashboard (after confirmed deployment): `https://trackca-collector.wessteven.workers.dev/`.
 
 No trading, no GOGET production changes, no guaranteed recovery, no alert on price alone.
+
+## Reliability hardening (v0.2)
+
+- Strict D1 bind regression coverage prevents undefined values from crashing hourly coverage rows.
+- DEX Screener 403/429 activates a run-wide cooldown rather than retrying every token.
+- GeckoTerminal exact-contract and exact-pool fallbacks are bounded to its public limits, and MIHAO's known PumpSwap pool is identity-validated before candle attribution.
+- Blockscout 403/429 stops further hourly attempts, marking wallet evidence unavailable; no fake unique-buyer or sell-depth claims.

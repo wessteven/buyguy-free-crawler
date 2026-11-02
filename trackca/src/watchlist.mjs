@@ -21,7 +21,7 @@ export const ASSETS = Object.freeze([
 {id:'spacehood',name:'SPACEHOOD',chain:'robinhood',address:'0xFe7E19CbCe2f896C6C528BC355bAF5a768291E18',identity_status:'PROVISIONAL_BLOCKSCOUT',priority:false,reason:'Blockscout verified-panel candidate 2026-11-02; confirm historical intended pool'},
 {id:'goose',name:'Golden Goose',chain:'robinhood',address:'0xcaCB0e9caCcee63ec4d82952E561a291c68Bcb68',priority:false},
 {id:'injoh',name:'SINJOH / INJOH',chain:'robinhood',address:'0x2cC0FAC44B8252f6B10208B091aFf2c94B4da77D',priority:true,pool:'0xB09fa4f04032b9d9e690ac4a1d29523b5f9A72DC',holding:true},
-{id:'mihao',name:'MIHAO (ni hao cat)',chain:'solana',address:'4CxjZyMNoF1p6eXHXHv1TWpS2X47CuUmLwtGe18spump',priority:true,pool:null}
+{id:'mihao',name:'MIHAO (ni hao cat)',chain:'solana',address:'4CxjZyMNoF1p6eXHXHv1TWpS2X47CuUmLwtGe18spump',priority:true,pool:'Ho1aSG6WGH1FfXdEHrK2f4Ggt1Hoxo9s5jcLMDqeyeBz'}
 ]);
 export const ROBINHOOD=ASSETS.filter(a=>a.chain==='robinhood');
 export const MIHAO=ASSETS.find(a=>a.id==='mihao');
