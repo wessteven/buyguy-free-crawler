@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ERC20_TRANSFER_TOPIC,topicAddress,parseHexInt,flowWindow,normalizeFlow,readHead,collectRpcWallet}
+import {ERC20_TRANSFER_TOPIC,topicAddress,parseHexInt,flowWindow,normalizeFlow,readHead,collectRpcWallet,collectRpcCohort}
   from '../src/robinhood-rpc.mjs';
 import {WALLETS} from '../src/wallets.mjs';
 const wallet=WALLETS.find(w=>w.id==='rh-unipcs');
@@ -79,4 +79,38 @@ test('RPC failure is not treated as zero trading activity',async()=>{
  const error=async()=>({ok:false,status:429});
  await assert.rejects(collectRpcWallet(wallet,null,12000,error,(...args)=>receipt.push(args)),/HTTP_429/);
  assert.equal(receipt.at(-1)[2],'FAILED');
+});
+
+test('seven-wallet cohort needs only two RPC log requests and keeps identities separate',async()=>{
+ const wallets=WALLETS.filter(x=>x.chain==='robinhood'),calls=[],receipt=[];
+ const base='0x0000000000000000000000000000000000000001';
+ const ownA=wallets[0],ownB=wallets[1];
+ const sample=[
+   {...logFor({from:ownA.address,to:base}),transactionHash:'0x'+'a'.repeat(64)},
+   {...logFor({from:base,to:ownB.address}),transactionHash:'0x'+'b'.repeat(64),logIndex:'0x1'}
+ ];
+ const fetcher=async(_url,options)=>{
+   const req=JSON.parse(options.body);assert.equal(req.method,'eth_getLogs');
+   calls.push(req);
+   const topics=req.params[0].topics;
+   assert.equal(topics[0],ERC20_TRANSFER_TOPIC);
+   assert.ok(Array.isArray(topics.length===2?topics[1]:topics[2]));
+   assert.equal((topics.length===2?topics[1]:topics[2]).length,7);
+   return {ok:true,json:async()=>({result:topics.length===2?[sample[0]]:[sample[1]]})};
+ };
+ const result=await collectRpcCohort(wallets,new Map(),12000,fetcher,
+   (...args)=>receipt.push(args),'2026-11-02T10:00:00Z');
+ assert.equal(calls.length,2);
+ assert.equal(receipt.length,2);
+ assert.equal(result.size,7);
+ assert.equal(result.get(ownA.id).events.length,1);
+ assert.equal(result.get(ownB.id).events.length,1);
+ assert.equal(result.get(wallets[2].id).events.length,0);
+ assert.equal(result.get(ownB.id).events[0].source,'robinhood_public_rpc');
+ assert.equal(result.get(ownA.id).status,'RPC_BASELINE_TRANSFER_ONLY');
+});
+test('seven-wallet cohort cannot silently shrink to six',async()=>{
+ const wallets=WALLETS.filter(x=>x.chain==='robinhood');
+ await assert.rejects(collectRpcCohort(wallets.slice(0,6),new Map(),12000,async()=>({ok:true,json:async()=>({result:[]})}),()=>{}),
+   /DENOMINATOR_NOT_7/);
 });
