@@ -1,0 +1,136 @@
+name: trackBIGBUX independent wallet evidence — test and deploy
+on:
+  push:
+    branches: [main, feature/trackbigbux-independent]
+    paths:
+      - 'trackbigbux/**'
+      - '.github/workflows/deploy-trackbigbux.yml'
+  pull_request:
+    paths:
+      - 'trackbigbux/**'
+      - '.github/workflows/deploy-trackbigbux.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: trackbigbux-independent-deploy
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify exact frozen roster, parser safety and worker syntax
+        run: |
+          node --check trackbigbux/src/wallets.mjs
+          node --check trackbigbux/src/normalize.mjs
+          node --check trackbigbux/src/worker.mjs
+          node --test trackbigbux/tests/*.test.mjs
+      - name: Verify additive schema idempotency and namespace
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          s=Path('trackbigbux/sql/001_trackbigbux.sql').read_text()
+          statements=[x.strip() for x in '\n'.join(l for l in s.splitlines() if not l.lstrip().startswith('--')).split(';') if x.strip()]
+          for x in statements:
+            if not x.upper().startswith(('CREATE TABLE IF NOT EXISTS TRACKBIGBUX_','CREATE INDEX IF NOT EXISTS IX_TRACKBIGBUX_')):
+              raise SystemExit('TRACKBIGBUX_NAMESPACE_VIOLATION')
+          conn=sqlite3.connect(':memory:')
+          conn.executescript(s)
+          conn.executescript(s)
+          rows=conn.execute("select name from sqlite_master where type='table' and name like 'trackbigbux_%'").fetchall()
+          assert len(rows)==6,rows
+          print('TRACKBIGBUX_SQL_ADDITIVE_OK',len(statements))
+          PY
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install existing Wrangler dependency
+        run: npm install --no-audit --no-fund
+      - name: Inject D1 binding into ONLY trackBIGBUX wrangler config
+        env:
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          ident=os.environ.get('CF_DATABASE_ID','')
+          if len(ident)<16: raise SystemExit('TRACKBIGBUX_D1_ID_MISSING')
+          path=Path('trackbigbux/wrangler.toml')
+          text=path.read_text()
+          if 'REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID' not in text:raise SystemExit('TRACKBIGBUX_D1_PLACEHOLDER_MISSING')
+          path.write_text(text.replace('REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID',ident))
+          PY
+      - name: Apply ONLY trackBIGBUX D1 tables
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          account,db,key=[os.environ.get(k,'') for k in ('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')]
+          if not all((account,db,key)):raise SystemExit('TRACKBIGBUX_D1_CREDENTIALS_MISSING')
+          sql=Path('trackbigbux/sql/001_trackbigbux.sql').read_text()
+          statements=[x.strip() for x in '\n'.join(l for l in sql.splitlines() if not l.lstrip().startswith('--')).split(';') if x.strip()]
+          url='https://api.cloudflare.com/client/v4/accounts/'+account+'/d1/database/'+db+'/query'
+          for stmt in statements:
+            if not stmt.upper().startswith(('CREATE TABLE IF NOT EXISTS TRACKBIGBUX_','CREATE INDEX IF NOT EXISTS IX_TRACKBIGBUX_')):
+              raise SystemExit('TRACKBIGBUX_NOT_ADDITIVE')
+            req=Request(url,data=json.dumps({'sql':stmt,'params':[]}).encode(),method='POST',headers={'authorization':'Bearer '+key,'content-type':'application/json'})
+            with urlopen(req,timeout=25) as r: j=json.load(r)
+            if not j.get('success') or j.get('result',[{}])[0].get('success') is not True:raise SystemExit('TRACKBIGBUX_D1_SCHEMA_FAILED')
+          print('TRACKBIGBUX_D1_SCHEMA_CREATED',len(statements))
+          PY
+      - name: Deploy separate trackbigbux-collector Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx wrangler deploy --config trackbigbux/wrangler.toml
+      - name: Set private Helius key on ONLY trackBIGBUX Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$HELIUS_API_KEY" ]; then echo '::error::HELIUS_API_KEY_NOT_CONFIGURED'; exit 1; fi
+          printf '%s' "$HELIUS_API_KEY" | npx wrangler secret put HELIUS_API_KEY --config trackbigbux/wrangler.toml
+      - name: Independently check deployed health and frozen roster
+        run: |
+          python - <<'PY'
+          import json,time,urllib.request
+          url='https://trackbigbux-collector.wessteven.workers.dev/api/status'
+          for attempt in range(6):
+            try:
+              req=urllib.request.Request(url,headers={'Accept':'application/json','User-Agent':'trackbigbux-release-check'})
+              with urllib.request.urlopen(req,timeout=12) as res: j=json.load(res)
+              assert j.get('project')=='trackBIGBUX'
+              assert j.get('expectedWallets')==12
+              assert len(j.get('wallets',[]))==12
+              print('TRACKBIGBUX_WORKER_LIVE',j['status'],'Last run',j.get('run',{}).get('started_at') if j.get('run') else 'PENDING_FIRST_CRON')
+              break
+            except Exception as e:
+              print('Retry',attempt+1,type(e).__name__)
+              time.sleep(8)
+          else:raise SystemExit('TRACKBIGBUX_DEPLOY_NOT_VERIFIED')
+          if j.get('run'):
+            matching=j.get('coverage',[])
+            assert len(matching)==12,('TRACKBIGBUX_RUN_COVERAGE_MISSING',len(matching))
+            print('TRACKBIGBUX_D1_COVERAGE_ROWS',len(matching))
+          else:print('TRACKBIGBUX_COLLECTION_NOT_YET_VERIFIED')
+          PY
