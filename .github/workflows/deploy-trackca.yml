@@ -103,7 +103,12 @@ jobs:
               with urllib.request.urlopen(url,timeout=15) as r: obj=json.load(r)
               if obj.get('project')=='trackCA':
                 print('TRACKCA_HEALTH_OK',obj.get('status'));break
-            except Exception as e:print('retry',attempt+1,type(e).__name__)
+            except Exception as e:
+              from urllib.error import HTTPError
+              if isinstance(e,HTTPError):
+                print('retry',attempt+1,'HTTP',e.code,'reason',e.reason,'response',e.read(300).decode('utf-8','replace'))
+              else:
+                print('retry',attempt+1,type(e).__name__,str(e)[:160])
             time.sleep(10)
           else:raise SystemExit('TRACKCA_HEALTH_UNVERIFIED')
           PY
