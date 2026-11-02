@@ -5,6 +5,7 @@ Market quotes are indicative; not contract certification or executable trades.
 import os, sys, json, re, time, uuid, datetime as dt
 from urllib.request import Request, urlopen
 from urllib.parse import quote, urlsplit
+from urllib.error import HTTPError, URLError
 
 UTC=dt.timezone.utc
 BASE='https://api.dexscreener.com'
@@ -27,7 +28,20 @@ def identity(chain,addr):
     return chain+':'+(addr.lower() if chain=='robinhood' else addr)
 def query(sql,params=()):
     url=CF.format(os.environ['CF_ACCOUNT_ID'],os.environ['CF_DATABASE_ID'])
-    data=get(url,{'sql':sql,'params':list(params)},os.environ['CF_D1_API_TOKEN'])
+    read_only=sql.lstrip().upper().startswith('SELECT ')
+    attempts=2 if read_only else 1
+    for attempt in range(attempts):
+        try:
+            data=get(url,{'sql':sql,'params':list(params)},os.environ['CF_D1_API_TOKEN'])
+            break
+        except (TimeoutError,URLError,HTTPError) as exc:
+            transient=(isinstance(exc,TimeoutError) or
+                       isinstance(exc,URLError) and isinstance(exc.reason,TimeoutError) or
+                       isinstance(exc,HTTPError) and exc.code in (502,503,504))
+            if not transient:raise
+            if attempt+1>=attempts:
+                raise RuntimeError('D1_READ_UNAVAILABLE' if read_only else 'D1_WRITE_OUTCOME_UNVERIFIED') from None
+            time.sleep(1)
     if not data.get('success') or not data.get('result') or any(not r.get('success') for r in data['result']):
         raise RuntimeError('Cloudflare D1 query failed: '+str(data.get('errors') or data.get('result'))[:350])
     return data['result'][0]

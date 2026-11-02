@@ -4,6 +4,7 @@
 // Limits: <=6 pools, <=8 signatures per pool, <=36 transaction decodes/run.
 import {writeFile} from 'node:fs/promises';
 import {PUMPSWAP} from '../src/pumpswap.mjs';
+import {retryRead} from '../src/goget-read-retry.mjs';
 const ADDR=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const LIMIT={pools:6,signaturesPerPool:8,txDecodes:36};
 const required=k=>{if(!process.env[k])throw Error('MISSING_'+k);return process.env[k]};
@@ -17,7 +18,7 @@ async function json(url,{body=null,token=null}={}){
 async function run(){
  const acc=required('CF_ACCOUNT_ID'),db=required('CF_DATABASE_ID'),cloud=required('CF_D1_API_TOKEN'),helius=required('HELIUS_API_KEY');
  const start=new Date().toISOString(),base='https://api.cloudflare.com/client/v4/accounts/'+acc+'/d1/database/'+db+'/query';
- const q=await json(base,{token:cloud,body:{sql:"SELECT address,pool,symbol,score,last_seen FROM assets WHERE chain='solana' AND pool IS NOT NULL AND status IN ('ALIVE','STATIC') ORDER BY score DESC,last_seen DESC LIMIT 20",params:[]}});
+ const q=await retryRead(()=>json(base,{token:cloud,body:{sql:"SELECT address,pool,symbol,score,last_seen FROM assets WHERE chain='solana' AND pool IS NOT NULL AND status IN ('ALIVE','STATIC') ORDER BY score DESC,last_seen DESC LIMIT 20",params:[]}}));
  if(q.success!==true||q.result?.[0]?.success!==true)throw Error('D1_POOL_QUERY_FAILURE');
  const pools=[...new Map((q.result[0].results||[]).filter(x=>ADDR.test(x.pool||'')&&ADDR.test(x.address||''))
   .map(x=>[x.pool,x])).values()].slice(0,LIMIT.pools);

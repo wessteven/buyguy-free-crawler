@@ -2,6 +2,9 @@
 // No Helius requests, no LLM, no wallet signing, no order execution.
 import {detectSignalWindows,attachAsOfQuotes,SIGNAL_LIMITS} from './goget-pre-signal-features.mjs';
 import {selectMarketResearchMints,chooseMarketPairs,chooseExactPoolOutcomes,readBoundedJson,MARKET_BOUNDS} from './goget-pre-signal-market.mjs';
+import {readCollectionSample,readLatestCollectionStatus,readCollectionWindow} from './goget-collection-health.mjs';
+
+export const PRE_SIGNAL_BUILD='COLLECTION_SUPERVISION_2026_11_02_V1';
 
 export const SIGNAL_WORKER_LIMITS=Object.freeze({
   cronMinutes:5,leaseMs:240000,maxOutcomeChecks:20,maxMarketExpiryMarks:20,
@@ -108,6 +111,7 @@ export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual'
   try{
     const from=new Date(now-SIGNAL_LIMITS.lookbackMinutes*MIN).toISOString();
     const rows=await read(db,sourceSQL,from,stamp,SIGNAL_LIMITS.sourceLimit);
+    const collectionHealth=await readCollectionSample(db,{now});
     const base=detectSignalWindows(rows,{now});
     const incomplete=rows.length>=SIGNAL_LIMITS.sourceLimit;
     let enriched=[],inserted=0,createdJobs=0;
@@ -264,7 +268,11 @@ export async function processPreSignalCycle(env,{now=Date.now(),trigger='manual'
         market.status='DEGRADED';
       }
     }
-    const summary={status:incomplete?'INCOMPLETE_SOURCE_WINDOW':'OK',
+    const summary={status:incomplete?'INCOMPLETE_SOURCE_WINDOW':
+      collectionHealth.status==='UNVERIFIED'?'SOURCE_HEALTH_UNVERIFIED':
+      collectionHealth.reasons.some(x=>['NO_SOURCE_RECEIPTS','NO_RECENT_SOURCE_RECEIPTS','SOURCE_PILOT_EXPIRED'].includes(x))?
+        'SOURCE_NOT_FRESH':collectionHealth.status==='REQUIRES_ATTENTION'?'RAW_ARCHIVE_INCOMPLETE':'OK',
+      build:PRE_SIGNAL_BUILD,collectionHealth,
       runId:id,trigger:trigger==='cron'?'cron':'manual',at:stamp,
       observedSourceRows:rows.length,observedMints:base.observedTokenMints,
       storedSnapshots:inserted,sampledSnapshots:enriched.length,
@@ -298,11 +306,22 @@ export default {
     const path=new URL(request.url).pathname;
     if(path==='/health'&&request.method==='GET')
       return json({service:'goget-pre-signal',mode:'RESEARCH_ONLY',
+        build:PRE_SIGNAL_BUILD,livenessOnly:true,collectionStatusPath:'/collection-health',
         cron:'FIVE_MINUTES',enabled:env?.PRE_SIGNAL_ENABLED==='true'});
-    if(path!=='/run'||request.method!=='POST')return json({error:'NOT_FOUND'},404);
+    if(path==='/collection-health'&&request.method==='GET'){
+      const status=await readLatestCollectionStatus(env?.DB);
+      return json(status,status.ok?200:503);
+    }
+    if(!((path==='/run'&&request.method==='POST')||(path==='/status'&&request.method==='GET')))
+      return json({error:'NOT_FOUND'},404);
     if(typeof env?.PRE_SIGNAL_CONTROL_TOKEN!=='string'||env.PRE_SIGNAL_CONTROL_TOKEN.length<40)
       return json({error:'NOT_CONFIGURED'},503);
     if(!await authorized(request,env.PRE_SIGNAL_CONTROL_TOKEN))return json({error:'UNAUTHORIZED'},401);
+    if(path==='/status'){
+      try{return json({build:PRE_SIGNAL_BUILD,latest:await readLatestCollectionStatus(env.DB),
+        window:await readCollectionWindow(env.DB)});}
+      catch{return json({error:'COLLECTION_HISTORY_UNAVAILABLE'},503);}
+    }
     try{return json(await processPreSignalCycle(env));}
     catch(e){const c=exception(e);console.error('GOGET_PRE_SIGNAL_MANUAL_FAILED',c);return json({error:c},503);}
   },

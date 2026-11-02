@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Verify actual Cloudflare signal receiver with existing research-only D1.
 import {createHmac} from 'node:crypto';
+import {PRE_SIGNAL_BUILD} from '../src/goget-pre-signal-worker.mjs';
 const url='https://goget-pre-signal.wessteven.workers.dev';
 const admin=process.env.ADMIN_TOKEN;
 if(!admin||admin.length<24)throw Error('ADMIN_TOKEN_MISSING');
@@ -15,23 +16,26 @@ for(let i=0;i<6;i++){
   try{
     const h=await get('/health');
     if(h.status===200&&h.result?.service==='goget-pre-signal'&&
-      h.result?.mode==='RESEARCH_ONLY'&&h.result?.enabled===true){ready=true;break;}
+      h.result?.mode==='RESEARCH_ONLY'&&h.result?.enabled===true&&
+      h.result?.build===PRE_SIGNAL_BUILD&&h.result?.livenessOnly===true){ready=true;break;}
   }catch{}
   if(i<5)await new Promise(r=>setTimeout(r,4000));
 }
 if(!ready)throw Error('PRE_SIGNAL_HEALTH_UNVERIFIED');
 let answer=null;
+const validStatuses=['OK','INCOMPLETE_SOURCE_WINDOW','LEASE_BUSY',
+  'SOURCE_HEALTH_UNVERIFIED','SOURCE_NOT_FRESH','RAW_ARCHIVE_INCOMPLETE'];
 for(let i=0;i<6;i++){
   try{
     const a=await get('/run',{method:'POST',
       headers:{authorization:'Bearer '+token}});
     answer=a;
-    if(a.status===200&&['OK','INCOMPLETE_SOURCE_WINDOW','LEASE_BUSY'].includes(a.result?.status))break;
+    if(a.status===200&&validStatuses.includes(a.result?.status))break;
     if(a.status!==503||a.result?.error!=='NOT_CONFIGURED')break;
   }catch{}
   if(i<5)await new Promise(r=>setTimeout(r,4000));
 }
-if(answer?.status!==200||!['OK','INCOMPLETE_SOURCE_WINDOW','LEASE_BUSY'].includes(answer.result?.status))
+if(answer?.status!==200||!validStatuses.includes(answer.result?.status))
   throw Error('PRE_SIGNAL_RUN_UNVERIFIED_'+(answer?.result?.error||answer?.status||'NETWORK'));
 const x=answer.result;
 if(x.status==='LEASE_BUSY'){console.log('GOGET_PRE_SIGNAL_SMOKE',JSON.stringify({status:'LEASE_BUSY'}));}
@@ -39,7 +43,7 @@ else{
  if(x.modelCalls!==0||x.heliusCalls!==0||x.trades!==0||
   x.sampledSnapshots>40||x.observedSourceRows>1200)throw Error('PRE_SIGNAL_OUTPUT_GUARD_FAILED');
  console.log('GOGET_PRE_SIGNAL_SMOKE',JSON.stringify({
-  status:x.status,observedSourceRows:x.observedSourceRows,
+  status:x.status,build:x.build,collectionHealth:x.collectionHealth,observedSourceRows:x.observedSourceRows,
   potentialSignals:x.potentialSignalCount,controls:x.controlCount,
   snapshots:x.storedSnapshots,quotes:x.freshExactPoolQuotes,
   forwardLabels:x.observedOutcomes,missingCoverage:x.missingFuturePriceCoverage,
@@ -49,3 +53,11 @@ else{
   modelCalls:x.modelCalls,heliusCalls:x.heliusCalls,trades:x.trades
  }));
 }
+const report=await get('/status',{headers:{authorization:'Bearer '+token}});
+if(report.status!==200||report.result?.build!==PRE_SIGNAL_BUILD||
+  report.result?.window?.expectedSlots!==864)throw Error('COLLECTION_STATUS_UNVERIFIED');
+console.log('GOGET_UNATTENDED_STATUS',JSON.stringify(report.result));
+const publicHealth=await get('/collection-health');
+if(![200,503].includes(publicHealth.status)||typeof publicHealth.result?.ok!=='boolean'||
+  publicHealth.result?.ok!==(publicHealth.status===200))throw Error('COLLECTION_HEALTH_UNVERIFIED');
+console.log('GOGET_COLLECTION_PUBLIC_HEALTH',JSON.stringify(publicHealth));
