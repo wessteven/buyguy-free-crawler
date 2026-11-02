@@ -97,3 +97,20 @@ bound, the receipt index and raw primary-key lookup. Production deployment
 verification pins the expected build, checks the protected 72-hour endpoint and
 tests that public collection HTTP status agrees with the explicit health flag.
 Deployment success with a degraded collection report is not a successful trial.
+
+## Independent unattended report acceptance gate
+
+The hourly watcher now tests its own acceptance logic before checking the
+provider. A passing latest `/collection-health` result is **not** enough for
+the hourly watcher to pass: the saved 72-hour report must also contain all
+864 distinct five-minute slots, zero missing, degraded or uninstrumented slots,
+an uncapped D1 read, and the matching `SAMPLED_EVIDENCE_WINDOW_COMPLETE` flag.
+The watcher independently rejects stale latest checks, stale window timestamps,
+contradictory counters and malformed report shapes.
+
+Results are written as `acceptance` alongside the existing source/status
+evidence artifact. A pass certifies **only sampled-window monitoring**, not
+provider/cohort continuity, full source completeness, independently verified
+market outcomes or trading profitability. The separate read-only provider audit
+continues to fail on missing subscriptions. No additional Helius calls, D1
+migrations, research cohort changes, trading actions or polling changes result.
