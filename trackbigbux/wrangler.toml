@@ -1,0 +1,16 @@
+name = "trackbigbux-collector"
+main = "src/worker.mjs"
+compatibility_date = "2026-10-18"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "buyguy-free-v3"
+database_id = "REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+TRACKBIGBUX_VERSION = "0.1.0"
+TRACKBIGBUX_MODE = "READ_ONLY_EVIDENCE"
