@@ -1,5 +1,6 @@
 import {WALLETS,ROSTER_VERSION,EXPECTED_WALLET_COUNT,assertRoster} from './wallets.mjs';
 import {solanaDelta,evmDelta,normalizeSignature,normalizeEvmTx,classifyHelius,boundedError,evmEqual} from './normalize.mjs';
+import {readHead,collectRpcWallet} from './robinhood-rpc.mjs';
 
 const BS='https://robinhoodchain.blockscout.com/api/v2';
 const MAX_SOL=300,MAX_EVM_PAGES=4,MAX_PARSE=60;
@@ -93,7 +94,7 @@ async function saveWalletResult(db,runId,wallet,startedAt,result,receipts){
       .bind(wallet.id,wallet.chain,wallet.address,result.latest,runId,result.latestAt,finish,gap).run();
   }
   await db.prepare('INSERT OR REPLACE INTO trackbigbux_coverage (run_id,wallet_id,chain,expected_address,provider,status,started_at,completed_at,fetch_calls,rows_received,rows_staged,checkpoint_matched,source_latest_tx,source_latest_at,error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
-    .bind(runId,wallet.id,wallet.chain,wallet.address,wallet.chain==='solana'?'helius_rpc':'blockscout',
+    .bind(runId,wallet.id,wallet.chain,wallet.address,result.provider||(wallet.chain==='solana'?'helius_rpc':'blockscout'),
       result.status,startedAt,finish,result.calls,result.fetched,result.events.length,result.checkpointMatched?1:0,
       result.latest,result.latestAt,null).run();
   await saveReceipts(db,runId,wallet.id,receipts);
@@ -150,6 +151,11 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
   if(claim.meta?.changes===0)return {project:'trackBIGBUX',runId,already_run:true};
   let attempted=0,complete=0,baselines=0,partial=0,seen=0,staged=0,parsed=0,pending=0;
   const warnings=[];
+  let rpcHead=null,rpcHeadError=null;
+  if(env.TRACKBIGBUX_RH_MODE==='rpc_transfer_only') {
+    try{rpcHead=await readHead(fetcher);}
+    catch(e){rpcHeadError=e;warnings.push('ROBINHOOD_RPC_HEAD:'+boundedError(e));}
+  }
   try{
     for(const wallet of WALLETS){
       const startWallet=iso(),receipts=[];
@@ -159,9 +165,18 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
       attempted++;
       try{
         const checkpoint=await loadCheckpoint(env.DB,wallet.id);
-        const result=wallet.chain==='solana'?
-          await collectSolWallet(wallet,checkpoint,env,fetcher,record):
-          await collectEvmWallet(wallet,checkpoint,fetcher,record);
+        let result;
+        if(wallet.chain==='solana'){
+          result=await collectSolWallet(wallet,checkpoint,env,fetcher,record);
+        } else if(env.TRACKBIGBUX_RH_MODE==='rpc_transfer_only'){
+          if(rpcHeadError) {
+            record('robinhood_public_rpc','eth_blockNumber','FAILED',0,boundedError(rpcHeadError));
+            throw rpcHeadError;
+          }
+          result=await collectRpcWallet(wallet,checkpoint,rpcHead,fetcher,record,iso());
+        } else {
+          result=await collectEvmWallet(wallet,checkpoint,fetcher,record);
+        }
         await saveWalletResult(env.DB,runId,wallet,startWallet,result,receipts);
         seen+=result.fetched;staged+=result.events.length;
         if(result.status==='OK')complete++;
