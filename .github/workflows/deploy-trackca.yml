@@ -100,7 +100,7 @@ jobs:
           url='https://trackca-collector.wessteven.workers.dev/health'
           for attempt in range(6):
             try:
-              with urllib.request.urlopen(url,timeout=15) as r: obj=json.load(r)
+              with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'trackca-release-verifier/1.0','Accept':'application/json'}),timeout=15) as r: obj=json.load(r)
               if obj.get('project')=='trackCA':
                 print('TRACKCA_HEALTH_OK',obj.get('status'));break
             except Exception as e:
