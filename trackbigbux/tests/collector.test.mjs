@@ -204,7 +204,7 @@ test('new scheduled scan invokes bounded parser even outside the old hourly slot
     return orig(sql);
   };
   const fetcher=async(url)=>{
-    if(url.includes('v0/transactions/')){
+    if(url.includes('v0/transactions')){
       providerCalls.push(url);
       return {ok:true,json:async()=>[{signature,type:'TRANSFER',tokenTransfers:[],feePayer:'unrelated'}]};
     }
@@ -247,4 +247,52 @@ test('public RPC head error records the actual failed method rather than guessin
     &&String(x.params[1]).startsWith('rh-'));
   assert.equal(receipts.length,7);
   assert.ok(receipts.every(x=>x.params[4]==='eth_chainId'&&x.params[6]==='FAILED'));
+});
+
+test('legacy Helius endpoint 404 retries exactly once on original documented host, with no invented buys',async()=>{
+  const db=new FakeDB(),orig=db.prepare.bind(db),signature=uniqueSig(7007),urls=[];
+  db.prepare=sql=>{
+    if(sql.startsWith('SELECT count(*) AS n FROM trackbigbux_activity'))return {first:async()=>({n:1})};
+    if(sql.startsWith('SELECT wallet_id,tx_id FROM trackbigbux_activity'))return {bind:()=>({all:async()=>({results:[{wallet_id:'sol-g4',tx_id:signature}]})})};
+    return orig(sql);
+  };
+  const fetcher=async(url)=>{
+    if(url.includes('/v0/transactions')){
+      urls.push(url.split('?')[0]);
+      if(url.includes('api-mainnet.helius-rpc.com'))return {ok:false,status:404,json:async()=>({})};
+      return {ok:true,json:async()=>[{signature,type:'TRANSFER',tokenTransfers:[],feePayer:'not-wallet'}]};
+    }
+    return {ok:false,status:429,json:async()=>({})};
+  };
+  const res=await collect({DB:db,HELIUS_API_KEY:'test-only'},{
+    now:new Date('2026-11-03T08:55:00Z'),fetcher});
+  assert.deepEqual(urls,[
+    'https://api-mainnet.helius-rpc.com/v0/transactions',
+    'https://api.helius.xyz/v0/transactions'
+  ]);
+  assert.equal(res.parsed,1);
+  const receipt=db.rows.find(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackbigbux_receipts')
+    &&x.params[1]==='__parser');
+  assert.equal(receipt.params[6],'OK');
+  assert.match(receipt.params[8],/parserHost=api.helius.xyz/);
+});
+test('Helius 429 never falls back or turns a failed batch into a parsed row',async()=>{
+  const db=new FakeDB(),orig=db.prepare.bind(db),signature=uniqueSig(7337),urls=[];
+  db.prepare=sql=>{
+    if(sql.startsWith('SELECT count(*) AS n FROM trackbigbux_activity'))return {first:async()=>({n:1})};
+    if(sql.startsWith('SELECT wallet_id,tx_id FROM trackbigbux_activity'))return {bind:()=>({all:async()=>({results:[{wallet_id:'sol-g4',tx_id:signature}]})})};
+    return orig(sql);
+  };
+  const fetcher=async url=>{
+    if(url.includes('/v0/transactions')){urls.push(url.split('?')[0]);return {ok:false,status:429,json:async()=>({})};}
+    return {ok:false,status:429,json:async()=>({})};
+  };
+  const res=await collect({DB:db,HELIUS_API_KEY:'test-only'},{
+    now:new Date('2026-11-03T09:00:00Z'),fetcher});
+  assert.deepEqual(urls,['https://api-mainnet.helius-rpc.com/v0/transactions']);
+  assert.equal(res.parsed,0);
+  const receipt=db.rows.find(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackbigbux_receipts')
+    &&x.params[1]==='__parser');
+  assert.equal(receipt.params[6],'FAILED');
+  assert.match(receipt.params[8],/UPSTREAM_HTTP_429/);
 });
