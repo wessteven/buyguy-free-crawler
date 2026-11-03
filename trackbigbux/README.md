@@ -45,3 +45,7 @@ An independent GitHub Actions auditor (trackbigbux-audit.yml, hourly) compares t
 ## Recovery patch — 2026-11-03 (draft, not deployed)
 
 The pending PR adds multi-page Solana checkpoint recovery with a no-watermark-advance guard; a rotating, bounded per-run enrichment caller; and opt-in dedicated Robinhood RPC routing. Regression tests are not live provider proof. The external D1 auditor must still verify 12/12 exact wallets and honest per-source receipts. Even successful ERC20 Transfer-log reads do not constitute full Robinhood transaction history, verified buys or audited P&L. Keep collector and auditor separate from other engines.
+
+## External audit timing and source evidence
+
+Independent D1 auditing checks the newest **finished** source scan. If the latest five-minute scan is still `RUNNING`, the audit separately reports that active scan and evaluates the last finished scan rather than inventing missing wallet coverage from half-written D1 rows. An active scan older than ten minutes is a verification failure. The auditor also includes Helius parser attempt/response counts and actual classified-row totals; source receipts alone never establish trading P&L. The strict 12/12 address, checkpoint and source-call gates remain unchanged.
