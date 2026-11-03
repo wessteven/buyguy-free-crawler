@@ -187,7 +187,7 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
           result=await collectSolWallet(wallet,checkpoint,env,fetcher,record);
         } else if(env.TRACKBIGBUX_RH_MODE==='rpc_transfer_only'){
           if(rpcHeadError) {
-            record('robinhood_public_rpc','eth_blockNumber','FAILED',0,boundedError(rpcHeadError));
+            record('robinhood_public_rpc',rpcHeadError.rpc_method||'eth_head_unknown','FAILED',0,boundedError(rpcHeadError));
             throw rpcHeadError;
           }
           if(!rpcCohort&&!rpcCohortError){
@@ -199,7 +199,12 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
             }catch(e){rpcCohortError=e;}
           }
           if(rpcCohortError) {
-            record('robinhood_public_rpc','eth_getLogs_batch','FAILED',0,boundedError(rpcCohortError));
+            // Preserve both successful and failed shared-provider request receipts
+            // for EACH member, not just a synthetic all-cohort error.
+            for(const receipt of rpcCohortReceipts){
+              record(receipt.source,receipt.kind,receipt.status,receipt.count,
+                receipt.details+';shared_cohort=7;wallet_matches=unknown');
+            }
             throw rpcCohortError;
           }
           result=rpcCohort.get(wallet.id);
