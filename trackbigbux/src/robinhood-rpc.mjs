@@ -33,8 +33,8 @@ export async function rpcCall(method,params,fetcher=fetch,endpoint=ROBINHOOD_RPC
    return doc.result;
  }finally{clearTimeout(timeout);}
 }
-export async function readHead(fetcher=fetch){
- const chain=await rpcCall('eth_chainId',[],fetcher);
+export async function readHead(fetcher=fetch,endpoint=ROBINHOOD_RPC){
+ const chain=await rpcCall('eth_chainId',[],fetcher,endpoint);
  if(parseHexInt(chain)!==CHAIN_ID)throw Error('ROBINHOOD_RPC_WRONG_CHAIN');
  const number=await rpcCall('eth_blockNumber',[],fetcher,endpoint);
  return parseHexInt(number);
@@ -148,7 +148,7 @@ export async function collectRpcCohort(wallets,checkpoints,head,fetcher,record,o
    try{
      const results=await rpcCall('eth_getLogs',[{
        fromBlock:'0x'+from.toString(16),toBlock:'0x'+to.toString(16),topics
-     }],fetcher);
+     }],fetcher,endpoint);
      if(!Array.isArray(results))throw Error('ROBINHOOD_RPC_BATCH_SCHEMA');
      record('robinhood_public_rpc','eth_getLogs_batch_'+direction,'OK',results.length,
        'wallets=7;from='+from+';to='+to);
