@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {WALLETS,EXPECTED_WALLET_COUNT,assertRoster} from '../src/wallets.mjs';
 import {solanaDelta,evmDelta,normalizeSignature,normalizeEvmTx,classifyHelius} from '../src/normalize.mjs';
-import {collect} from '../src/worker.mjs';
+import {collect,collectSolWallet,saveWalletResult} from '../src/worker.mjs';
 
 test('freeze complete 12-wallet v1 roster across two exact chains',()=>{
   assert.equal(EXPECTED_WALLET_COUNT,12);
@@ -138,4 +138,81 @@ test('backfill continues after one provider batch fails',async()=>{
   assert.equal(result.failedBatches,1);
   assert.equal(result.classified,1);
   assert.equal(result.unresolved,1);
+});
+
+const base58='123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+function uniqueSig(n){
+  let out='';
+  do{out=base58[n%58]+out;n=Math.floor(n/58);}while(n);
+  return out.padStart(85,'1');
+}
+function solRow(n){
+  return {signature:uniqueSig(n),slot:100000+n,blockTime:1793600000+n,err:null};
+}
+test('busy Solana wallet pages past first 301 signatures to the exact saved checkpoint',async()=>{
+  const wallet=WALLETS.find(x=>x.id==='sol-decu');
+  const first=Array.from({length:301},(_,i)=>solRow(500-i));
+  const second=[solRow(199),solRow(198)];
+  const requests=[],receipts=[];
+  const fetcher=async(_,options)=>{
+    const p=JSON.parse(options.body).params[1];requests.push(p);
+    return {ok:true,json:async()=>({result:p.before?second:first})};
+  };
+  const result=await collectSolWallet(wallet,{newest_tx_id:uniqueSig(198)},
+    {HELIUS_API_KEY:'unit-test'},fetcher,(...args)=>receipts.push(args));
+  assert.equal(result.status,'OK');
+  assert.equal(result.checkpointMatched,true);
+  assert.equal(result.calls,2);
+  assert.equal(result.events.length,302);
+  assert.equal(requests[1].before,first.at(-1).signature);
+  assert.equal(receipts.length,2);
+  assert.equal(receipts[0][2],'OK');
+});
+test('missing Solana checkpoint remains explicit after five bounded pages',async()=>{
+  const wallet=WALLETS.find(x=>x.id==='sol-cented');
+  let calls=0;
+  const fetcher=async()=>{
+    const i=calls++;
+    return {ok:true,json:async()=>({result:Array.from({length:301},(_,j)=>solRow(3000-i*301-j))})};
+  };
+  const result=await collectSolWallet(wallet,{newest_tx_id:uniqueSig(3)},
+    {HELIUS_API_KEY:'unit-test'},fetcher,()=>{});
+  assert.equal(result.calls,5);
+  assert.equal(result.status,'CHECKPOINT_NOT_FOUND');
+  assert.equal(result.checkpointMatched,false);
+  assert.equal(result.events.length,1505);
+});
+test('Solana coverage gap persists observations but never advances newest watermark',async()=>{
+  const db=new FakeDB();
+  const wallet=WALLETS.find(w=>w.id==='sol-decu');
+  await saveWalletResult(db,'trackbigbux-test',wallet,'2026-11-03T00:00:00Z',{
+    events:[],status:'CHECKPOINT_NOT_FOUND',latest:uniqueSig(123),
+    latestAt:null,provider:'helius_rpc',fetched:1505,calls:5,checkpointMatched:false
+  },[]);
+  assert.equal(db.rows.some(r=>r.sql.startsWith('INSERT INTO trackbigbux_wallet_state')),false);
+  assert.equal(db.rows.some(r=>r.sql.startsWith('UPDATE trackbigbux_wallet_state SET gap_count')),true);
+  assert.equal(db.rows.filter(r=>r.sql.startsWith('INSERT OR REPLACE INTO trackbigbux_coverage')).length,1);
+});
+test('new scheduled scan invokes bounded parser even outside the old hourly slot',async()=>{
+  const db=new FakeDB(),orig=db.prepare.bind(db);
+  const signature=uniqueSig(7),providerCalls=[];
+  db.prepare=sql=>{
+    if(sql.startsWith('SELECT count(*) AS n FROM trackbigbux_activity'))
+      return {first:async()=>({n:1})};
+    if(sql.startsWith('SELECT wallet_id,tx_id FROM trackbigbux_activity'))
+      return {bind:(limit,offset)=>({all:async()=>({results:[{wallet_id:'sol-g4',tx_id:signature}]})})};
+    return orig(sql);
+  };
+  const fetcher=async(url)=>{
+    if(url.includes('v0/transactions/')){
+      providerCalls.push(url);
+      return {ok:true,json:async()=>[{signature,type:'TRANSFER',tokenTransfers:[],feePayer:'unrelated'}]};
+    }
+    return {ok:false,status:429,json:async()=>({})};
+  };
+  const result=await collect({DB:db,HELIUS_API_KEY:'unit-test'},
+    {now:new Date('2026-11-03T00:05:00Z'),fetcher});
+  assert.equal(providerCalls.length,1);
+  assert.equal(result.parsed,1);
+  assert.ok(db.rows.some(r=>r.sql.startsWith('INSERT OR IGNORE INTO trackbigbux_receipts')&&r.params[1]==='__parser'));
 });
