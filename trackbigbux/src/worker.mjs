@@ -1,10 +1,10 @@
 import {WALLETS,ROSTER_VERSION,EXPECTED_WALLET_COUNT,assertRoster} from './wallets.mjs';
 import {solanaDelta,evmDelta,normalizeSignature,normalizeEvmTx,classifyHelius,boundedError,evmEqual} from './normalize.mjs';
 import {readHead,collectRpcCohort} from './robinhood-rpc.mjs';
-import {planEnrichment} from './enrichment-plan.mjs';
+import {drainBacklog} from './backfill.mjs';
 
 const BS='https://robinhoodchain.blockscout.com/api/v2';
-const MAX_SOL=300,MAX_EVM_PAGES=4,MAX_PARSE=60;
+const MAX_SOL=300,MAX_SOL_PAGES=5,MAX_EVM_PAGES=4,MAX_PARSE_PER_RUN=20;
 const EVENT_SQL='INSERT OR IGNORE INTO trackbigbux_activity (wallet_id,chain,tx_id,occurred_at,height,observed_at,category,initiated,source,evidence_json) VALUES (?,?,?,?,?,?,?,?,?,?)';
 const statusHeaders={'cache-control':'no-store','content-type':'application/json; charset=utf-8'};
 const iso=()=>new Date().toISOString();
@@ -30,30 +30,51 @@ async function persistEvents(db,events){
 async function loadCheckpoint(db,walletId){
   return await db.prepare('SELECT newest_tx_id,last_seen_at,gap_count FROM trackbigbux_wallet_state WHERE wallet_id=?').bind(walletId).first();
 }
-function collectSolWallet(wallet,checkpoint,env,fetcher,record) {
+// Read multiple bounded pages when a high-velocity wallet outruns one scan.
+// Never claim continuity unless the exact persisted checkpoint was located.
+export function collectSolWallet(wallet,checkpoint,env,fetcher,record) {
   return (async()=>{
     if(!env.HELIUS_API_KEY)throw Error('HELIUS_API_KEY_NOT_CONFIGURED');
     const endpoint='https://mainnet.helius-rpc.com/?api-key='+encodeURIComponent(env.HELIUS_API_KEY);
-    const request={jsonrpc:'2.0',id:1,method:'getSignaturesForAddress',
-      params:[wallet.address,{limit:MAX_SOL+1,commitment:'finalized'}]};
-    let rows;
-    try{
-      const result=await json(endpoint,{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify(request)},fetcher);
-      if(result.error)throw Error('HELIUS_RPC_'+String(result.error.code||'error'));
-      if(!Array.isArray(result.result))throw Error('SOLANA_RPC_SCHEMA_INVALID');
-      rows=result.result;
-      record('helius_rpc','getSignaturesForAddress','OK',rows.length,'limit='+String(MAX_SOL+1));
-    }catch(e){record('helius_rpc','getSignaturesForAddress','FAILED',0,boundedError(e));throw e;}
-    const delta=solanaDelta(rows,checkpoint?.newest_tx_id,MAX_SOL);
-    const now=iso();
-    const normalized=delta.rows.map(x=>normalizeSignature(wallet,x,now)).filter(Boolean);
+    const previous=checkpoint?.newest_tx_id||null,all=[],seen=new Set();
+    let before=null,calls=0;
+    for(let page=0;page<(previous?MAX_SOL_PAGES:1);page++){
+      const options={limit:MAX_SOL+1,commitment:'finalized'};
+      if(before)options.before=before;
+      const request={jsonrpc:'2.0',id:1,method:'getSignaturesForAddress',
+        params:[wallet.address,options]};
+      let rows;
+      try{
+        const result=await json(endpoint,{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify(request)},fetcher);
+        if(result.error)throw Error('HELIUS_RPC_'+String(result.error.code||'error'));
+        if(!Array.isArray(result.result))throw Error('SOLANA_RPC_SCHEMA_INVALID');
+        rows=result.result;
+        record('helius_rpc','getSignaturesForAddress','OK',rows.length,
+          'page='+String(page+1)+';limit='+String(MAX_SOL+1));
+      }catch(e){
+        record('helius_rpc','getSignaturesForAddress','FAILED',0,boundedError(e));
+        throw e;
+      }
+      calls++;
+      for(const row of rows){
+        if(!seen.has(row?.signature)){seen.add(row?.signature);all.push(row);}
+      }
+      // A non-full page indicates provider history ended; still flag a missing
+      // checkpoint, which can arise from an expired or replaced watermark.
+      if(!previous||all.some(x=>x.signature===previous)||rows.length<MAX_SOL+1)break;
+      const nextBefore=rows.at(-1)?.signature;
+      if(!nextBefore||nextBefore===before)break;
+      before=nextBefore;
+    }
+    const delta=solanaDelta(all,previous,MAX_SOL_PAGES*(MAX_SOL+1));
+    const now=iso(),normalized=delta.rows.map(x=>normalizeSignature(wallet,x,now)).filter(Boolean);
     const identityValid=normalized.length===delta.rows.length;
     return {events:normalized,
       status:identityValid?delta.status:'INVALID_TRANSACTION_IDS',
       checkpointMatched:identityValid&&delta.checkpointFound,latest:delta.newest,
-      latestAt:rows[0]?.blockTime?new Date(rows[0].blockTime*1000).toISOString():null,
-      fetched:rows.length,calls:1};
+      latestAt:all[0]?.blockTime?new Date(all[0].blockTime*1000).toISOString():null,
+      fetched:all.length,calls};
   })();
 }
 async function collectEvmWallet(wallet,checkpoint,fetcher,record){
@@ -88,11 +109,14 @@ async function collectEvmWallet(wallet,checkpoint,fetcher,record){
 async function saveWalletResult(db,runId,wallet,startedAt,result,receipts){
   const finish=iso();
   await persistEvents(db,result.events);
-  // Save checkpoint AFTER evidence so a partial database write cannot skip a transaction.
-  if(result.latest){
-    const gap=result.status==='CHECKPOINT_NOT_FOUND'?1:0;
-    await db.prepare('INSERT INTO trackbigbux_wallet_state (wallet_id,chain,address,newest_tx_id,last_completed_run,last_seen_at,updated_at,gap_count) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(wallet_id) DO UPDATE SET chain=excluded.chain,address=excluded.address,newest_tx_id=excluded.newest_tx_id,last_completed_run=excluded.last_completed_run,last_seen_at=excluded.last_seen_at,updated_at=excluded.updated_at,gap_count=trackbigbux_wallet_state.gap_count+excluded.gap_count')
-      .bind(wallet.id,wallet.chain,wallet.address,result.latest,runId,result.latestAt,finish,gap).run();
+  // Persist source rows first. NEVER advance a Solana watermark across an
+  // unverified interval: the next run must be able to recover the omitted page.
+  if(result.latest && !['CHECKPOINT_NOT_FOUND','INVALID_TRANSACTION_IDS'].includes(result.status)){
+    await db.prepare('INSERT INTO trackbigbux_wallet_state (wallet_id,chain,address,newest_tx_id,last_completed_run,last_seen_at,updated_at,gap_count) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(wallet_id) DO UPDATE SET chain=excluded.chain,address=excluded.address,newest_tx_id=excluded.newest_tx_id,last_completed_run=excluded.last_completed_run,last_seen_at=excluded.last_seen_at,updated_at=excluded.updated_at,gap_count=trackbigbux_wallet_state.gap_count')
+      .bind(wallet.id,wallet.chain,wallet.address,result.latest,runId,result.latestAt,finish,0).run();
+  }else if(result.status==='CHECKPOINT_NOT_FOUND'){
+    await db.prepare('UPDATE trackbigbux_wallet_state SET gap_count=gap_count+1,updated_at=? WHERE wallet_id=?')
+      .bind(finish,wallet.id).run();
   }
   await db.prepare('INSERT OR REPLACE INTO trackbigbux_coverage (run_id,wallet_id,chain,expected_address,provider,status,started_at,completed_at,fetch_calls,rows_received,rows_staged,checkpoint_matched,source_latest_tx,source_latest_at,error) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
     .bind(runId,wallet.id,wallet.chain,wallet.address,result.provider||(wallet.chain==='solana'?'helius_rpc':'blockscout'),
@@ -111,39 +135,28 @@ async function saveFailure(db,runId,wallet,startedAt,error,receipts) {
       'ERROR',startedAt,iso(),receipts.length,0,0,0,null,null,boundedError(error)).run();
   await saveReceipts(db,runId,wallet.id,receipts);
 }
-// Incremental enrichment is on a separate bounded hourly budget; other signatures stay pending.
-async function enrichSolana(env,db,runId,fetcher,warnings){
+// Spread parser work across five-minute runs, rotating through old pending rows
+// rather than allowing a few permanently unparseable signatures to block all work.
+async function enrichSolana(env,db,runId,fetcher,warnings,bucket){
   if(!env.HELIUS_API_KEY){warnings.push('ENRICHMENT_KEY_MISSING');return 0;}
-  const q=await db.prepare("SELECT wallet_id,tx_id FROM trackbigbux_activity WHERE chain='solana' AND category='UNPARSED_SIGNATURE' ORDER BY observed_at ASC LIMIT ?").bind(MAX_PARSE).all();
-  const rows=q.results||[];if(!rows.length)return 0;
+  const count=await db.prepare("SELECT count(*) AS n FROM trackbigbux_activity WHERE chain='solana' AND category='UNPARSED_SIGNATURE'").first();
+  const pending=Number(count?.n||0);
+  if(!pending)return 0;
+  const offset=(bucket*MAX_PARSE_PER_RUN)%pending;
   const url='https://api-mainnet.helius-rpc.com/v0/transactions/?api-key='+encodeURIComponent(env.HELIUS_API_KEY);
-  // Bound individual provider requests; failed chunks remain pending for later retry.
-  const signatures=[...new Set(rows.map(r=>r.tx_id))];
-  const chunks=[];
-  for(let i=0;i<signatures.length;i+=20)chunks.push(signatures.slice(i,i+20));
-  let updated=0;
-  for(let i=0;i<chunks.length;i++){
-    let data;
-    try {
-      data=await json(url,{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({transactions:chunks[i]})},fetcher);
-      if(!Array.isArray(data))throw Error('HELIUS_PARSE_SCHEMA_INVALID');
+  const result=await drainBacklog({db,wallets:WALLETS,classify:classifyHelius,
+    limit:MAX_PARSE_PER_RUN,batchSize:20,offset,
+    fetchParsed:signatures=>json(url,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({transactions:signatures})},fetcher),
+    onBatch:async item=>{
+      const details='requested='+item.requested+';offset='+offset+';batch='+item.index+
+        (item.error?';error='+boundedError(item.error):'');
       await db.prepare('INSERT OR IGNORE INTO trackbigbux_receipts (run_id,wallet_id,seq,source,request_kind,observed_at,result_status,response_records,details) VALUES (?,?,?,?,?,?,?,?,?)')
-        .bind(runId,'__parser',i+1,'helius_enhanced','parseTransactions',iso(),'OK',data.length,
-          'chunk='+String(i+1)+';requested='+String(chunks[i].length)).run();
-    }catch(e){
-      warnings.push('ENRICHMENT_FAILED_CHUNK_'+String(i+1)+':'+boundedError(e));
-      await db.prepare('INSERT OR IGNORE INTO trackbigbux_receipts (run_id,wallet_id,seq,source,request_kind,observed_at,result_status,response_records,details) VALUES (?,?,?,?,?,?,?,?,?)')
-        .bind(runId,'__parser',i+1,'helius_enhanced','parseTransactions',iso(),'FAILED',0,boundedError(e)).run();
-      continue;
-    }
-    const updates=planEnrichment(rows,data,WALLETS,classifyHelius);
-    const stmts=updates.map(parsed=>db.prepare("UPDATE trackbigbux_activity SET category=?,initiated=?,source=?,evidence_json=? WHERE wallet_id=? AND chain='solana' AND tx_id=? AND category='UNPARSED_SIGNATURE'")
-      .bind(parsed.category,parsed.initiated,parsed.source,parsed.evidence_json,parsed.walletId,parsed.signature));
-    if(stmts.length)await insertBatch(db,stmts);
-    updated+=stmts.length;
-  }
-  return updated;
+        .bind(runId,'__parser',item.index,'helius_enhanced','parseTransactions',iso(),item.status,item.returned,details).run();
+      if(item.status!=='OK')warnings.push('ENRICHMENT_FAILED_BATCH_'+item.index+':'+boundedError(item.error));
+    }});
+  if(result.unresolved)warnings.push('ENRICHMENT_UNRESOLVED_ROWS_'+result.unresolved);
+  return result.classified;
 }
 export async function collect(env,{now=new Date(),fetcher=fetch}={}){
   assertRoster();
@@ -157,7 +170,7 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
   let rpcHead=null,rpcHeadError=null,rpcCohort=null,rpcCohortError=null;
   const rpcCohortReceipts=[];
   if(env.TRACKBIGBUX_RH_MODE==='rpc_transfer_only') {
-    try{rpcHead=await readHead(fetcher);}
+    try{rpcHead=await readHead(fetcher,env.TRACKBIGBUX_RH_RPC_URL||undefined);}
     catch(e){rpcHeadError=e;warnings.push('ROBINHOOD_RPC_HEAD:'+boundedError(e));}
   }
   try{
@@ -182,7 +195,7 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
             for(const w of wallets)checkpoints.set(w.id,await loadCheckpoint(env.DB,w.id));
             try {
               rpcCohort=await collectRpcCohort(wallets,checkpoints,rpcHead,fetcher,
-                (source,kind,status,count,details)=>rpcCohortReceipts.push({source,kind,status,count,details}),iso());
+                (source,kind,status,count,details)=>rpcCohortReceipts.push({source,kind,status,count,details}),iso(),env.TRACKBIGBUX_RH_RPC_URL||undefined);
             }catch(e){rpcCohortError=e;}
           }
           if(rpcCohortError) {
@@ -208,7 +221,7 @@ export async function collect(env,{now=new Date(),fetcher=fetch}={}){
         await saveFailure(env.DB,runId,wallet,startWallet,e,receipts);
       }
     }
-    if(bucket%12===0)parsed=await enrichSolana(env,env.DB,runId,fetcher,warnings);
+    parsed=await enrichSolana(env,env.DB,runId,fetcher,warnings,bucket);
     const p=await env.DB.prepare("SELECT count(*) AS n FROM trackbigbux_activity WHERE chain='solana' AND category='UNPARSED_SIGNATURE'").first();
     pending=Number(p?.n||0);
     const status=(complete===EXPECTED_WALLET_COUNT&&partial===0&&baselines===0)?
