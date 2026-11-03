@@ -110,6 +110,19 @@ jobs:
           set -euo pipefail
           if [ -z "$HELIUS_API_KEY" ]; then echo '::error::HELIUS_API_KEY_NOT_CONFIGURED'; exit 1; fi
           printf '%s' "$HELIUS_API_KEY" | npx wrangler secret put HELIUS_API_KEY --config trackbigbux/wrangler.toml
+      - name: Configure optional dedicated Robinhood RPC for ONLY trackBIGBUX
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          TRACKBIGBUX_RH_RPC_URL: ${{ secrets.TRACKBIGBUX_RH_RPC_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "$TRACKBIGBUX_RH_RPC_URL" ]; then
+            printf '%s' "$TRACKBIGBUX_RH_RPC_URL" | npx wrangler secret put TRACKBIGBUX_RH_RPC_URL --config trackbigbux/wrangler.toml
+            echo 'TRACKBIGBUX_DEDICATED_RH_RPC_CONFIGURED'
+          else
+            echo 'TRACKBIGBUX_RH_RPC_PUBLIC_ONLY_RATE_LIMITED'
+          fi
       - name: Independently check deployed health and frozen roster
         run: |
           python - <<'PY'

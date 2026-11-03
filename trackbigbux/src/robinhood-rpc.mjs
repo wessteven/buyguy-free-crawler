@@ -7,6 +7,22 @@ export const MAX_BLOCK_WINDOW=6000;
 export const MAX_LOGS_PER_WALLET=3500;
 const addressRe=/^0x[0-9a-f]{40}$/i;
 const hashRe=/^0x[0-9a-f]{64}$/i;
+const PUBLIC_RPC_MIN_INTERVAL_MS=1200;
+let nextPublicRpcRequestAt=0;
+// Use a polite per-isolate request interval for Robinhood's keyless public RPC.
+// This does not promise cross-isolate or account-wide capacity and does not
+// retry 429s in a burst; failures stay visible without moving checkpoints.
+export function rpcPaceSlot(now,nextAt,spacing=PUBLIC_RPC_MIN_INTERVAL_MS){
+  const start=Math.max(now,nextAt);
+  return {waitMs:start-now,nextAt:start+spacing};
+}
+async function pacePublicRpc(fetcher,endpoint){
+  if(fetcher!==fetch||endpoint!==ROBINHOOD_RPC)return;
+  const slot=rpcPaceSlot(Date.now(),nextPublicRpcRequestAt);
+  nextPublicRpcRequestAt=slot.nextAt;
+  if(slot.waitMs)await new Promise(resolve=>setTimeout(resolve,slot.waitMs));
+}
+
 export const topicAddress=address=>{
  if(!addressRe.test(address))throw Error('RPC_INVALID_ADDRESS');
  return '0x'+address.slice(2).toLowerCase().padStart(64,'0');
@@ -17,11 +33,14 @@ export const parseHexInt=val=>{
  if(!Number.isSafeInteger(n))throw Error('RPC_INTEGER_OVERFLOW');
  return n;
 };
-export async function rpcCall(method,params,fetcher=fetch){
+export async function rpcCall(method,params,fetcher=fetch,endpoint=ROBINHOOD_RPC){
+  const parsed=new URL(endpoint);
+  if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error('ROBINHOOD_RPC_ENDPOINT_INVALID');
+  await pacePublicRpc(fetcher,endpoint);
  const ctrl=new AbortController();
  const timeout=setTimeout(()=>ctrl.abort(),12000);
  try{
-   const res=await fetcher(ROBINHOOD_RPC,{method:'POST',signal:ctrl.signal,
+   const res=await fetcher(endpoint,{method:'POST',signal:ctrl.signal,
      headers:{accept:'application/json','content-type':'application/json'},
      body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});
    if(!res.ok)throw Error('ROBINHOOD_RPC_HTTP_'+res.status);
@@ -29,12 +48,16 @@ export async function rpcCall(method,params,fetcher=fetch){
    if(doc?.error)throw Error('ROBINHOOD_RPC_CODE_'+String(doc.error.code||'unknown'));
    if(!Object.hasOwn(doc||{},'result'))throw Error('ROBINHOOD_RPC_MISSING_RESULT');
    return doc.result;
+ }catch(e){
+   // Keep method attribution without ever writing the RPC URL or API key.
+   if(e && typeof e==='object')e.rpc_method=method;
+   throw e;
  }finally{clearTimeout(timeout);}
 }
-export async function readHead(fetcher=fetch){
- const chain=await rpcCall('eth_chainId',[],fetcher);
+export async function readHead(fetcher=fetch,endpoint=ROBINHOOD_RPC){
+ const chain=await rpcCall('eth_chainId',[],fetcher,endpoint);
  if(parseHexInt(chain)!==CHAIN_ID)throw Error('ROBINHOOD_RPC_WRONG_CHAIN');
- const number=await rpcCall('eth_blockNumber',[],fetcher);
+ const number=await rpcCall('eth_blockNumber',[],fetcher,endpoint);
  return parseHexInt(number);
 }
 export function flowWindow(checkpoint,head){
@@ -122,7 +145,7 @@ export async function collectRpcWallet(wallet,checkpoint,head,fetcher,record,obs
 
 // Two network requests for the entire seven-wallet cohort. Provenance and exact wallet
 // membership remain independently recorded; no token receipt is interpreted as a buy.
-export async function collectRpcCohort(wallets,checkpoints,head,fetcher,record,observedAt){
+export async function collectRpcCohort(wallets,checkpoints,head,fetcher,record,observedAt,endpoint=ROBINHOOD_RPC){
  if(wallets.length!==7)throw Error('RPC_COHORT_DENOMINATOR_NOT_7');
  const idset=new Set(),addressToWallet=new Map(),windows=new Map();
  for(const wallet of wallets){
@@ -146,7 +169,7 @@ export async function collectRpcCohort(wallets,checkpoints,head,fetcher,record,o
    try{
      const results=await rpcCall('eth_getLogs',[{
        fromBlock:'0x'+from.toString(16),toBlock:'0x'+to.toString(16),topics
-     }],fetcher);
+     }],fetcher,endpoint);
      if(!Array.isArray(results))throw Error('ROBINHOOD_RPC_BATCH_SCHEMA');
      record('robinhood_public_rpc','eth_getLogs_batch_'+direction,'OK',results.length,
        'wallets=7;from='+from+';to='+to);

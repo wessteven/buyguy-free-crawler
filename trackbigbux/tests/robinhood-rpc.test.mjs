@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ERC20_TRANSFER_TOPIC,topicAddress,parseHexInt,flowWindow,normalizeFlow,readHead,collectRpcWallet,collectRpcCohort}
+import {ERC20_TRANSFER_TOPIC,topicAddress,parseHexInt,flowWindow,normalizeFlow,readHead,collectRpcWallet,collectRpcCohort,rpcCall,rpcPaceSlot}
   from '../src/robinhood-rpc.mjs';
 import {WALLETS} from '../src/wallets.mjs';
 const wallet=WALLETS.find(w=>w.id==='rh-unipcs');
@@ -113,4 +113,28 @@ test('seven-wallet cohort cannot silently shrink to six',async()=>{
  const wallets=WALLETS.filter(x=>x.chain==='robinhood');
  await assert.rejects(collectRpcCohort(wallets.slice(0,6),new Map(),12000,async()=>({ok:true,json:async()=>({result:[]})}),()=>{}),
    /DENOMINATOR_NOT_7/);
+});
+
+test('configured dedicated RPC URL is used for head and seven-wallet cohort calls',async()=>{
+  const configured='https://robinhood-mainnet.g.alchemy.com/v2/test-only';
+  const urls=[];
+  const fetcher=async(url,options)=>{
+    urls.push(url);
+    const req=JSON.parse(options.body);
+    const value=req.method==='eth_chainId'?'0x1237':
+      req.method==='eth_blockNumber'?'0x12345':[];
+    return {ok:true,json:async()=>({result:value})};
+  };
+  const head=await readHead(fetcher,configured);
+  await collectRpcCohort(WALLETS.filter(w=>w.chain==='robinhood'),new Map(),
+    head,fetcher,()=>{},'2026-11-03T00:00:00Z',configured);
+  assert.equal(urls.length,4);
+  assert.ok(urls.every(x=>x===configured));
+  await assert.rejects(rpcCall('eth_chainId',[],fetcher,'http://insecure.local'),/ENDPOINT_INVALID/);
+});
+
+test('public RPC pacer reserves non-overlapping request slots',()=>{
+  assert.deepEqual(rpcPaceSlot(1000,0),{waitMs:0,nextAt:2200});
+  assert.deepEqual(rpcPaceSlot(1050,2200),{waitMs:1150,nextAt:3400});
+  assert.deepEqual(rpcPaceSlot(5000,3400),{waitMs:0,nextAt:6200});
 });
