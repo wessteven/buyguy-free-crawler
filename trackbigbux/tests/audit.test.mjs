@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FROZEN,AUDIT_ROSTER_VERSION,EXPECTED_AUDIT_COUNT,evaluateAudit,pickAuditableRun,parserEvidence} from '../scripts/audit.mjs';
+import {FROZEN,AUDIT_ROSTER_VERSION,EXPECTED_AUDIT_COUNT,evaluateAudit,pickAuditableRun,parserEvidence,estimateSourceCredits} from '../scripts/audit.mjs';
 
 function fixture(){
   const now=new Date('2026-11-02T12:00:00Z'),run={
@@ -80,4 +80,28 @@ test('parser receipts remain independent from wallet source receipts',()=>{
     {wallet_id:'__parser',request_kind:'parseTransactions',result_status:'FAILED',response_records:0}
   ]);
   assert.deepEqual(r,{attempted:2,ok:1,failed:1,recordsReturned:12});
+});
+
+test('credit model uses unique Helius wallet requests, not shared Robinhood receipt multiplication',()=>{
+ const receipts=[
+   {wallet_id:'sol-g4',source:'helius_rpc',request_kind:'getSignaturesForAddress',result_status:'OK'},
+   {wallet_id:'sol-decu',source:'helius_rpc',request_kind:'getSignaturesForAddress',result_status:'FAILED'},
+   {wallet_id:'__parser',source:'helius_parsed_events',request_kind:'parseTransactions',result_status:'OK'},
+   {wallet_id:'rh-unipcs',source:'robinhood_public_rpc',request_kind:'eth_getLogs_batch_OUT',result_status:'OK'},
+   {wallet_id:'rh-ogle',source:'robinhood_public_rpc',request_kind:'eth_getLogs_batch_OUT',result_status:'OK'}
+ ];
+ const x=estimateSourceCredits(receipts);
+ assert.equal(x.archivalRpcCalls,2);
+ assert.equal(x.parsedEventsCalls,1);
+ assert.equal(x.legacyEnhancedCalls,0);
+ assert.equal(x.estimatedCreditsPerRun,30);
+ assert.equal(x.projectedCreditsPer30DaysAt5MinuteCadence,259200);
+ assert.match(x.model,/NOT_ACCOUNT_USAGE/);
+});
+test('legacy parser costs differ from Parsed Events and unknown-source requests are not estimated',()=>{
+ const x=estimateSourceCredits([
+   {wallet_id:'__parser',source:'helius_enhanced',request_kind:'parseTransactions'},
+   {wallet_id:'foo',source:'unknown',request_kind:'whatever'}
+ ]);
+ assert.equal(x.estimatedCreditsPerRun,100);
 });
