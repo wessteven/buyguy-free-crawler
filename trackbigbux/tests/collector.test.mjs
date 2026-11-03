@@ -216,3 +216,35 @@ test('new scheduled scan invokes bounded parser even outside the old hourly slot
   assert.equal(result.parsed,1);
   assert.ok(db.rows.some(r=>r.sql.startsWith('INSERT OR IGNORE INTO trackbigbux_receipts')&&r.params[1]==='__parser'));
 });
+
+test('shared Robinhood source failures preserve real OUT and IN receipts per wallet',async()=>{
+  const db=new FakeDB(),calls=[];
+  const fetcher=async(_url,options)=>{
+    const req=JSON.parse(options.body);calls.push(req.method);
+    if(req.method==='eth_chainId')return {ok:true,json:async()=>({result:'0x1237'})};
+    if(req.method==='eth_blockNumber')return {ok:true,json:async()=>({result:'0x20000'})};
+    if(req.method==='eth_getLogs'&&req.params[0].topics.length===2)
+      return {ok:true,json:async()=>({result:[]})};
+    return {ok:false,status:429,json:async()=>({})};
+  };
+  const result=await collect({DB:db,TRACKBIGBUX_RH_MODE:'rpc_transfer_only'},
+    {now:new Date('2026-11-03T08:45:00Z'),fetcher});
+  assert.equal(result.partial,12);
+  assert.deepEqual(calls,['eth_chainId','eth_blockNumber','eth_getLogs','eth_getLogs']);
+  const receipts=db.rows.filter(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackbigbux_receipts')
+    &&String(x.params[1]).startsWith('rh-'));
+  assert.equal(receipts.length,14);
+  assert.equal(receipts.filter(x=>x.params[4]==='eth_getLogs_batch_OUT'&&x.params[6]==='OK').length,7);
+  assert.equal(receipts.filter(x=>x.params[4]==='eth_getLogs_batch_IN'&&x.params[6]==='FAILED').length,7);
+});
+test('public RPC head error records the actual failed method rather than guessing',async()=>{
+  const db=new FakeDB();
+  const fetcher=async()=>({ok:false,status:429,json:async()=>({})});
+  const result=await collect({DB:db,TRACKBIGBUX_RH_MODE:'rpc_transfer_only'},
+    {now:new Date('2026-11-03T08:50:00Z'),fetcher});
+  assert.equal(result.partial,12);
+  const receipts=db.rows.filter(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackbigbux_receipts')
+    &&String(x.params[1]).startsWith('rh-'));
+  assert.equal(receipts.length,7);
+  assert.ok(receipts.every(x=>x.params[4]==='eth_chainId'&&x.params[6]==='FAILED'));
+});
