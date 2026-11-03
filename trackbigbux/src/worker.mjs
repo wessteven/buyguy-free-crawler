@@ -143,13 +143,31 @@ async function enrichSolana(env,db,runId,fetcher,warnings,bucket){
   const pending=Number(count?.n||0);
   if(!pending)return 0;
   const offset=(bucket*MAX_PARSE_PER_RUN)%pending;
-  const url='https://api-mainnet.helius-rpc.com/v0/transactions/?api-key='+encodeURIComponent(env.HELIUS_API_KEY);
+  // SDK v3 uses /v0/transactions (no trailing slash). An HTTP 404 on
+  // that path may mean the legacy API is only reachable on its original host.
+  // Retry ONLY 404, never 401/403/429 or schema failures; keep rows pending
+  // if neither documented legacy host returns a genuine enhanced array.
+  const key=encodeURIComponent(env.HELIUS_API_KEY);
+  const primary='https://api-mainnet.helius-rpc.com/v0/transactions?api-key='+key;
+  const legacy='https://api.helius.xyz/v0/transactions?api-key='+key;
+  let parserHost='api-mainnet.helius-rpc.com';
+  const parse=async signatures=>{
+    const options={method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({transactions:signatures})};
+    parserHost='api-mainnet.helius-rpc.com';
+    try{return await json(primary,options,fetcher);}
+    catch(e){
+      if(!String(e?.message||'').startsWith('UPSTREAM_HTTP_404_'))throw e;
+      parserHost='api.helius.xyz';
+      return await json(legacy,options,fetcher);
+    }
+  };
   const result=await drainBacklog({db,wallets:WALLETS,classify:classifyHelius,
     limit:MAX_PARSE_PER_RUN,batchSize:20,offset,
-    fetchParsed:signatures=>json(url,{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({transactions:signatures})},fetcher),
+    fetchParsed:parse,
     onBatch:async item=>{
       const details='requested='+item.requested+';offset='+offset+';batch='+item.index+
+        ';parserHost='+parserHost+
         (item.error?';error='+boundedError(item.error):'');
       await db.prepare('INSERT OR IGNORE INTO trackbigbux_receipts (run_id,wallet_id,seq,source,request_kind,observed_at,result_status,response_records,details) VALUES (?,?,?,?,?,?,?,?,?)')
         .bind(runId,'__parser',item.index,'helius_enhanced','parseTransactions',iso(),item.status,item.returned,details).run();

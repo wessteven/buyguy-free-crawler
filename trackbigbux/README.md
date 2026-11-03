@@ -49,3 +49,7 @@ The pending PR adds multi-page Solana checkpoint recovery with a no-watermark-ad
 ## External audit timing and source evidence
 
 Independent D1 auditing checks the newest **finished** source scan. If the latest five-minute scan is still `RUNNING`, the audit separately reports that active scan and evaluates the last finished scan rather than inventing missing wallet coverage from half-written D1 rows. An active scan older than ten minutes is a verification failure. The auditor also includes Helius parser attempt/response counts and actual classified-row totals; source receipts alone never establish trading P&L. The strict 12/12 address, checkpoint and source-call gates remain unchanged.
+
+## Helius parser 404 repair (3 Nov 2026)
+
+The external D1 auditor observed `UPSTREAM_HTTP_404_api-mainnet.helius-rpc.com` from the old `/v0/transactions/` URL and zero successful parser calls. The corrected endpoint uses `/v0/transactions` (matching current Helius SDK); only on HTTP 404 may the collector retry the legacy `api.helius.xyz` URL. Errors such as 401/403/429 are never circumvented by fallback. Source host and sanitized response status are retained as parser receipts. Pending rows remain pending until an actual enhanced array returns and wallet-specific classification succeeds. Live provider success and throughput must be verified by D1 audit before claiming backlog recovery.
