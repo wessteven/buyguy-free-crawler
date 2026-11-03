@@ -296,3 +296,58 @@ test('Helius 429 never falls back or turns a failed batch into a parsed row',asy
   assert.equal(receipt.params[6],'FAILED');
   assert.match(receipt.params[8],/UPSTREAM_HTTP_429/);
 });
+
+test('Parsed Events mode sends up to 100 signatures in one request, commits only real classifications',async()=>{
+  const db=new FakeDB(),orig=db.prepare.bind(db),signatures=Array.from({length:100},(_,i)=>uniqueSig(17000+i));
+  const records=signatures.map(tx_id=>({wallet_id:'sol-g4',tx_id}));
+  const requests=[];
+  db.prepare=sql=>{
+    if(sql.startsWith('SELECT count(*) AS n FROM trackbigbux_activity'))return {first:async()=>({n:records.length})};
+    if(sql.startsWith('SELECT wallet_id,tx_id FROM trackbigbux_activity'))
+      return {bind:(limit,offset)=>({all:async()=>({results:records.slice(offset,offset+limit)})})};
+    return orig(sql);
+  };
+  const fetcher=async(url,options)=>{
+    if(url.includes('/v1/parsed-events/transactions')){
+      const data=JSON.parse(options.body);requests.push({url:url.split('?')[0],data});
+      return {ok:true,json:async()=>data.transactions.map(signature=>({
+        signature,parserStatus:'OK',parsed:{transactionStatus:'OK',feePayer:'not-the-wallet',
+          summary:{type:'transfer'},tokenTransfers:[]}
+      }))};
+    }
+    return {ok:false,status:429,json:async()=>({})};
+  };
+  const result=await collect({DB:db,HELIUS_API_KEY:'unit-test',TRACKBIGBUX_PARSE_MODE:'parsed_events'},{
+    now:new Date('2026-11-03T09:15:00Z'),fetcher});
+  assert.equal(requests.length,1);
+  assert.equal(requests[0].url,'https://mainnet.helius-rpc.com/v1/parsed-events/transactions');
+  assert.equal(requests[0].data.rawTransaction,'none');
+  assert.equal(requests[0].data.transactions.length,100);
+  assert.equal(result.parsed,100);
+  const receipt=db.rows.find(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackbigbux_receipts')&&x.params[1]==='__parser');
+  assert.equal(receipt.params[3],'helius_parsed_events');
+  assert.equal(receipt.params[6],'OK');
+  assert.equal(receipt.params[7],100);
+  assert.match(receipt.params[8],/itemErrors=0/);
+});
+test('Parsed Events item-level parser failures remain pending with honest receipt',async()=>{
+  const db=new FakeDB(),orig=db.prepare.bind(db),signature=uniqueSig(20123);
+  db.prepare=sql=>{
+    if(sql.startsWith('SELECT count(*) AS n FROM trackbigbux_activity'))return {first:async()=>({n:1})};
+    if(sql.startsWith('SELECT wallet_id,tx_id FROM trackbigbux_activity'))
+      return {bind:()=>({all:async()=>({results:[{wallet_id:'sol-g4',tx_id:signature}]})})};
+    return orig(sql);
+  };
+  const fetcher=async url=>url.includes('/v1/parsed-events/transactions')?
+    {ok:true,json:async()=>[{signature,parserStatus:'ERROR',parserError:{code:'transaction_not_found'}}]}:
+    {ok:false,status:429,json:async()=>({})};
+  const result=await collect({DB:db,HELIUS_API_KEY:'unit-test',TRACKBIGBUX_PARSE_MODE:'parsed_events'},{
+    now:new Date('2026-11-03T09:20:00Z'),fetcher});
+  assert.equal(result.parsed,0);
+  const receipt=db.rows.find(x=>x.sql.startsWith('INSERT OR IGNORE INTO trackbigbux_receipts')&&x.params[1]==='__parser');
+  assert.equal(receipt.params[6],'OK');
+  assert.equal(receipt.params[7],1);
+  assert.match(receipt.params[8],/itemErrors=1/);
+  assert.ok(result.warnings.some(x=>x.startsWith('PARSER_ITEM_ERRORS_')));
+  assert.ok(!db.rows.some(x=>x.sql.startsWith('UPDATE trackbigbux_activity SET category=')));
+});
