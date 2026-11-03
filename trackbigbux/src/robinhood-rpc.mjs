@@ -48,6 +48,10 @@ export async function rpcCall(method,params,fetcher=fetch,endpoint=ROBINHOOD_RPC
    if(doc?.error)throw Error('ROBINHOOD_RPC_CODE_'+String(doc.error.code||'unknown'));
    if(!Object.hasOwn(doc||{},'result'))throw Error('ROBINHOOD_RPC_MISSING_RESULT');
    return doc.result;
+ }catch(e){
+   // Keep method attribution without ever writing the RPC URL or API key.
+   if(e && typeof e==='object')e.rpc_method=method;
+   throw e;
  }finally{clearTimeout(timeout);}
 }
 export async function readHead(fetcher=fetch,endpoint=ROBINHOOD_RPC){
