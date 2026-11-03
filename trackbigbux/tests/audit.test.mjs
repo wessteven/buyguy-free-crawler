@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {FROZEN,AUDIT_ROSTER_VERSION,EXPECTED_AUDIT_COUNT,evaluateAudit} from '../scripts/audit.mjs';
+import {FROZEN,AUDIT_ROSTER_VERSION,EXPECTED_AUDIT_COUNT,evaluateAudit,pickAuditableRun,parserEvidence} from '../scripts/audit.mjs';
 
 function fixture(){
   const now=new Date('2026-11-02T12:00:00Z'),run={
@@ -50,4 +50,34 @@ test('parser backlog is reported and never called audited profitability',()=>{
   assert.equal(x.pending,5);
   assert.equal(x.persistedEvents,22);
   assert.notEqual(x.candidateEvents,x.persistedEvents);
+});
+
+test('ongoing scan does not replace finished 12-wallet coverage in external audit',()=>{
+  const f=fixture();
+  const newer={run_id:'trackbigbux-active',status:'RUNNING',started_at:'2026-11-02T11:58:00Z'};
+  const selected=pickAuditableRun(newer,f.run);
+  assert.equal(selected.run.run_id,f.run.run_id);
+  assert.equal(selected.activeRun.run_id,newer.run_id);
+  const out=evaluateAudit({...f,run:selected.run,activeRun:selected.activeRun});
+  assert.equal(out.verdict,'RAW_CAPTURE_VERIFIED');
+});
+test('stuck active scan fails audit even when prior finished scan qualifies',()=>{
+  const f=fixture();
+  const activeRun={run_id:'trackbigbux-stuck',status:'RUNNING',started_at:'2026-11-02T11:40:00Z'};
+  const out=evaluateAudit({...f,activeRun});
+  assert.ok(out.failures.includes('STALE_OR_INVALID_ACTIVE_RUN'));
+});
+test('do not manufacture a source run when only a partial run exists',()=>{
+  const active={status:'RUNNING',started_at:'2026-11-02T11:58:00Z'};
+  assert.deepEqual(pickAuditableRun(active,null),{run:null,activeRun:active});
+  const out=evaluateAudit({...fixture(),run:null,activeRun:active});
+  assert.ok(out.failures.includes('NO_SOURCE_RUN'));
+});
+test('parser receipts remain independent from wallet source receipts',()=>{
+  const r=parserEvidence([
+    {wallet_id:'sol-g4',request_kind:'getSignaturesForAddress',result_status:'OK',response_records:301},
+    {wallet_id:'__parser',request_kind:'parseTransactions',result_status:'OK',response_records:12},
+    {wallet_id:'__parser',request_kind:'parseTransactions',result_status:'FAILED',response_records:0}
+  ]);
+  assert.deepEqual(r,{attempted:2,ok:1,failed:1,recordsReturned:12});
 });
