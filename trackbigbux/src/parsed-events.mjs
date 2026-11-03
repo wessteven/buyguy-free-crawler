@@ -3,11 +3,18 @@
 export const PARSED_EVENTS_ENDPOINT='https://mainnet.helius-rpc.com/v1/parsed-events/transactions';
 export const MAX_PARSED_EVENTS_BATCH=100;
 const eq=(a,b)=>typeof a==='string'&&typeof b==='string'&&a===b;
-const transferView=t=>({
-  mint:typeof t.mint==='string'?t.mint:null,
-  rawTokenAmount:String(t.rawTokenAmount??''),
-  decimals:Number.isInteger(t.decimals)?t.decimals:null
-});
+const transferView=t=>{
+  const raw=t.rawTokenAmount;
+  // Parsed Events can send JSON numbers. Never manufacture precise big integer
+  // amounts after JavaScript JSON parsing has already rounded an unsafe number.
+  const safe=typeof raw==='string'||Number.isSafeInteger(raw);
+  return {
+    mint:typeof t.mint==='string'?t.mint:null,
+    rawTokenAmount:safe?String(raw):null,
+    amountPrecision:safe?'EXACT':'UNSAFE_OR_MISSING',
+    decimals:Number.isInteger(t.decimals)?t.decimals:null
+  };
+};
 export function classifyParsedEvent(wallet,item){
   if(!wallet||!item||item.parserStatus!=='OK'||!item.parsed||
      typeof item.signature!=='string')return null;
