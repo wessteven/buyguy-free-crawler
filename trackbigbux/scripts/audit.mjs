@@ -119,7 +119,7 @@ export async function main(){
   // bounded persisted receipt details, never raw Helius URLs, headers or keys.
   const parserDiagnostics=receipts.filter(x=>x.wallet_id==='__parser').map(x=>({
     at:x.observed_at,status:x.result_status,records:x.response_records,
-    details:String(x.details||'').replace(/https?:\\/\\/\\S+/g,'[endpoint]').slice(0,180)
+    details:String(x.details||'').replace(/https?:\/\/\S+/g,'[endpoint]').slice(0,180)
   })).slice(0,12);
   console.log('TRACKBIGBUX_PARSER_DIAGNOSTICS',JSON.stringify(parserDiagnostics));
   console.log('TRACKBIGBUX_SOURCE_DIAGNOSTICS',JSON.stringify(coverage
