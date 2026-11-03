@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ERC20_TRANSFER_TOPIC,topicAddress,parseHexInt,flowWindow,normalizeFlow,readHead,collectRpcWallet,collectRpcCohort,rpcCall}
+import {ERC20_TRANSFER_TOPIC,topicAddress,parseHexInt,flowWindow,normalizeFlow,readHead,collectRpcWallet,collectRpcCohort,rpcCall,rpcPaceSlot}
   from '../src/robinhood-rpc.mjs';
 import {WALLETS} from '../src/wallets.mjs';
 const wallet=WALLETS.find(w=>w.id==='rh-unipcs');
@@ -131,4 +131,10 @@ test('configured dedicated RPC URL is used for head and seven-wallet cohort call
   assert.equal(urls.length,4);
   assert.ok(urls.every(x=>x===configured));
   await assert.rejects(rpcCall('eth_chainId',[],fetcher,'http://insecure.local'),/ENDPOINT_INVALID/);
+});
+
+test('public RPC pacer reserves non-overlapping request slots',()=>{
+  assert.deepEqual(rpcPaceSlot(1000,0),{waitMs:0,nextAt:2200});
+  assert.deepEqual(rpcPaceSlot(1050,2200),{waitMs:1150,nextAt:3400});
+  assert.deepEqual(rpcPaceSlot(5000,3400),{waitMs:0,nextAt:6200});
 });
