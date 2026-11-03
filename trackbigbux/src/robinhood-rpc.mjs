@@ -17,11 +17,13 @@ export const parseHexInt=val=>{
  if(!Number.isSafeInteger(n))throw Error('RPC_INTEGER_OVERFLOW');
  return n;
 };
-export async function rpcCall(method,params,fetcher=fetch){
+export async function rpcCall(method,params,fetcher=fetch,endpoint=ROBINHOOD_RPC){
+  const parsed=new URL(endpoint);
+  if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error('ROBINHOOD_RPC_ENDPOINT_INVALID');
  const ctrl=new AbortController();
  const timeout=setTimeout(()=>ctrl.abort(),12000);
  try{
-   const res=await fetcher(ROBINHOOD_RPC,{method:'POST',signal:ctrl.signal,
+   const res=await fetcher(endpoint,{method:'POST',signal:ctrl.signal,
      headers:{accept:'application/json','content-type':'application/json'},
      body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});
    if(!res.ok)throw Error('ROBINHOOD_RPC_HTTP_'+res.status);
@@ -34,7 +36,7 @@ export async function rpcCall(method,params,fetcher=fetch){
 export async function readHead(fetcher=fetch){
  const chain=await rpcCall('eth_chainId',[],fetcher);
  if(parseHexInt(chain)!==CHAIN_ID)throw Error('ROBINHOOD_RPC_WRONG_CHAIN');
- const number=await rpcCall('eth_blockNumber',[],fetcher);
+ const number=await rpcCall('eth_blockNumber',[],fetcher,endpoint);
  return parseHexInt(number);
 }
 export function flowWindow(checkpoint,head){
@@ -122,7 +124,7 @@ export async function collectRpcWallet(wallet,checkpoint,head,fetcher,record,obs
 
 // Two network requests for the entire seven-wallet cohort. Provenance and exact wallet
 // membership remain independently recorded; no token receipt is interpreted as a buy.
-export async function collectRpcCohort(wallets,checkpoints,head,fetcher,record,observedAt){
+export async function collectRpcCohort(wallets,checkpoints,head,fetcher,record,observedAt,endpoint=ROBINHOOD_RPC){
  if(wallets.length!==7)throw Error('RPC_COHORT_DENOMINATOR_NOT_7');
  const idset=new Set(),addressToWallet=new Map(),windows=new Map();
  for(const wallet of wallets){
