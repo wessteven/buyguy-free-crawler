@@ -2,6 +2,7 @@ import {WALLETS,ROSTER_VERSION,EXPECTED_WALLET_COUNT,assertRoster} from './walle
 import {solanaDelta,evmDelta,normalizeSignature,normalizeEvmTx,classifyHelius,boundedError,evmEqual} from './normalize.mjs';
 import {readHead,collectRpcCohort} from './robinhood-rpc.mjs';
 import {drainBacklog} from './backfill.mjs';
+import {classifyParsedEvent,PARSED_EVENTS_ENDPOINT,MAX_PARSED_EVENTS_BATCH} from './parsed-events.mjs';
 
 const BS='https://robinhoodchain.blockscout.com/api/v2';
 const MAX_SOL=300,MAX_SOL_PAGES=5,MAX_EVM_PAGES=4,MAX_PARSE_PER_RUN=20;
@@ -142,7 +143,9 @@ async function enrichSolana(env,db,runId,fetcher,warnings,bucket){
   const count=await db.prepare("SELECT count(*) AS n FROM trackbigbux_activity WHERE chain='solana' AND category='UNPARSED_SIGNATURE'").first();
   const pending=Number(count?.n||0);
   if(!pending)return 0;
-  const offset=(bucket*MAX_PARSE_PER_RUN)%pending;
+  const parsedMode=env.TRACKBIGBUX_PARSE_MODE==='parsed_events';
+  const limit=parsedMode?MAX_PARSED_EVENTS_BATCH:MAX_PARSE_PER_RUN;
+  const offset=(bucket*limit)%pending;
   // SDK v3 uses /v0/transactions (no trailing slash). An HTTP 404 on
   // that path may mean the legacy API is only reachable on its original host.
   // Retry ONLY 404, never 401/403/429 or schema failures; keep rows pending
@@ -152,6 +155,12 @@ async function enrichSolana(env,db,runId,fetcher,warnings,bucket){
   const legacy='https://api.helius.xyz/v0/transactions?api-key='+key;
   let parserHost='api-mainnet.helius-rpc.com';
   const parse=async signatures=>{
+    if(parsedMode){
+      parserHost='mainnet.helius-rpc.com';
+      return json(PARSED_EVENTS_ENDPOINT+'?api-key='+key,
+        {method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({transactions:signatures,rawTransaction:'none'})},fetcher);
+    }
     const options={method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({transactions:signatures})};
     parserHost='api-mainnet.helius-rpc.com';
@@ -162,16 +171,18 @@ async function enrichSolana(env,db,runId,fetcher,warnings,bucket){
       return await json(legacy,options,fetcher);
     }
   };
-  const result=await drainBacklog({db,wallets:WALLETS,classify:classifyHelius,
-    limit:MAX_PARSE_PER_RUN,batchSize:20,offset,
+  const result=await drainBacklog({db,wallets:WALLETS,
+    classify:parsedMode?classifyParsedEvent:classifyHelius,
+    limit,batchSize:parsedMode?MAX_PARSED_EVENTS_BATCH:20,offset,
     fetchParsed:parse,
     onBatch:async item=>{
       const details='requested='+item.requested+';offset='+offset+';batch='+item.index+
-        ';parserHost='+parserHost+
+        ';parserHost='+parserHost+';itemErrors='+item.itemErrors+
         (item.error?';error='+boundedError(item.error):'');
       await db.prepare('INSERT OR IGNORE INTO trackbigbux_receipts (run_id,wallet_id,seq,source,request_kind,observed_at,result_status,response_records,details) VALUES (?,?,?,?,?,?,?,?,?)')
-        .bind(runId,'__parser',item.index,'helius_enhanced','parseTransactions',iso(),item.status,item.returned,details).run();
+        .bind(runId,'__parser',item.index,parsedMode?'helius_parsed_events':'helius_enhanced','parseTransactions',iso(),item.status,item.returned,details).run();
       if(item.status!=='OK')warnings.push('ENRICHMENT_FAILED_BATCH_'+item.index+':'+boundedError(item.error));
+      if(item.itemErrors)warnings.push('PARSER_ITEM_ERRORS_'+item.itemErrors);
     }});
   if(result.unresolved)warnings.push('ENRICHMENT_UNRESOLVED_ROWS_'+result.unresolved);
   return result.classified;
