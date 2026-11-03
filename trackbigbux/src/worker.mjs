@@ -117,24 +117,33 @@ async function enrichSolana(env,db,runId,fetcher,warnings){
   const q=await db.prepare("SELECT wallet_id,tx_id FROM trackbigbux_activity WHERE chain='solana' AND category='UNPARSED_SIGNATURE' ORDER BY observed_at ASC LIMIT ?").bind(MAX_PARSE).all();
   const rows=q.results||[];if(!rows.length)return 0;
   const url='https://api-mainnet.helius-rpc.com/v0/transactions/?api-key='+encodeURIComponent(env.HELIUS_API_KEY);
-  let data;
-  try {
-    data=await json(url,{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({transactions:[...new Set(rows.map(r=>r.tx_id))]})},fetcher);
-    if(!Array.isArray(data))throw Error('HELIUS_PARSE_SCHEMA_INVALID');
-    await db.prepare('INSERT OR IGNORE INTO trackbigbux_receipts (run_id,wallet_id,seq,source,request_kind,observed_at,result_status,response_records,details) VALUES (?,?,?,?,?,?,?,?,?)')
-      .bind(runId,'__parser',1,'helius_enhanced','parseTransactions',iso(),'OK',data.length,'bounded_batch').run();
-  }catch(e){
-    warnings.push('ENRICHMENT_FAILED:'+boundedError(e));
-    await db.prepare('INSERT OR IGNORE INTO trackbigbux_receipts (run_id,wallet_id,seq,source,request_kind,observed_at,result_status,response_records,details) VALUES (?,?,?,?,?,?,?,?,?)')
-      .bind(runId,'__parser',1,'helius_enhanced','parseTransactions',iso(),'FAILED',0,boundedError(e)).run();
-    return 0;
+  // Bound individual provider requests; failed chunks remain pending for later retry.
+  const signatures=[...new Set(rows.map(r=>r.tx_id))];
+  const chunks=[];
+  for(let i=0;i<signatures.length;i+=20)chunks.push(signatures.slice(i,i+20));
+  let updated=0;
+  for(let i=0;i<chunks.length;i++){
+    let data;
+    try {
+      data=await json(url,{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({transactions:chunks[i]})},fetcher);
+      if(!Array.isArray(data))throw Error('HELIUS_PARSE_SCHEMA_INVALID');
+      await db.prepare('INSERT OR IGNORE INTO trackbigbux_receipts (run_id,wallet_id,seq,source,request_kind,observed_at,result_status,response_records,details) VALUES (?,?,?,?,?,?,?,?,?)')
+        .bind(runId,'__parser',i+1,'helius_enhanced','parseTransactions',iso(),'OK',data.length,
+          'chunk='+String(i+1)+';requested='+String(chunks[i].length)).run();
+    }catch(e){
+      warnings.push('ENRICHMENT_FAILED_CHUNK_'+String(i+1)+':'+boundedError(e));
+      await db.prepare('INSERT OR IGNORE INTO trackbigbux_receipts (run_id,wallet_id,seq,source,request_kind,observed_at,result_status,response_records,details) VALUES (?,?,?,?,?,?,?,?,?)')
+        .bind(runId,'__parser',i+1,'helius_enhanced','parseTransactions',iso(),'FAILED',0,boundedError(e)).run();
+      continue;
+    }
+    const updates=planEnrichment(rows,data,WALLETS,classifyHelius);
+    const stmts=updates.map(parsed=>db.prepare("UPDATE trackbigbux_activity SET category=?,initiated=?,source=?,evidence_json=? WHERE wallet_id=? AND chain='solana' AND tx_id=? AND category='UNPARSED_SIGNATURE'")
+      .bind(parsed.category,parsed.initiated,parsed.source,parsed.evidence_json,parsed.walletId,parsed.signature));
+    if(stmts.length)await insertBatch(db,stmts);
+    updated+=stmts.length;
   }
-  const updates=planEnrichment(rows,data,WALLETS,classifyHelius);
-  const stmts=updates.map(parsed=>db.prepare("UPDATE trackbigbux_activity SET category=?,initiated=?,source=?,evidence_json=? WHERE wallet_id=? AND chain='solana' AND tx_id=? AND category='UNPARSED_SIGNATURE'")
-    .bind(parsed.category,parsed.initiated,parsed.source,parsed.evidence_json,parsed.walletId,parsed.signature));
-  if(stmts.length)await insertBatch(db,stmts);
-  return stmts.length;
+  return updated;
 }
 export async function collect(env,{now=new Date(),fetcher=fetch}={}){
   assertRoster();
