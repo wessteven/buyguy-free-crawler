@@ -106,7 +106,7 @@ async function collectEvmWallet(wallet,checkpoint,fetcher,record){
     latest:delta.newest,latestAt:all[0]?.timestamp||null,
     fetched:all.length,calls};
 }
-async function saveWalletResult(db,runId,wallet,startedAt,result,receipts){
+export async function saveWalletResult(db,runId,wallet,startedAt,result,receipts){
   const finish=iso();
   await persistEvents(db,result.events);
   // Persist source rows first. NEVER advance a Solana watermark across an
