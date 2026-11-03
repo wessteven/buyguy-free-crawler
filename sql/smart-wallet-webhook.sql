@@ -35,3 +35,10 @@ CREATE TABLE IF NOT EXISTS smart_wallet_webhook_raw_health (
  last_error_code TEXT NOT NULL DEFAULT 'NONE',
  last_at TEXT NOT NULL
 );
+
+-- Persistent fail-closed latch for the single GOGET-owned subscription. Never reset on UTC rollover.
+CREATE TABLE IF NOT EXISTS smart_wallet_webhook_control (
+  id TEXT PRIMARY KEY, state TEXT NOT NULL,reason TEXT NOT NULL,changed_at TEXT NOT NULL
+);
+INSERT OR IGNORE INTO smart_wallet_webhook_control(id,state,reason,changed_at)
+ VALUES('owned','ARMED','USER_APPROVED_BOUNDED_RESTART_2026_11_03','2026-11-03T00:00:00.000Z');

@@ -1,5 +1,7 @@
 """Guard the exact D1 webhook schema deployer's comment-handling behavior."""
 import sqlite3
+import json
+import re
 import unittest
 from pathlib import Path
 
@@ -19,6 +21,43 @@ class WebhookSchemaDeploymentTests(unittest.TestCase):
         self.assertLess(workflow.index('id: provider_budget'), workflow.index('run: node scripts/provision-smart-wallet-webhook.mjs sync'))
         self.assertIn('run: node scripts/provision-smart-wallet-webhook.mjs guard', workflow)
         self.assertIn('GOGET_LIVE_WORKER_REVISION_VERIFIED', workflow)
+        self.assertIn("cron: '*/15 * * * *'", workflow)
+        self.assertIn('PERSISTENT_SUSPENSION_OR_UNKNOWN', workflow)
+        self.assertIn("latch[0].state==='ARMED'", workflow)
+        self.assertIn('GOGET_WEBHOOK_SUSPENSION_LATCHED', (ROOT / 'scripts/provision-smart-wallet-webhook.mjs').read_text())
+
+    def test_bounded_restart_preserves_roster_and_excludes_high_volume_wallets(self):
+        roster = json.loads((ROOT / 'research/smart-wallet-webhook-cohort.json').read_text())
+        addresses = [w['wallet'] for w in roster]
+        selected = [w['wallet'] for w in roster if w['webhookEnabled'] is True]
+        self.assertEqual(len(roster), 14)
+        self.assertEqual(len(addresses), len(set(addresses)))
+        self.assertEqual(len(selected), 12)
+        self.assertEqual(set(addresses) - set(selected), {
+            'kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ',
+            '3wySUKHiD15kUD7sunNe1FQpogv2FK7Tw7TzSJyC9Ft8'
+        })
+        config = (ROOT / 'wrangler.smart-wallet.toml').read_text()
+        match = re.search(r'WALLET_WATCHED_ADDRESSES\s*=\s*"([^"]+)"', config)
+        self.assertIsNotNone(match)
+        self.assertEqual(set(match.group(1).split(',')), set(selected))
+        control = (ROOT / 'scripts/provision-smart-wallet-webhook.mjs').read_text()
+        self.assertIn('webhookEnabled===true', control)
+        self.assertIn("GOGET_SUSPENSION_PERSISTENCE_UNVERIFIED", control)
+
+    def test_suspension_latch_survives_quota_rollover_and_redeploy(self):
+        source = (ROOT / 'sql/smart-wallet-webhook.sql').read_text()
+        sql = '\n'.join(x for x in source.splitlines() if not x.lstrip().startswith('--'))
+        db = sqlite3.connect(':memory:')
+        db.executescript(sql)
+        self.assertEqual(db.execute(
+            "SELECT state FROM smart_wallet_webhook_control WHERE id='owned'").fetchone(),
+            ('ARMED',))
+        db.execute("UPDATE smart_wallet_webhook_control SET state='SUSPENDED' WHERE id='owned'")
+        db.executescript(sql)
+        self.assertEqual(db.execute(
+            "SELECT state FROM smart_wallet_webhook_control WHERE id='owned'").fetchone(),
+            ('SUSPENDED',))
 
     def test_schema_parser_ignores_semicolons_in_sql_comments(self):
         workflow = (ROOT / ".github/workflows/deploy-smart-wallet-webhook.yml").read_text()

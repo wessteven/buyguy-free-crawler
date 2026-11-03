@@ -2,93 +2,109 @@
   {
     "wallet": "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4",
     "source": "Prior pilot, fee-payer activity",
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx",
     "source": "Prior pilot, deployer research",
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP",
     "source": "Prior pilot, deployer research",
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 3,
     "poolCount": 2,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": false,
+    "webhookExclusion": "2026-11-03: bounded credit restart, extreme observed traffic (~95% of recent webhook receipts); retained for historic research; NOT certified trader"
   },
   {
     "wallet": "27HFmP7ccLadGswvQfvea4o3juLw75cPF4V6jWpHM3MX",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 3,
     "poolCount": 2,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "3wySUKHiD15kUD7sunNe1FQpogv2FK7Tw7TzSJyC9Ft8",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 2,
     "poolCount": 2,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": false,
+    "webhookExclusion": "2026-11-03: bounded credit restart, extreme observed traffic (~95% of recent webhook receipts); retained for historic research; NOT certified trader"
   },
   {
     "wallet": "UVa1idQFMxA6JRLyhLVTVFi9pTtCjyTpe7ePaTDVqwY",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 2,
     "poolCount": 1,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "GQw6yekXzuEMM7iGEnMnFmJwW9PJ94iMSomMw6PUC8zG",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 2,
     "poolCount": 1,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "HNtZMYtK8gLmKoT1ZmErLRKMCuAGifcU2fgpLFmKevUJ",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 1,
     "poolCount": 1,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "HoNCppnH2aojxiosdcfa4nHhcBp2UUBUpDHNKckMUGXS",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 1,
     "poolCount": 1,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "qz9SXgx1tK3aadcReFeXYbVMyCi3DZBWgKwuhMNrD2K",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 1,
     "poolCount": 1,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "3uCdwANhJQs7GhEa6Xi23X1hhJ5r2Z6dgR64SAoLfy6a",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 1,
     "poolCount": 1,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "AUb3e3ggTscttXBdkSRXxLkmoA28zAhpTwwvhGqZqSd4",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 1,
     "poolCount": 1,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   },
   {
     "wallet": "77Ed1Zk2xEkUHdTgUkqMQvGjnM79LtZJYpbBxB92kBtz",
     "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
     "observedTransactions": 1,
     "poolCount": 1,
-    "vetted": false
+    "vetted": false,
+    "webhookEnabled": true
   }
 ]

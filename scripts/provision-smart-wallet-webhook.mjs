@@ -72,6 +72,26 @@ async function main(){
     return;
   }
   const key=required('HELIUS_API_KEY');
+  // This applies to the single GOGET-owned subscription only. A quota-trip
+  // persists across UTC midnight: a later code deployment must NOT rearm it.
+  const controlRead=async(sql,params=[])=>{
+    const account=required('CF_ACCOUNT_ID'),database=required('CF_DATABASE_ID'),token=required('CF_D1_API_TOKEN');
+    const url='https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account)+
+      '/d1/database/'+encodeURIComponent(database)+'/query';
+    const response=await fetch(url,{method:'POST',
+      headers:{authorization:'Bearer '+token,'content-type':'application/json'},
+      body:JSON.stringify({sql,params}),signal:AbortSignal.timeout(16000)});
+    if(!response.ok)throw Error('CONTROL_D1_HTTP_'+response.status);
+    const body=await response.json();
+    if(body?.success!==true||body?.result?.[0]?.success!==true||
+       !Array.isArray(body.result[0].results))throw Error('CONTROL_D1_UNVERIFIED');
+    return body.result[0].results;
+  };
+  if(action==='sync'){
+    const gate=await controlRead("SELECT state FROM smart_wallet_webhook_control WHERE id='owned' LIMIT 1");
+    if(gate.length!==1||gate[0].state!=='ARMED')
+      throw Error('GOGET_WEBHOOK_SUSPENSION_LATCHED');
+  }
   if(action==='guard'){
     const account=required('CF_ACCOUNT_ID'),database=required('CF_DATABASE_ID'),token=required('CF_D1_API_TOKEN');
     const url='https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account)+
@@ -96,6 +116,13 @@ async function main(){
     console.log('GOGET_HELIUS_CREDIT_GUARD',{counts,action:policy.action,reasons:policy.reasons});
     if(policy.action==='UNKNOWN_DATA_MANUAL_REVIEW')throw Error('GUARD_COUNTS_UNVERIFIED');
     if(policy.action==='MONITOR')return;
+    const reason=policy.reasons.join('+').slice(0,96);
+    const latched=await controlRead(
+      "UPDATE smart_wallet_webhook_control SET state='SUSPENDED',reason=?,changed_at=? WHERE id='owned' RETURNING state",
+      [reason,new Date().toISOString()]);
+    if(latched.length!==1||latched[0].state!=='SUSPENDED')
+      throw Error('GOGET_SUSPENSION_PERSISTENCE_UNVERIFIED');
+    console.log('GOGET_HELIUS_CREDIT_GUARD',{mode:'PERSISTENT_SUSPENSION_LATCHED',reason});
     const owned=await listOwn(key);
     if(owned){
       if(!idPattern.test(owned.webhookID||''))throw Error('WEBHOOK_ID_INVALID');
@@ -125,7 +152,7 @@ async function main(){
       active:details?.active??hook.active??null,wallets:count,
       returnedFieldNames:fields});
     const source=JSON.parse(await readFile('research/smart-wallet-webhook-cohort.json','utf8'));
-    const expected=source.map(x=>x.wallet);
+    const expected=source.filter(x=>x.webhookEnabled===true).map(x=>x.wallet);
     if(Array.isArray(addresses)&&
       (count!==expected.length || !expected.every(w=>addresses.includes(w))))
       throw Error('HELIUS_WALLET_COUNT_MISMATCH');
@@ -136,9 +163,14 @@ async function main(){
   const token=derivePurposeToken(required('ADMIN_TOKEN'),key);
   const cfg=await readFile('research/smart-wallet-webhook-cohort.json','utf8');
   const cohort=JSON.parse(cfg);
-  const wallets=cohort.map(x=>x.wallet);
-  if(cohort.length<3||cohort.length>20||!cohort.every(x=>x.vetted===false)||
-     new Set(wallets).size!==wallets.length)throw Error('UNVETTED_PILOT_COHORT_INVALID');
+  const wallets=cohort.filter(x=>x.webhookEnabled===true).map(x=>x.wallet);
+  const allWallets=cohort.map(x=>x.wallet);
+  if(cohort.length!==14||wallets.length!==12||
+     !cohort.every(x=>x.vetted===false&&typeof x.webhookEnabled==='boolean')||
+     new Set(allWallets).size!==allWallets.length||
+     wallets.includes('kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ')||
+     wallets.includes('3wySUKHiD15kUD7sunNe1FQpogv2FK7Tw7TzSJyC9Ft8'))
+     throw Error('UNVETTED_PILOT_COHORT_INVALID');
   // Verify that the Worker configuration and Helius subscription target the same cohort.
   const cfgToml=await readFile('wrangler.smart-wallet.toml','utf8');
   const deployedWallets=cfgToml.match(/WALLET_WATCHED_ADDRESSES\s*=\s*"([^"]+)"/)?.[1]?.split(',')||[];
