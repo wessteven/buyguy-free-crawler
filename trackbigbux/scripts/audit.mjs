@@ -31,6 +31,25 @@ export function parserEvidence(receipts=[]){
     recordsReturned:rows.filter(x=>x.result_status==='OK')
       .reduce((n,x)=>n+Number(x.response_records||0),0)};
 }
+// Source-receipt metering only, never Helius account usage or a billing proof.
+// Current Helius docs: archival RPC=10, Parsed Events=10, legacy Enhanced=100.
+// These may change; unsuccessful requests might bill differently.
+export function estimateSourceCredits(receipts=[]){
+  const archival=receipts.filter(x=>x.source==='helius_rpc'&&x.request_kind==='getSignaturesForAddress');
+  const parsed=receipts.filter(x=>x.wallet_id==='__parser'&&x.source==='helius_parsed_events');
+  const legacy=receipts.filter(x=>x.wallet_id==='__parser'&&x.source==='helius_enhanced');
+  const perScan=10*archival.length+10*parsed.length+100*legacy.length;
+  return {
+    model:'ESTIMATE_FROM_SOURCE_RECEIPTS_NOT_ACCOUNT_USAGE',
+    archivalRpcCalls:archival.length,
+    parsedEventsCalls:parsed.length,
+    legacyEnhancedCalls:legacy.length,
+    estimatedCreditsPerRun:perScan,
+    projectedCreditsPer30DaysAt5MinuteCadence:perScan*12*24*30,
+    rateAssumption:'10 credits archival RPC; 10 Parsed Events; 100 legacy Enhanced',
+    excludes:'Other collectors, other methods, account discounts, missing receipts'
+  };
+}
 export function evaluateAudit({now=new Date(),run=null,activeRun=null,coverage=[],receipts=[],persistedEvents=0,pending=0,previous=null}={}){
   const failures=[];
   if(activeRun){
@@ -108,6 +127,7 @@ export async function main(){
   const now=new Date();
   const result=evaluateAudit({now,run,activeRun,coverage,receipts,persistedEvents,pending,previous});
   const parser=parserEvidence(receipts);
+  const sourceCredits=estimateSourceCredits(receipts);
   const bucket=Math.floor(now.getTime()/3600000);
   await d1('INSERT OR IGNORE INTO trackbigbux_external_audits (audited_bucket,audited_at,source_run_id,source_started_at,source_status,roster_version,frozen_denominator,actual_coverage,verified_request_wallets,candidate_events_seen,actual_events_in_run,parser_pending,failures_json,verdict) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',[
     bucket,now.toISOString(),run?.run_id||null,run?.started_at||null,run?.status||'NO_SOURCE',
@@ -132,7 +152,7 @@ export async function main(){
     activeRun:activeRun?.run_id||null,
     activeRunStartedAt:activeRun?.started_at||null,
     parserPending:result.pending,parserProcessed:Number(run?.enhanced_parsed||0),
-    parserReceipts:parser,failures:result.failures};
+    parserReceipts:parser,sourceCredits,failures:result.failures};
   console.log(JSON.stringify(summary));
   if(result.verdict!=='RAW_CAPTURE_VERIFIED')process.exitCode=1;
   return summary;
