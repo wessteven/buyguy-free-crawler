@@ -7,6 +7,22 @@ export const MAX_BLOCK_WINDOW=6000;
 export const MAX_LOGS_PER_WALLET=3500;
 const addressRe=/^0x[0-9a-f]{40}$/i;
 const hashRe=/^0x[0-9a-f]{64}$/i;
+const PUBLIC_RPC_MIN_INTERVAL_MS=1200;
+let nextPublicRpcRequestAt=0;
+// Use a polite per-isolate request interval for Robinhood's keyless public RPC.
+// This does not promise cross-isolate or account-wide capacity and does not
+// retry 429s in a burst; failures stay visible without moving checkpoints.
+export function rpcPaceSlot(now,nextAt,spacing=PUBLIC_RPC_MIN_INTERVAL_MS){
+  const start=Math.max(now,nextAt);
+  return {waitMs:start-now,nextAt:start+spacing};
+}
+async function pacePublicRpc(fetcher,endpoint){
+  if(fetcher!==fetch||endpoint!==ROBINHOOD_RPC)return;
+  const slot=rpcPaceSlot(Date.now(),nextPublicRpcRequestAt);
+  nextPublicRpcRequestAt=slot.nextAt;
+  if(slot.waitMs)await new Promise(resolve=>setTimeout(resolve,slot.waitMs));
+}
+
 export const topicAddress=address=>{
  if(!addressRe.test(address))throw Error('RPC_INVALID_ADDRESS');
  return '0x'+address.slice(2).toLowerCase().padStart(64,'0');
@@ -20,6 +36,7 @@ export const parseHexInt=val=>{
 export async function rpcCall(method,params,fetcher=fetch,endpoint=ROBINHOOD_RPC){
   const parsed=new URL(endpoint);
   if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw Error('ROBINHOOD_RPC_ENDPOINT_INVALID');
+  await pacePublicRpc(fetcher,endpoint);
  const ctrl=new AbortController();
  const timeout=setTimeout(()=>ctrl.abort(),12000);
  try{
