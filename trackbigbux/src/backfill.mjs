@@ -2,12 +2,12 @@ import {planEnrichment} from './enrichment-plan.mjs';
 
 // Independent catch-up engine. No wallet collection, checkpoint movement or trading.
 // Caller provides D1, Helius fetch function, frozen wallets and classification.
-export async function drainBacklog({db,fetchParsed,wallets,classify,limit=60,batchSize=20,onBatch=async()=>{}}) {
+export async function drainBacklog({db,fetchParsed,wallets,classify,limit=60,batchSize=20,offset=0,onBatch=async()=>{}}) {
   if(!db||typeof fetchParsed!=='function'||!Array.isArray(wallets)||typeof classify!=='function')
     throw Error('BACKFILL_DEPENDENCIES_REQUIRED');
-  if(!Number.isInteger(limit)||limit<1||limit>300||!Number.isInteger(batchSize)||batchSize<1||batchSize>20)
+  if(!Number.isInteger(limit)||limit<1||limit>300||!Number.isInteger(batchSize)||batchSize<1||batchSize>20||!Number.isSafeInteger(offset)||offset<0)
     throw Error('BACKFILL_BOUNDS_INVALID');
-  const q=await db.prepare("SELECT wallet_id,tx_id FROM trackbigbux_activity WHERE chain='solana' AND category='UNPARSED_SIGNATURE' ORDER BY observed_at ASC LIMIT ?").bind(limit).all();
+  const q=await db.prepare("SELECT wallet_id,tx_id FROM trackbigbux_activity WHERE chain='solana' AND category='UNPARSED_SIGNATURE' ORDER BY observed_at ASC, wallet_id ASC, tx_id ASC LIMIT ? OFFSET ?").bind(limit,offset).all();
   const rows=q.results||[];
   const signatures=[...new Set(rows.map(x=>x.tx_id))];
   const summary={rowsSelected:rows.length,uniqueSignatures:signatures.length,attempted:0,returned:0,
