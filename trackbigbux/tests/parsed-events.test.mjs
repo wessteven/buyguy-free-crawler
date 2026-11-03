@@ -24,6 +24,7 @@ test('proof of swap requires exact wallet inbound/outbound token flows and parse
   assert.equal(x.source,'helius_parsed_events');
   const e=JSON.parse(x.evidence_json);
   assert.equal(e.ownOutbound[0].rawTokenAmount,'900719925474099300000');
+  assert.equal(e.ownOutbound[0].amountPrecision,'EXACT');
   assert.equal(e.ownInbound[0].rawTokenAmount,'800');
   assert.equal(e.tokenUnits,'raw');
   assert.match(x.evidence_json,/NOT_INDEPENDENT_NET_PNL/);
@@ -46,4 +47,12 @@ test('non-swap and execution errors cannot become buy classifications',()=>{
   assert.equal(classifyParsedEvent(wallet,transfer).category,'NON_SWAP_OR_UNRESOLVED');
   transfer.parsed.transactionStatus='ERROR';
   assert.equal(classifyParsedEvent(wallet,transfer).category,'FAILED_TRANSACTION_PARSED');
+});
+
+test('unsafe JSON number amount never masquerades as an exact raw token amount',()=>{
+  const tx=swap();
+  tx.parsed.tokenTransfers[0].rawTokenAmount=9007199254740993;
+  const e=JSON.parse(classifyParsedEvent(wallet,tx).evidence_json);
+  assert.equal(e.ownOutbound[0].rawTokenAmount,null);
+  assert.equal(e.ownOutbound[0].amountPrecision,'UNSAFE_OR_MISSING');
 });
