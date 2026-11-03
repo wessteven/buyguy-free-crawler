@@ -108,3 +108,34 @@ test('missing Helius credentials cannot silently drop five Solana wallets',async
   assert.equal(db.rows.filter(x=>x.sql.startsWith('INSERT OR REPLACE INTO trackbigbux_coverage')).length,12);
   assert.equal((await collect({DB:db},{now:new Date('2026-11-02T01:05:00Z'),fetcher})).already_run,true);
 });
+
+
+test('backfill handles shared signature and independent wallet classifications',async()=>{
+  const {drainBacklog}=await import('../src/backfill.mjs');
+  const rows=[{wallet_id:'sol-g4',tx_id:'sig1'},{wallet_id:'sol-end837',tx_id:'sig1'}];
+  const updated=[];
+  const db={prepare:sql=>({bind:(...params)=>({
+    all:async()=>({results:rows.slice(0,params[0])}),
+    run:async()=>{updated.push(params);return {meta:{changes:1}}}
+  })}),batch:async stmts=>{for(const stmt of stmts)await stmt.run()}};
+  const calls=[];
+  const result=await drainBacklog({db,wallets:WALLETS,
+    classify:wallet=>({category:'TRANSFER_NOT_BUY',initiated:'NOT_ESTABLISHED',source:'test',evidence_json:wallet.id}),
+    fetchParsed:async ids=>{calls.push(ids);return [{signature:'sig1'}]}});
+  assert.deepEqual(calls,[['sig1']]);
+  assert.equal(result.classified,2);
+  assert.equal(updated.length,2);
+});
+test('backfill continues after one provider batch fails',async()=>{
+  const {drainBacklog}=await import('../src/backfill.mjs');
+  const rows=[{wallet_id:'sol-g4',tx_id:'sig1'},{wallet_id:'sol-g4',tx_id:'sig2'}];
+  const db={prepare:()=>({bind:(...params)=>({
+    all:async()=>({results:rows.slice(0,params[0])}),run:async()=>({meta:{changes:1}})
+  })}),batch:async stmts=>{for(const stmt of stmts)await stmt.run()}};
+  const result=await drainBacklog({db,wallets:WALLETS,batchSize:1,
+    classify:()=>({category:'TRANSFER_NOT_BUY',initiated:'NOT_ESTABLISHED',source:'test',evidence_json:'{}'}),
+    fetchParsed:async ids=>{if(ids[0]==='sig1')throw Error('provider unavailable');return [{signature:'sig2'}]}});
+  assert.equal(result.failedBatches,1);
+  assert.equal(result.classified,1);
+  assert.equal(result.unresolved,1);
+});
