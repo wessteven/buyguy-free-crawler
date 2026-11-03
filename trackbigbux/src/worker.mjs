@@ -1,6 +1,7 @@
 import {WALLETS,ROSTER_VERSION,EXPECTED_WALLET_COUNT,assertRoster} from './wallets.mjs';
 import {solanaDelta,evmDelta,normalizeSignature,normalizeEvmTx,classifyHelius,boundedError,evmEqual} from './normalize.mjs';
 import {readHead,collectRpcCohort} from './robinhood-rpc.mjs';
+import {planEnrichment} from './enrichment-plan.mjs';
 
 const BS='https://robinhoodchain.blockscout.com/api/v2';
 const MAX_SOL=300,MAX_EVM_PAGES=4,MAX_PARSE=60;
@@ -129,16 +130,9 @@ async function enrichSolana(env,db,runId,fetcher,warnings){
       .bind(runId,'__parser',1,'helius_enhanced','parseTransactions',iso(),'FAILED',0,boundedError(e)).run();
     return 0;
   }
-  const requested=new Map(rows.map(x=>[x.tx_id,x.wallet_id]));
-  const stmts=[];
-  for(const tx of data){
-    const walletId=requested.get(tx.signature);
-    if(!walletId)continue;
-    const wallet=WALLETS.find(w=>w.id===walletId);if(!wallet)continue;
-    const parsed=classifyHelius(wallet,tx);if(!parsed)continue;
-    stmts.push(db.prepare("UPDATE trackbigbux_activity SET category=?,initiated=?,source=?,evidence_json=? WHERE wallet_id=? AND chain='solana' AND tx_id=? AND category='UNPARSED_SIGNATURE'")
-      .bind(parsed.category,parsed.initiated,parsed.source,parsed.evidence_json,walletId,tx.signature));
-  }
+  const updates=planEnrichment(rows,data,WALLETS,classifyHelius);
+  const stmts=updates.map(parsed=>db.prepare("UPDATE trackbigbux_activity SET category=?,initiated=?,source=?,evidence_json=? WHERE wallet_id=? AND chain='solana' AND tx_id=? AND category='UNPARSED_SIGNATURE'")
+    .bind(parsed.category,parsed.initiated,parsed.source,parsed.evidence_json,parsed.walletId,parsed.signature));
   if(stmts.length)await insertBatch(db,stmts);
   return stmts.length;
 }
