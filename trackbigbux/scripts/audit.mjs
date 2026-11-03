@@ -115,6 +115,13 @@ export async function main(){
     result.persistedEvents,result.pending,JSON.stringify(result.failures),result.verdict
   ]);
   // Print bounded persisted provider failure receipts, not AI recollections.
+  // A failed parse is not evidence that a wallet stopped trading. Print only
+  // bounded persisted receipt details, never raw Helius URLs, headers or keys.
+  const parserDiagnostics=receipts.filter(x=>x.wallet_id==='__parser').map(x=>({
+    at:x.observed_at,status:x.result_status,records:x.response_records,
+    details:String(x.details||'').replace(/https?:\\/\\/\\S+/g,'[endpoint]').slice(0,180)
+  })).slice(0,12);
+  console.log('TRACKBIGBUX_PARSER_DIAGNOSTICS',JSON.stringify(parserDiagnostics));
   console.log('TRACKBIGBUX_SOURCE_DIAGNOSTICS',JSON.stringify(coverage
     .filter(x=>x.status==='ERROR'||x.status==='CHECKPOINT_NOT_FOUND')
     .map(x=>({wallet:x.wallet_id,status:x.status,error:String(x.error||'').slice(0,160),
