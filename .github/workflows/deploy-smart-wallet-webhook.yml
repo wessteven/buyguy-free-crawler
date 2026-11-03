@@ -12,7 +12,7 @@ on:
       - 'research/smart-wallet-webhook-cohort.json'
       - 'src/smart-wallet-budget.mjs'
   schedule:
-    - cron: '17 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -105,9 +105,13 @@ jobs:
           ]);
           const policy=assessWebhookBudget({lastHour:hour[0]?.n,dayAttempted:usage[0]?.reserved??0});
           if(policy.action==='UNKNOWN_DATA_MANUAL_REVIEW')throw Error('BUDGET_UNVERIFIED');
+          const latch=await query("SELECT state FROM smart_wallet_webhook_control WHERE id='owned' LIMIT 1",[]);
+          const armed=latch.length===1&&latch[0].state==='ARMED';
+          const safe=policy.safe&&armed;
           if(!process.env.GITHUB_OUTPUT)throw Error('GITHUB_OUTPUT_MISSING');
-          appendFileSync(process.env.GITHUB_OUTPUT,`safe=${policy.safe}\n`);
-          console.log('GOGET_HELIUS_DEPLOY_BUDGET_GATE',{action:policy.action,reasons:policy.reasons});
+          appendFileSync(process.env.GITHUB_OUTPUT,`safe=${safe}\n`);
+          console.log('GOGET_HELIUS_DEPLOY_BUDGET_GATE',{action:policy.action,armed,
+            reasons:[...policy.reasons,...(armed?[]:['PERSISTENT_SUSPENSION_OR_UNKNOWN'])]});
           JS
       - name: Respect existing Helius credit suspension after a code deployment
         if: steps.provider_budget.outputs.safe == 'false'
@@ -124,6 +128,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
         run: node scripts/provision-smart-wallet-webhook.mjs sync
       - name: Confirm webhook listed after registration
         if: steps.provider_budget.outputs.safe == 'true'
