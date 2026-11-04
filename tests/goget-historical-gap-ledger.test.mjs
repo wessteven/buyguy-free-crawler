@@ -12,6 +12,14 @@ test('historical gap ledger is read-only, reconciles all three independent evide
  assert.match(s,/invalidHistoricalPriceRecords/);
  assert.match(s,/invalidForensicActivityRecords/);
  assert.match(s,/nativeRatioInvalid/);
+ assert.match(s,/smart_wallet_helius_gap_wave_coverage/);
+ assert.match(s,/smart_wallet_helius_historical_replay/);
+ assert.match(s,/replayWindowCount===21/);
+ assert.match(s,/replayCompletedCount===21/);
+ assert.match(s,/replayJournalCount===replaySourceCount/);
+ assert.match(s,/ENHANCED_REPLAY_WINDOWS_COMPLETE/);
+ assert.match(s,/COVERAGE_JOURNAL_MISMATCH/);
+ assert.match(s,/sourceTotalAcrossHistoricalWaves/);
  assert.match(s,/RECONCILED_NEW_FORWARD_GAPS_PENDING/);
  assert.match(s,/RECONCILED_ALL_CURRENT_HISTORICAL_GAPS/);
  assert.match(s,/usd_price_reconstructed/);
