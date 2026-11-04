@@ -152,6 +152,8 @@ async function main(){
  report.reconciliation=comparison.results[0]||null;
  await writeFile('goget-helius-historical-replay.json',JSON.stringify(report,null,2)+'\n');
  console.log('GOGET_HELIUS_HISTORICAL_REPLAY',JSON.stringify(report));
+ if(report.storedNew===0&&report.failedWallets.length===WATCHED.length)
+   process.exitCode=1; // Never report an all-failed source reconstruction as successful.
 }
 main().catch(e=>{
  const allowed=/^(?:MISSING_[A-Z_]+|D1_HTTP_\d+|D1_BUDGET|D1_INSERT_UNVERIFIED|D1_READ_OR_WRITE_UNVERIFIED|SOURCE_TOO_LARGE)$/;
