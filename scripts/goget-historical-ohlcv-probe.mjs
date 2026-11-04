@@ -20,8 +20,8 @@ async function main(){
  if(groups.length>HISTORY_BOUNDS.maxPoolReads)throw Error('POOL_LIMIT');
  let requests=0;
  const results=[];
- for(const g of groups){
-  for(const due of [g.first_due,g.last_due]){
+ for(const g of groups.slice(0,1)){
+  for(const due of [g.first_due]){
    if(requests>=HISTORY_BOUNDS.maxApiCalls)break;
    if(!Number.isFinite(Date.parse(due)))throw Error('BAD_DB_TIME');
    if(requests)await wait(7300); // conservative under public ~10/min budget
@@ -39,7 +39,15 @@ async function main(){
     if(size&&Number(size)>HISTORY_BOUNDS.maxBytes)throw Error('OVERSIZE');
     const text=await r.text();
     if(text.length>HISTORY_BOUNDS.maxBytes)throw Error('OVERSIZE');
-    const parsed=parseHistoricalOhlcv(JSON.parse(text),{mint:g.mint,pool:g.pool});
+    const payload=JSON.parse(text);
+    if(requests===1)console.log('GOGET_OHLCV_PROVIDER_SHAPE',JSON.stringify({
+      id:String(payload?.data?.id||'').slice(0,160),
+      base:String(payload?.meta?.base?.address||payload?.meta?.base?.id||'').slice(0,140),
+      quote:String(payload?.meta?.quote?.address||payload?.meta?.quote?.id||'').slice(0,140),
+      candleCount:payload?.data?.attributes?.ohlcv_list?.length??null,
+      keys:Object.keys(payload?.data||{}).slice(0,8)
+    }));
+    const parsed=parseHistoricalOhlcv(payload,{mint:g.mint,pool:g.pool});
     const evidence=matchHistoricOutcome({due_at:due,reference_price_usd:1},parsed.candles);
     results.push({pool:g.pool,mint:g.mint,due,kind:evidence.status,
        candleAt:evidence.candleAt,closeUsd:evidence.candleCloseUsd,
