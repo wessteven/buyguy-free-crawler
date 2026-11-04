@@ -1,0 +1,38 @@
+name: GOGET Historical Data Recovery Inventory
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-history-recovery-inventory.yml'
+      - 'scripts/goget-history-recovery-inventory.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-history-recovery-inventory
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify read-only inventory script syntax
+        run: node --check scripts/goget-history-recovery-inventory.mjs
+      - name: Inventory missing historical D1 evidence with no writes or provider calls
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-history-recovery-inventory.mjs
+      - name: Retain audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-history-recovery-inventory
+          path: goget-history-recovery-inventory.json
+          retention-days: 14
+          if-no-files-found: warn
