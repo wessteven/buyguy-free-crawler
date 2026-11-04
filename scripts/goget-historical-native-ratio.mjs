@@ -3,6 +3,7 @@
 // indicative native SOL/token forensic evidence. No USD price reconstruction.
 import {readFile,writeFile} from 'node:fs/promises';
 import {inferExactCounterpartyNativeRatio} from '../src/goget-historical-native-ratio.mjs';
+import {normalizeParsedEventForNativeRatio} from '../src/goget-parsed-events-adapter.mjs';
 const required=k=>{const v=process.env[k];if(!v)throw Error('MISSING_'+k);return v;};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function main(){
@@ -55,7 +56,7 @@ async function main(){
    if(calls)await sleep(1700);
    calls++;
    try{
-    const url='https://api-mainnet.helius-rpc.com/v0/transactions/?api-key='+encodeURIComponent(helius);
+    const url='https://mainnet.helius-rpc.com/v1/parsed-events/transactions?api-key='+encodeURIComponent(helius);
     const response=await fetch(url,{method:'POST',
       headers:{accept:'application/json','content-type':'application/json'},
       body:JSON.stringify({transactions:sigs}),signal:AbortSignal.timeout(16000)});
@@ -67,17 +68,25 @@ async function main(){
         const items=JSON.parse(payload);
         if(!Array.isArray(items)||items.length>sigs.length||items.some(t=>
           !signature.test(t?.signature||'')||!sigs.includes(t.signature)||
-          !Number.isSafeInteger(t.timestamp)||t.timestamp*1000<due||t.timestamp*1000>until||
-          !(t.accountData||[]).some(z=>z.account===a.pool)))error='SOURCE_IDENTITY_UNVERIFIED';
+          !Number.isSafeInteger(t?.parsed?.blockTime)||
+          t.parsed.blockTime*1000<due||t.parsed.blockTime*1000>until))
+          error='SOURCE_IDENTITY_UNVERIFIED';
         else results=items;
       }
     }
    }catch{error='SOURCE_UNAVAILABLE';}
   }
-  const matching=results.filter(t=>sigs.includes(t.signature)&&t.timestamp*1000>=due&&t.timestamp*1000<=until);
+  const matching=results.filter(t=>sigs.includes(t.signature)&&
+    t.parsed?.blockTime*1000>=due&&t.parsed?.blockTime*1000<=until);
   if(!error&&(matching.length!==sigs.length||new Set(matching.map(t=>t.signature)).size!==sigs.length))
     error='EXACT_SIGNATURE_COVERAGE_INCOMPLETE';
-  const candidates=matching.map(tx=>inferExactCounterpartyNativeRatio(tx,{pool:a.pool,mint:a.mint}));
+  if(!error&&matching.some(t=>t.parserStatus!=='OK'))
+    error='PARSED_EVENT_STATUS_INCOMPLETE';
+  const parsedResults=matching.map(tx=>normalizeParsedEventForNativeRatio(tx,{
+    pool:a.pool,mint:a.mint,expectedSignature:tx.signature}));
+  const candidates=parsedResults.map(x=>x.ok?
+    inferExactCounterpartyNativeRatio(x.normalized,{pool:a.pool,mint:a.mint}):
+    {status:x.reason,solPerToken:null});
   // Multiple swaps are possible within ten minutes. Use only the earliest
   // unambiguous direct pool-flow ratio, and never claim it was the first trade.
   // A missing exact source signature invalidates the entire batch.
@@ -86,18 +95,20 @@ async function main(){
   const chosen=!error&&clean.length?clean[0]:null;
   const status=error?'SOURCE_INCOMPLETE':
    chosen?'HISTORIC_NATIVE_POOL_FLOW_RATIO_ONLY':
-   candidates.length?'AMBIGUOUS_ENHANCED_SWAP_POOL_LEGS':'SIGNATURE_NOT_RECOVERED';
+   candidates.length?'NO_UNAMBIGUOUS_PARSED_EVENT_POOL_RATIO':'SIGNATURE_NOT_RECOVERED';
   const v=chosen;
   const res=await d1(insert,[a.mint,a.bucket,Number(a.horizon_min),
     a.due_at,a.pool,status,v?.signature??null,v?.blockTime??null,v?.side??null,
     v?.solPerToken??null,v?.wsolAmount??null,v?.tokenAmount??null,
-    'HELIUS_ENHANCED_EXACT_POOL_COUNTERPARTY_LEGS',new Date().toISOString(),0]);
+    'HELIUS_PARSED_EVENTS_V1_EXACT_POOL_COUNTERPARTY_LEGS',new Date().toISOString(),0]);
   const n=Number(res.meta?.changes);
   if(!Number.isSafeInteger(n)||n<0||n>1)throw Error('D1_WRITE_UNVERIFIED');
   writes++;report.d1WriteCalls=writes;
   if(chosen)report.nativeQuotesRecovered++;else report.ambiguousOrMissing++;
   report.items.push({mint:a.mint,pool:a.pool,dueAt:a.due_at,status,
     originalSignatures:sigs,directRatioCandidates:clean.length,
+    parseProblems:parsedResults.filter(x=>!x.ok).reduce((acc,x)=>{
+      acc[x.reason]=(acc[x.reason]||0)+1;return acc;},{}),
     nativeRatio:v?.solPerToken??null,
     sourceSignature:v?.signature??null,side:v?.side??null,
     error,stored:n===1});
