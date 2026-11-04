@@ -26,7 +26,7 @@ const stat=rs=>{
    positiveSharePct:pct(nums.filter(x=>x>0).length,nums.length),
    medianChangePct:quantile(nums,0.5),q25ChangePct:quantile(nums,0.25),
    q75ChangePct:quantile(nums,0.75),
-   meanChangePct:fix(nums.reduce((a,b)=>a+b,0)/(nums.length||1)),
+   meanChangePct:nums.length?fix(nums.reduce((a,b)=>a+b,0)/nums.length):null,
    extremeOver500Pct:nums.filter(x=>Math.abs(x)>500).length,
    firstMintMedianPct:quantile(first,0.5),
    firstMintPositiveSharePct:pct(first.filter(x=>x>0).length,first.length)};
@@ -89,6 +89,29 @@ export function reviewRecoveredEvidence({rows=[],coverage=[],wallets=[],asOf=new
     medianBucketSignalMinusControlPct:quantile(pairs.map(x=>x.signalMedianPct-x.controlMedianPct),.5),
     caveat:'Same-time observational grouping; wallets and token observations are not independent.'});
  }
+ // Repeated 5m snapshots and four horizons can reference the same token.
+ // Publish every first-observed signal mint's horizon evidence, not a cherry-picked winner.
+ const byMint=new Map();
+ for(const item of valid.filter(x=>x.sampleKind==='POTENTIAL_SIGNAL')
+   .sort((a,b)=>a.bucket.localeCompare(b.bucket)||a.horizonMin-b.horizonMin)){
+   const itemGroup=byMint.get(item.mint)||{mint:item.mint,firstObservedBucket:item.bucket,
+     recoveredRecordCount:0,uniqueSignalBuckets:new Set(),horizons:new Map()};
+   itemGroup.recoveredRecordCount++;
+   itemGroup.uniqueSignalBuckets.add(item.bucket);
+   if(!itemGroup.horizons.has(item.horizonMin)){
+     itemGroup.horizons.set(item.horizonMin,{
+       horizonMinutes:item.horizonMin,firstSignalBucket:item.bucket,
+       recoveredHistoricalChangePct:item.changePct,
+       exactPool:item.pool,historicalCandleAt:item.candleAt});
+   }
+   byMint.set(item.mint,itemGroup);
+ }
+ const signalMintDetails=[...byMint.values()].sort((a,b)=>
+  a.firstObservedBucket.localeCompare(b.firstObservedBucket)||a.mint.localeCompare(b.mint))
+  .map(x=>({mint:x.mint,firstObservedBucket:x.firstObservedBucket,
+    recoveredRecordCount:x.recoveredRecordCount,
+    uniqueSignalBuckets:x.uniqueSignalBuckets.size,
+    firstSignalOutcomeByHorizon:[...x.horizons.values()].sort((a,b)=>a.horizonMinutes-b.horizonMinutes)}));
  const walletRows=wallets.map(x=>({
    wallet:x.wallet,txType:x.tx_type,rows:Number(x.n),
    feePayerSelf:Number(x.self_fee_payer||0)}));
@@ -105,7 +128,7 @@ export function reviewRecoveredEvidence({rows=[],coverage=[],wallets=[],asOf=new
   totalOriginalMissing:totals.missing,totalHistoricalRecovered:totals.recovered,
   stillMissing:Math.max(0,totals.missing-totals.recovered),
   recoveryPct:pct(totals.recovered,totals.missing),
-  horizonBands:bands,timeMatchedComparisons:comparisons,
+  horizonBands:bands,timeMatchedComparisons:comparisons,signalMintDetails,
   replayWalletCount:historicalWalletCount,replayTypeCounts:walletRows,
   providerCalls:0,d1Writes:0,realTrades:0,
   independentlyVerifiedProfitableCopyTrades:0,
