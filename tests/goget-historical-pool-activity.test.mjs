@@ -44,9 +44,7 @@ test('unknown transactions are separate from complete non-swap history',()=>{
 });
 test('must not use transactions outside original target plus ten minutes',()=>{
  const before=Math.floor(Date.parse('2026-11-01T02:49:00Z')/1000);
- const result=review([tx({timestamp:before})]);
- assert.equal(result.nearbyTxCount,0);
- assert.equal(result.classification,'NO_MATCHING_TX_IN_HELIUS_ENHANCED_HISTORY');
+ assert.throws(()=>review([tx({timestamp:before})]),/OUT_OF_REQUESTED_TIME_WINDOW/);
 });
 test('reject invalid source, repeated identity and time-filter deviations',()=>{
  assert.throws(()=>validateEvidenceTx({signature:'bad'},{
