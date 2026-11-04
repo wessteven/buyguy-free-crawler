@@ -1,0 +1,43 @@
+name: GOGET Helius Historical Wallet Replay (isolated source)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-helius-historical-replay.yml'
+      - 'scripts/goget-helius-historical-replay.mjs'
+      - 'sql/smart-wallet-helius-historical-replay.sql'
+      - 'tests/goget-helius-historical-replay.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-helius-wallet-history-one-shot
+  cancel-in-progress: false
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check provenance, bounded Helius history and immutable live cursors
+        run: |
+          node --check scripts/goget-helius-historical-replay.mjs
+          node --test tests/goget-helius-historical-replay.test.mjs
+      - name: Reconstruct historical Solana transactions for three gap-flagged wallets
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-helius-historical-replay.mjs
+      - name: Preserve detailed replay and completeness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-helius-historical-wallet-replay
+          path: goget-helius-historical-replay.json
+          retention-days: 30
+          if-no-files-found: warn

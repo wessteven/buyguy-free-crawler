@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+test('historical Helius wallet replay is bounded, isolated and never changes GOGET live cursors',async()=>{
+ const s=await readFile('scripts/goget-helius-historical-replay.mjs','utf8');
+ const sql=await readFile('sql/smart-wallet-helius-historical-replay.sql','utf8');
+ assert.match(s,/maxPagesPerWallet:8,maxTotalHeliusCalls:24/);
+ assert.match(s,/HELIUS_TIME_FILTER_OR_TRANSACTION_UNVERIFIED/);
+ assert.match(s,/before-signature/);
+ assert.match(s,/gte-time/);
+ assert.match(s,/lte-time/);
+ assert.match(s,/INSERT OR IGNORE INTO smart_wallet_helius_historical_replay/);
+ assert.match(s,/missing_from_live/);
+ assert.doesNotMatch(s,/UPDATE smart_wallet_live_cursors/i);
+ assert.doesNotMatch(s,/INSERT INTO smart_wallet_webhook_events/i);
+ assert.match(s,/noLiveWebhookWrites:true,noLiveCursorChanges:true,trades:0/);
+ assert.match(sql,/PRIMARY KEY\(wallet,signature\)/);
+ assert.match(sql,/historical_evidence_json/);
+ assert.match(sql,/retrieved_at/);
+});
