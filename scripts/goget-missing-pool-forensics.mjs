@@ -36,7 +36,7 @@ async function main(){
   .split(';').map(x=>x.trim()).filter(Boolean);
  for(const stmt of statements){await dbQuery(stmt);d1Writes++;}
  const sourceRows=(await dbQuery(
-   "SELECT o.mint,o.bucket,o.horizon_min,o.due_at,o.pool,s.sample_kind FROM goget_pre_signal_market_outcomes o JOIN goget_pre_signal_snapshots s ON s.mint=o.mint AND s.bucket=o.bucket LEFT JOIN goget_historical_price_recovery p ON p.mint=o.mint AND p.bucket=o.bucket AND p.horizon_min=o.horizon_min LEFT JOIN goget_historical_pool_activity_audit a ON a.mint=o.mint AND a.bucket=o.bucket AND a.horizon_min=o.horizon_min WHERE o.status='MISSING_FUTURE_USD_QUOTE_COVERAGE' AND p.mint IS NULL AND a.mint IS NULL ORDER BY o.due_at ASC LIMIT ?",
+   "SELECT o.mint,o.bucket,o.horizon_min,o.due_at,o.pool,s.sample_kind,a.enhanced_history_complete AS priorComplete FROM goget_pre_signal_market_outcomes o JOIN goget_pre_signal_snapshots s ON s.mint=o.mint AND s.bucket=o.bucket LEFT JOIN goget_historical_price_recovery p ON p.mint=o.mint AND p.bucket=o.bucket AND p.horizon_min=o.horizon_min LEFT JOIN goget_historical_pool_activity_audit a ON a.mint=o.mint AND a.bucket=o.bucket AND a.horizon_min=o.horizon_min WHERE o.status='MISSING_FUTURE_USD_QUOTE_COVERAGE' AND p.mint IS NULL AND (a.mint IS NULL OR a.enhanced_history_complete=0) ORDER BY o.due_at ASC LIMIT ?",
    [FORENSIC_LIMITS.maxOutcomeRows])).results;
  const coverage=(await dbQuery(
    "SELECT (SELECT COUNT(*) FROM goget_pre_signal_market_outcomes WHERE status='MISSING_FUTURE_USD_QUOTE_COVERAGE') AS total_missing,(SELECT COUNT(*) FROM goget_historical_price_recovery) AS reconstructed_historical,(SELECT COUNT(*) FROM goget_historical_pool_activity_audit) AS previously_classified")).results[0];
@@ -75,13 +75,13 @@ async function main(){
     'Pool-specific Solana USD quotes cannot be computed without exact swap legs and historical SOL/USD.',
     'This pass is capped and explicitly reports unexamined pairs; earlier Helius history may be incomplete.'
    ]};
- const fetchPage=async(g,fromMs,toMs,before)=>{
+ const fetchPage=async(g,fromMs,toMs,before,pageLimit)=>{
   if(heliusCalls>=FORENSIC_LIMITS.maxApiCallsPerBatch)return {error:'HELIUS_CALL_BUDGET'};
   const wait=Math.max(0,1500-(Date.now()-lastProviderAt));if(wait)await sleep(wait);
   heliusCalls++;lastProviderAt=Date.now();
   const u=new URL('https://api-mainnet.helius-rpc.com/v0/addresses/'+encodeURIComponent(g.pool)+'/transactions');
   for(const [k,v] of Object.entries({'api-key':helius,
-    limit:String(FORENSIC_LIMITS.pageSize),
+    limit:String(pageLimit),
     'gte-time':String(Math.floor(fromMs/1000)),
     'lte-time':String(Math.ceil(toMs/1000)),
     ...(before?{'before-signature':before}:{})}))u.searchParams.set(k,v);
@@ -94,7 +94,7 @@ async function main(){
    const text=await r.text();
    if(text.length>FORENSIC_LIMITS.maxSourceBytes)return {error:'HELIUS_OVERSIZE'};
    const a=JSON.parse(text);
-   if(!Array.isArray(a)||a.length>FORENSIC_LIMITS.pageSize)
+   if(!Array.isArray(a)||a.length>pageLimit)
      return {error:'HELIUS_RESPONSE_SHAPE'};
    // Validate pagination time boundaries and exact unique signatures before
    // accepting it as complete or as evidence of absence.
@@ -108,7 +108,8 @@ async function main(){
      'HELIUS_TIME_FILTER_UNVERIFIED':'HELIUS_REQUEST_OR_PARSE_UNVERIFIED'};
   }
  };
- const insertSQL='INSERT OR IGNORE INTO goget_historical_pool_activity_audit(mint,bucket,horizon_min,due_at,pool,classification,enhanced_history_complete,pages_read,requested_helius_calls,nearby_tx_count,exact_pool_tx_count,labeled_swap_tx_count,exact_mint_swap_hint_count,unknown_pool_tx_count,signatures_json,provider_failure,checked_at,source,reconstructed_usd_price) VALUES';
+ const insertSQL='INSERT INTO goget_historical_pool_activity_audit(mint,bucket,horizon_min,due_at,pool,classification,enhanced_history_complete,pages_read,requested_helius_calls,nearby_tx_count,exact_pool_tx_count,labeled_swap_tx_count,exact_mint_swap_hint_count,unknown_pool_tx_count,signatures_json,provider_failure,checked_at,source,reconstructed_usd_price) VALUES';
+ const improveOnly=' ON CONFLICT(mint,bucket,horizon_min) DO UPDATE SET classification=excluded.classification,enhanced_history_complete=excluded.enhanced_history_complete,pages_read=excluded.pages_read,requested_helius_calls=excluded.requested_helius_calls,nearby_tx_count=excluded.nearby_tx_count,exact_pool_tx_count=excluded.exact_pool_tx_count,labeled_swap_tx_count=excluded.labeled_swap_tx_count,exact_mint_swap_hint_count=excluded.exact_mint_swap_hint_count,unknown_pool_tx_count=excluded.unknown_pool_tx_count,signatures_json=excluded.signatures_json,provider_failure=excluded.provider_failure,checked_at=excluded.checked_at WHERE goget_historical_pool_activity_audit.enhanced_history_complete=0 AND excluded.enhanced_history_complete=1';
  for(const g of selected){
   if(heliusCalls>=FORENSIC_LIMITS.maxApiCallsPerBatch){
    report.groupReports.push({pool:g.pool,mint:g.mint,sourceRows:g.rows.length,
@@ -120,10 +121,14 @@ async function main(){
     FORENSIC_LIMITS.afterDueMs;
   const transactions=[];
   const signatureSeen=new Set();
+  // Failed oversized reads are retried with 20-record pages, without
+  // expanding the existing 30-call provider budget.
+  const retryIncomplete=g.rows.some(x=>Number(x.priorComplete)===0);
+  const pageLimit=retryIncomplete?20:FORENSIC_LIMITS.pageSize;
   let before=null,complete=false,providerFailure=null,pages=0;
   const startingCall=heliusCalls;
   for(let i=0;i<FORENSIC_LIMITS.maxPagesPerPool;i++){
-   const got=await fetchPage(g,fromMs,toMs,before);
+   const got=await fetchPage(g,fromMs,toMs,before,pageLimit);
    if(got.error){providerFailure=got.error;break;}
    pages++;
    if(got.items.length===0){complete=true;break;}
@@ -160,7 +165,7 @@ async function main(){
     v.exactMintHintedSwaps,v.unclassifiedPoolTxCount,JSON.stringify(v.signatures),
     providerFailure,v.asOf,v.source,0
    ]);
-   const sql=insertSQL+chunk.map(()=>'(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').join(',');
+   const sql=insertSQL+chunk.map(()=>'(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').join(',')+improveOnly;
    const result=await dbQuery(sql,params);d1Writes++;
    const n=Number(result.meta?.changes);
    if(!Number.isSafeInteger(n)||n<0||n>chunk.length)throw Error('D1_WRITE_UNVERIFIED');
@@ -171,7 +176,7 @@ async function main(){
   report.inserted+=inserted;report.duplicates+=duplicates;
   if(complete)report.completelyPagedGroups++;else report.partiallyPagedGroups++;
   const summary={pool:g.pool,mint:g.mint,sourceRows:g.rows.length,
-   pages,heliusCalls:heliusCalls-startingCall,enhancedTxRead:transactions.length,
+   pages,pageLimit,retryIncomplete,heliusCalls:heliusCalls-startingCall,enhancedTxRead:transactions.length,
    enhancedTxInsideExactWindow:exactWindowTransactions.length,
    enhancedHistoryExhausted:complete,providerFailure,inserted,
    classifiedSwapWithMintHints:evidence.filter(x=>x.exactMintHintedSwaps>0).length,

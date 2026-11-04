@@ -11,7 +11,11 @@ test('historical pool forensic pass does not rewrite forward labels or trade',as
  assert.match(s,/gte-time/);
  assert.match(s,/lte-time/);
  assert.match(s,/before-signature/);
- assert.match(s,/INSERT OR IGNORE INTO goget_historical_pool_activity_audit/);
+ assert.match(s,/INSERT INTO goget_historical_pool_activity_audit/);
+ assert.match(s,/ON CONFLICT\(mint,bucket,horizon_min\) DO UPDATE/);
+ assert.match(s,/excluded\.enhanced_history_complete=1/);
+ assert.match(s,/retryIncomplete\?20:FORENSIC_LIMITS\.pageSize/);
+ assert.match(s,/a\.enhanced_history_complete=0/);
  assert.match(s,/enhancedHistoryExhausted/);
  assert.match(s,/deferredRows/);
  assert.doesNotMatch(s,/UPDATE goget_pre_signal_market_outcomes/i);
