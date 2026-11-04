@@ -129,7 +129,7 @@ test('bounded Helius page search reconnects an exact older cursor',async()=>{
 test('page cap leaves missing interval unknown and current cursor unchanged',async()=>{
  const wallet='A'.repeat(44),previous='9'.repeat(88);
  const sigs=Array.from({length:70},(_,i)=>({
-   signature:'5'.repeat(87)+'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[i],err:null
+   signature:'5'.repeat(86)+'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(i/58)]+'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[i%58],err:null
  }));
  let calls=0;
  const history=await collectSignatureHistory(({limit,before})=>{
