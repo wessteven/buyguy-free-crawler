@@ -1,0 +1,45 @@
+name: GOGET Missing-Pool Helius Forensics (isolated evidence)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-missing-pool-forensics.yml'
+      - 'src/goget-historical-pool-activity.mjs'
+      - 'scripts/goget-missing-pool-forensics.mjs'
+      - 'tests/goget-historical-pool-activity.test.mjs'
+      - 'sql/goget-historical-pool-activity.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-missing-pool-helius-forensics
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate bounded classification and immutable price history
+        run: |
+          node --check src/goget-historical-pool-activity.mjs
+          node --check scripts/goget-missing-pool-forensics.mjs
+          node --test tests/goget-historical-pool-activity.test.mjs
+      - name: Classify at most 12 missing exact pools and 30 Helius history pages
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: node scripts/goget-missing-pool-forensics.mjs
+      - name: Keep classification gaps and source coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-missing-pool-forensics
+          path: goget-missing-pool-forensics.json
+          retention-days: 21
+          if-no-files-found: warn
