@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+test('historical pool forensic pass does not rewrite forward labels or trade',async()=>{
+ const s=await readFile('scripts/goget-missing-pool-forensics.mjs','utf8');
+ const sql=await readFile('sql/goget-historical-pool-activity.sql','utf8');
+ const workflow=await readFile('.github/workflows/goget-missing-pool-forensics.yml','utf8');
+ assert.match(s,/FORENSIC_LIMITS\.maxApiCallsPerBatch/);
+ assert.match(s,/FORENSIC_LIMITS\.maxPoolsPerBatch/);
+ assert.match(s,/maxD1Calls/);
+ assert.match(s,/gte-time/);
+ assert.match(s,/lte-time/);
+ assert.match(s,/before-signature/);
+ assert.match(s,/INSERT OR IGNORE INTO goget_historical_pool_activity_audit/);
+ assert.match(s,/enhancedHistoryExhausted/);
+ assert.match(s,/deferredRows/);
+ assert.doesNotMatch(s,/UPDATE goget_pre_signal_market_outcomes/i);
+ assert.doesNotMatch(s,/UPDATE goget_historical_price_recovery/i);
+ assert.doesNotMatch(s,/UPDATE smart_wallet_live_cursors/i);
+ assert.doesNotMatch(s,/INSERT INTO smart_wallet_webhook_events/i);
+ assert.doesNotMatch(s,/secret.*console\.log/ig);
+ assert.match(sql,/PRIMARY KEY\(mint,bucket,horizon_min\)/);
+ assert.doesNotMatch(sql,/\b(?:DROP|ALTER|DELETE|UPDATE)\b/i);
+ assert.match(workflow,/workflow_dispatch/);
+ assert.match(workflow,/contents: read/);
+});
