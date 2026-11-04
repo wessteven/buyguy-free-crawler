@@ -75,9 +75,10 @@ async function main(){
   }
   const matching=results.filter(t=>sigs.includes(t.signature)&&t.timestamp*1000>=due&&t.timestamp*1000<=until);
   const candidates=matching.map(tx=>inferExactCounterpartyNativeRatio(tx,{pool:a.pool,mint:a.mint}));
-  // Do not use the best of several possible rates as if it were unique.
+  // Do not use the best of several possible rates as if it were unique;
+  // a failed fetch invalidates the reconstruction even if one candidate appeared.
   const clean=candidates.filter(x=>x.status==='HISTORIC_NATIVE_POOL_FLOW_RATIO_ONLY');
-  const chosen=clean.length===1?clean[0]:null;
+  const chosen=clean.length===1&&candidates.length===1&&!error?clean[0]:null;
   const status=error?'SOURCE_INCOMPLETE':
    chosen?'HISTORIC_NATIVE_POOL_FLOW_RATIO_ONLY':
    candidates.length?'AMBIGUOUS_ENHANCED_SWAP_POOL_LEGS':'SIGNATURE_NOT_RECOVERED';
