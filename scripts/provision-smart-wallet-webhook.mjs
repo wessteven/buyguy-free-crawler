@@ -107,11 +107,16 @@ async function main(){
     }
     const recent=new Date(Date.now()-3600000).toISOString();
     const day=new Date().toISOString().slice(0,10);
-    const [hour,dayRows]=await Promise.all([
+    const [hour,dayRows,delivery]=await Promise.all([
       d1('SELECT COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=?',[recent]),
-      d1('SELECT reserved FROM smart_wallet_webhook_budget WHERE day=?',[day])
+      d1('SELECT reserved FROM smart_wallet_webhook_budget WHERE day=?',[day]),
+      d1('SELECT observed_deliveries FROM smart_wallet_webhook_credit_estimates WHERE day=?',[day])
     ]);
-    const counts={lastHour:hour[0]?.n??null,dayAttempted:dayRows[0]?.reserved??0};
+    const counts={
+      lastHour:hour[0]?.n??null,
+      dayAttempted:dayRows[0]?.reserved??0,
+      dayDeliveryCredits:delivery[0]?.observed_deliveries??0
+    };
     const policy=assessWebhookBudget(counts);
     console.log('GOGET_HELIUS_CREDIT_GUARD',{counts,action:policy.action,reasons:policy.reasons});
     if(policy.action==='UNKNOWN_DATA_MANUAL_REVIEW')throw Error('GUARD_COUNTS_UNVERIFIED');

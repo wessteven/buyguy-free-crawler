@@ -99,19 +99,26 @@ jobs:
             return data.result[0].results||[];
           }
           const start=new Date(Date.now()-3600000).toISOString(),day=new Date().toISOString().slice(0,10);
-          const [hour,usage]=await Promise.all([
+          const [hour,usage,delivery]=await Promise.all([
             query('SELECT COUNT(*) AS n FROM smart_wallet_webhook_events WHERE observed_at>=?',[start]),
-            query('SELECT reserved FROM smart_wallet_webhook_budget WHERE day=?',[day])
+            query('SELECT reserved FROM smart_wallet_webhook_budget WHERE day=?',[day]),
+            query('SELECT observed_deliveries FROM smart_wallet_webhook_credit_estimates WHERE day=?',[day])
           ]);
-          const policy=assessWebhookBudget({lastHour:hour[0]?.n,dayAttempted:usage[0]?.reserved??0});
+          const counts={
+            lastHour:hour[0]?.n,
+            dayAttempted:usage[0]?.reserved??0,
+            dayDeliveryCredits:delivery[0]?.observed_deliveries??0
+          };
+          const policy=assessWebhookBudget(counts);
           if(policy.action==='UNKNOWN_DATA_MANUAL_REVIEW')throw Error('BUDGET_UNVERIFIED');
           const latch=await query("SELECT state FROM smart_wallet_webhook_control WHERE id='owned' LIMIT 1",[]);
           const armed=latch.length===1&&latch[0].state==='ARMED';
           const safe=policy.safe&&armed;
           if(!process.env.GITHUB_OUTPUT)throw Error('GITHUB_OUTPUT_MISSING');
           appendFileSync(process.env.GITHUB_OUTPUT,`safe=${safe}\n`);
-          console.log('GOGET_HELIUS_DEPLOY_BUDGET_GATE',{action:policy.action,armed,
-            reasons:[...policy.reasons,...(armed?[]:['PERSISTENT_SUSPENSION_OR_UNKNOWN'])]});
+          console.log('GOGET_HELIUS_DEPLOY_BUDGET_GATE',{counts,action:policy.action,armed,
+            reasons:[...policy.reasons,...(armed?[]:['PERSISTENT_SUSPENSION_OR_UNKNOWN'])],
+            accounting:'LOCAL_WEBHOOK_CREDIT_ESTIMATE_NOT_ACCOUNT_BILLING'});
           JS
       - name: Respect existing Helius credit suspension after a code deployment
         if: steps.provider_budget.outputs.safe == 'false'

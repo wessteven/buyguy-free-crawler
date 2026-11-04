@@ -42,3 +42,12 @@ CREATE TABLE IF NOT EXISTS smart_wallet_webhook_control (
 );
 INSERT OR IGNORE INTO smart_wallet_webhook_control(id,state,reason,changed_at)
  VALUES('owned','ARMED','USER_APPROVED_BOUNDED_RESTART_2026_11_03','2026-11-03T00:00:00.000Z');
+
+-- Authenticated Helius webhook payload records counted BEFORE event filtering.
+-- This is a conservative local estimate of webhook delivery credits (1/event),
+-- not a Helius billing statement or a shared-account provider credit counter.
+CREATE TABLE IF NOT EXISTS smart_wallet_webhook_credit_estimates (
+ day TEXT PRIMARY KEY,
+ observed_deliveries INTEGER NOT NULL DEFAULT 0,
+ last_at TEXT NOT NULL
+);

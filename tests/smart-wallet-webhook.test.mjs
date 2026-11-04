@@ -14,14 +14,19 @@ const tx={
   tokenTransfers:[{mint:'B'.repeat(44),fromUserAccount:other,toUserAccount:wallet}]
 };
 function db(){
-  const rows=new Map(),rawRows=new Map(),rawBatchSizes=[],rawHealth=[];let used=0,rawUsed=0;
+  const rows=new Map(),rawRows=new Map(),rawBatchSizes=[],rawHealth=[];let used=0,rawUsed=0,delivered=0;
   const limit=WEBHOOK_LIMITS.storedEventsPerDay,rawLimit=WEBHOOK_LIMITS.rawBytesPerUtcDay;
   return {
     rows,rawRows,rawBatchSizes,rawHealth,limit,
+    get observedDeliveryCredits(){return delivered;},
     prepare(sql){
       return {bind(...values){
         return {
           async run(){
+            if(sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_credit_estimates'))return {success:true,meta:{changes:1}};
+            if(sql.includes('UPDATE smart_wallet_webhook_credit_estimates')){
+              delivered+=values[0];return {success:true,meta:{changes:1}};
+            }
             if(sql.includes('INSERT OR IGNORE INTO smart_wallet_webhook_raw_health'))return {success:true,meta:{changes:1}};
             if(sql.includes('UPDATE smart_wallet_webhook_raw_health')){
               rawHealth.push(values);return {success:true,meta:{changes:1}};
@@ -93,6 +98,8 @@ test('authenticated enhanced SWAP stored as unverified evidence and deduplicated
   const e=env();const a=await serveSmartWalletWebhook(req(),e,now);
   assert.equal(a.status,200);const body=await a.json();
   assert.equal(body.accepted,2); // fee payer plus transfer source wallet
+  assert.equal(body.webhookDeliveryCreditEstimateAdded,1);
+  assert.equal(e.DB.observedDeliveryCredits,1);
   assert.equal(body.tradeEligible,false);
   assert.equal(body.rawArchived,1);
   assert.equal(body.rawArchiveStatus,'OK');
@@ -102,6 +109,7 @@ test('authenticated enhanced SWAP stored as unverified evidence and deduplicated
   assert.equal((await dup.json()).duplicates,2);
   assert.equal(e.DB.rows.size,2);
   assert.equal(e.DB.rawRows.size,1);
+  assert.equal(e.DB.observedDeliveryCredits,2); // duplicate webhook push still counts locally
   const evidence=JSON.parse([...e.DB.rows.values()][0][8]);
   assert.match(evidence.caveat,/NOT_EXECUTABLE/);
 });
@@ -160,7 +168,7 @@ test('v2 bounded source observation handles large data and remains parseable',()
   const result=JSON.parse(buildResearchEvidence(t,wallet));
   assert.equal(result.truncatedSource.tokenTransfers,true);
   assert.ok(JSON.stringify(result).length<14000);
-  assert.equal(WEBHOOK_LIMITS.storedEventsPerDay,5000);
+  assert.equal(WEBHOOK_LIMITS.storedEventsPerDay,20000);
 });
 
 test('overlarge raw record stays unarchived while bounded parsed evidence is retained',async()=>{
@@ -320,4 +328,26 @@ test('async raw archival failure does not retroactively turn acknowledged source
  await Promise.all(pending);
  assert.equal(base.rows.size,2);
  assert.equal(base.rawRows.size,1);
+});
+
+test('no matched wallet still records the authenticated provider delivery estimate',async()=>{
+  const e=env(),foreign={...tx,feePayer:'D'.repeat(44),tokenTransfers:[]};
+  const result=await serveSmartWalletWebhook(req([foreign]),e,now);
+  assert.equal(result.status,200);
+  const out=await result.json();
+  assert.equal(out.accepted,0);
+  assert.equal(out.webhookDeliveryCreditEstimateAdded,1);
+  assert.equal(e.DB.observedDeliveryCredits,1);
+  assert.equal(e.DB.rows.size,0);
+});
+test('failed provider-delivery credit estimate blocks normalized D1 persistence',async()=>{
+  const base=db(),old=base.prepare.bind(base);
+  base.prepare=sql=>{
+    if(sql.includes('UPDATE smart_wallet_webhook_credit_estimates'))
+      return {bind(){return {async run(){throw Error('NO_ACCOUNTING_WRITE');}}}};
+    return old(sql);
+  };
+  const result=await serveSmartWalletWebhook(req(),env(base),now);
+  assert.equal(result.status,503);
+  assert.equal(base.rows.size,0);
 });
