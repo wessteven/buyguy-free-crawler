@@ -1,0 +1,42 @@
+name: GOGET Historical Recovery Efficacy Review (read only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-historical-recovery-efficacy.yml'
+      - 'src/goget-historical-recovery-review.mjs'
+      - 'scripts/goget-historical-recovery-efficacy.mjs'
+      - 'tests/goget-historical-recovery-review.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-historical-recovery-efficacy
+  cancel-in-progress: false
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test historical provenance and deduplicated comparisons
+        run: |
+          node --check scripts/goget-historical-recovery-efficacy.mjs
+          node --test tests/goget-historical-recovery-review.test.mjs
+      - name: Review all recovered outcomes versus missing original outcomes
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-historical-recovery-efficacy.mjs
+      - name: Preserve evidence report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-historical-recovery-efficacy
+          path: goget-historical-recovery-efficacy.json
+          retention-days: 21
+          if-no-files-found: warn
