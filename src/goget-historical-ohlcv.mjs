@@ -9,10 +9,20 @@ const norm=x=>typeof x==='string'?x.replace(/^solana[_:]/,''):null;
 const positive=x=>x!==null&&x!==undefined&&x!==''&&Number.isFinite(Number(x))&&Number(x)>0?Number(x):null;
 export function parseHistoricalOhlcv(payload,{mint,pool}={}){
  if(!BASE58.test(mint||'')||!BASE58.test(pool||''))throw Error('INVALID_EXACT_PAIR');
- const meta=payload?.meta,sourcePool=norm(payload?.data?.id||'');
+ const meta=payload?.meta,providerId=payload?.data?.id;
  const a=norm(meta?.base?.address||meta?.base?.id);
  const b=norm(meta?.quote?.address||meta?.quote?.id);
- if(sourcePool&&sourcePool!==pool)throw Error('POOL_IDENTITY_MISMATCH');
+ // GeckoTerminal OHLCV data.id is an internal UUID, not its Solana pool.
+ // The requested HTTPS URL specifies exact pool; also confirm the original
+ // token appears as base or quote in the response metadata.
+ // If the provider ever returns an actual Solana address identifier, require
+ // it match the requested pool (and reject unknown identifier encodings).
+ if(typeof providerId!=='string'||providerId.length>150)
+   throw Error('POOL_PROVIDER_ID_UNVERIFIED');
+ const candidate=norm(providerId);
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+ if(candidate!==pool&&!uuid.test(providerId))
+   throw Error('POOL_IDENTITY_MISMATCH');
  if(a!==mint&&b!==mint)throw Error('MINT_IDENTITY_UNVERIFIED');
  const list=payload?.data?.attributes?.ohlcv_list;
  if(!Array.isArray(list)||list.length>HISTORY_BOUNDS.maxCandles)
