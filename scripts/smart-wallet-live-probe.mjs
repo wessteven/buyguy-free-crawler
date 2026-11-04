@@ -2,7 +2,7 @@
 // GOGET WATCH-ONLY live pilot. Reads public Solana data and writes isolated D1 evidence.
 // No signing, no real transactions, no automatic paper entries.
 import {readFile,writeFile} from 'node:fs/promises';
-import {WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,selectWindow,cursorAfterPersisted,classifyObservedTransaction} from '../src/smart-wallet-live-probe.mjs';
+import {WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,collectSignatureHistory,selectWindow,cursorAfterPersisted,classifyObservedTransaction} from '../src/smart-wallet-live-probe.mjs';
 
 const usage={rpc:0,transactions:0,d1:0};
 const now=()=>new Date().toISOString();
@@ -78,14 +78,32 @@ async function run(){
       report.wallets.push(w);
       try{
         const prev=(await d1('SELECT last_signature FROM smart_wallet_live_cursors WHERE wallet=? LIMIT 1',[wallet]))[0]?.last_signature||null;
-        const signatures=await rpc('getSignaturesForAddress',[wallet,{limit:WATCH_LIMITS.signaturesPerWallet,commitment:'confirmed'}]);
-        const selection=selectWindow(signatures,prev,{limit:WATCH_LIMITS.decodePerWallet,baseline:!prev});
+        const history=await collectSignatureHistory(({limit,before})=>
+          rpc('getSignaturesForAddress',[wallet,{
+            limit,commitment:'confirmed',...(before?{before}:{})
+          }]),wallet,prev);
+        w.signaturePagesRead=history.pagesRead;
+        w.sourceAnchorRecovered=history.anchored;
+        const selection=selectWindow(history.signatures,prev,{
+          limit:WATCH_LIMITS.decodePerWallet,baseline:!prev
+        });
         // A truncated bounded decode is pending work, NOT necessarily missing data.
         // Only a cursor falling beyond the 16-signature page is a real gap.
         w.gap=selection.gap;
         w.deferred=selection.truncated;
         if(w.gap)report.totals.gaps++;
         if(w.deferred)report.totals.deferredWindows++;
+        if(w.gap){
+          // Fail closed: a retrospective Helius history row is not a live cursor.
+          w.status='SOURCE_GAP_UNRESOLVED';
+          w.sourcePageCapReached=history.hitPageCap;
+          await d1([
+            'INSERT INTO smart_wallet_live_cursors(wallet,last_signature,last_polled_at,status,gaps) VALUES(?,?,?,?,?)',
+            'ON CONFLICT(wallet) DO UPDATE SET last_polled_at=excluded.last_polled_at,',
+            'status=excluded.status,gaps=smart_wallet_live_cursors.gaps+1'
+          ].join(' '),[wallet,prev,start,w.status,1]);
+          continue;
+        }
         const committed=[];
         for(const sig of [...selection.selected].reverse()){
           if(usage.transactions>=WATCH_LIMITS.maxDecodesPerRun){
@@ -94,15 +112,15 @@ async function run(){
           usage.transactions++;
           const tx=await rpc('getTransaction',[sig.signature,{encoding:'jsonParsed',maxSupportedTransactionVersion:MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,commitment:'confirmed'}]);
           const e=classifyObservedTransaction({wallet,signature:sig.signature,tx,observedAt:now(),baseline:selection.baseline});
-          w.processed++;
-          report.events.push({wallet,signature:e.signature,classification:e.classification,
-            baseline:e.baseline,blockTime:e.blockTime,delayMs:e.delayMs,tokenIncreases:e.tokenIncreases});
           await d1([
             'INSERT OR IGNORE INTO smart_wallet_live_events',
             '(wallet,signature,observed_at,block_time,slot,classification,baseline,evidence_json)',
             'VALUES(?,?,?,?,?,?,?,?)'
           ].join(' '),[wallet,e.signature,e.observedAt,e.blockTime,e.slot,e.classification,e.baseline?1:0,JSON.stringify(e).slice(0,3000)]);
-          // Commit progress only after the corresponding D1 insert succeeded.
+          // Only count source evidence after its D1 insert was acknowledged.
+          w.processed++;
+          report.events.push({wallet,signature:e.signature,classification:e.classification,
+            baseline:e.baseline,blockTime:e.blockTime,delayMs:e.delayMs,tokenIncreases:e.tokenIncreases});
           committed.push(sig.signature);
           if(e.baseline)report.totals.baselineSamples++;
           else if(e.classification==='AMM_INVOCATION_WITH_TOKEN_INCREASE_UNPRICED')report.totals.newCandidates++;
