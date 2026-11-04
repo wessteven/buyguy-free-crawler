@@ -38,9 +38,11 @@ async function main(){
  const toNum=v=>v==null?0:Number(v);
  const expected=toNum(counts.historical_price)+toNum(counts.historical_pool_activity)+toNum(counts.still_unaccounted);
  const total=toNum(counts.original_missing);
- const status=toNum(counts.overlapping_evidence)===0&&expected===total&&
-  toNum(prices.invalid)===0&&toNum(audit.invalid)===0&&ratiosInvalid.length===0
-  ?'RECONCILED':'FAIL_CLOSED_UNVERIFIED';
+ const structurallyValid=toNum(counts.overlapping_evidence)===0&&expected===total&&
+  toNum(prices.invalid)===0&&toNum(audit.invalid)===0&&ratiosInvalid.length===0;
+ const status=!structurallyValid?'FAIL_CLOSED_UNVERIFIED':
+  toNum(counts.still_unaccounted)>0?'RECONCILED_NEW_FORWARD_GAPS_PENDING':
+  'RECONCILED_ALL_CURRENT_HISTORICAL_GAPS';
  const report={at:new Date().toISOString(),status,
   originalMissingPriceOutcomes:total,
   historicalUsdPricesRecovered:toNum(counts.historical_price),
@@ -61,7 +63,7 @@ async function main(){
     'New missing forward outcomes can accrue after this snapshot.']};
  await writeFile('goget-historical-gap-ledger.json',JSON.stringify(report,null,2)+'\n');
  console.log('GOGET_HISTORICAL_GAP_LEDGER',JSON.stringify(report));
- if(status!=='RECONCILED')process.exitCode=1;
+ if(!structurallyValid)process.exitCode=1;
 }
 main().catch(e=>{console.error('GOGET_HISTORICAL_GAP_LEDGER_FAILED',
  /^D1_HTTP_\d+$/.test(e?.message||'')?e.message:'READ_ONLY_RECONCILIATION_ERROR');process.exitCode=1;});
