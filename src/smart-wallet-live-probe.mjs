@@ -4,7 +4,7 @@
 import {PUMPSWAP,PUMP_BONDING_CURVE} from './pumpswap.mjs';
 
 export const WATCH_LIMITS=Object.freeze({maxWallets:3, signaturesPerWallet:16,
-  decodePerWallet:2, maxDecodesPerRun:6, maxAgeSeconds:1800});
+  maxSignaturePages:4, decodePerWallet:2, maxDecodesPerRun:6, maxAgeSeconds:1800});
 export const MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION=1;
 export const WSOL='So11111111111111111111111111111111111111112';
 const address=s=>typeof s==='string'&&/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
@@ -46,22 +46,61 @@ function programIds(tx) {
 // Select a bounded, descending signature window; report gaps rather than implying completeness.
 export function selectWindow(raw,lastSignature,{limit=WATCH_LIMITS.decodePerWallet,baseline=false}={}) {
   if(!Array.isArray(raw))throw Error('SIGNATURES_RESPONSE_INVALID');
-  const list=raw.filter(x=>signature(x?.signature)&&x.err===null);
   const head=raw.find(x=>signature(x?.signature))?.signature??null;
   const ix=lastSignature?raw.findIndex(x=>x?.signature===lastSignature):-1;
-  const allNew=lastSignature?(ix>=0?raw.slice(0,ix):raw):raw;
+  if(lastSignature&&ix<0)return {head,selected:[],observedCount:raw.length,
+    gap:true,truncated:true,baseline:false};
+  const allNew=lastSignature?raw.slice(0,ix):raw;
   const count=allNew.length;
   // The Helius page is newest-first. Decode the oldest eligible unprocessed
   // receipts first, so a bounded cycle can resume from its last saved record
   // rather than leaping over all older new signatures.
-  const eligible=allNew.filter(x=>signature(x?.signature)&&x.err===null);
+  // Failed-chain signatures also belong to source coverage; classify, don't skip.
+  const eligible=allNew.filter(x=>signature(x?.signature));
   const capacity=Number.isSafeInteger(limit)?Math.max(0,Math.min(limit,WATCH_LIMITS.decodePerWallet)):0;
   const selected=capacity?eligible.slice(-capacity):[];
   return {head,selected,observedCount:count,
-    gap:!!lastSignature&&ix<0&&raw.length>=WATCH_LIMITS.signaturesPerWallet,
+    gap:false,
     truncated:count>selected.length,baseline:baseline||!lastSignature};
 }
 
+
+
+// Search backward for an exact existing cursor, within a fixed RPC request cap.
+// Never mistake an absent anchor for verified live completeness.
+export async function collectSignatureHistory(fetchPage,wallet,previousSignature,{
+ maxPages=WATCH_LIMITS.maxSignaturePages,pageSize=WATCH_LIMITS.signaturesPerWallet
+}={}){
+ if(typeof fetchPage!=='function'||!address(wallet)||
+  !Number.isSafeInteger(maxPages)||maxPages<1||maxPages>WATCH_LIMITS.maxSignaturePages||
+  !Number.isSafeInteger(pageSize)||pageSize<1||pageSize>WATCH_LIMITS.signaturesPerWallet)
+   throw Error('SIGNATURE_HISTORY_LIMITS_INVALID');
+ if(previousSignature!==null&&!signature(previousSignature))
+   throw Error('PREVIOUS_CURSOR_INVALID');
+ const all=[],seen=new Set();let before=null,anchored=!previousSignature,
+  pagesRead=0,exhausted=false;
+ for(let pageNo=0;pageNo<maxPages;pageNo++){
+   const page=await fetchPage({wallet,limit:pageSize,before});
+   if(!Array.isArray(page)||page.length>pageSize)throw Error('SIGNATURE_HISTORY_PAGE_INVALID');
+   pagesRead++;
+   if(!page.length){exhausted=true;break;}
+   for(const item of page){
+     if(!signature(item?.signature)||seen.has(item.signature))
+       throw Error('SIGNATURE_HISTORY_IDENTITY_INVALID');
+     seen.add(item.signature);all.push(item);
+   }
+   if(previousSignature&&page.some(x=>x.signature===previousSignature)){
+     anchored=true;break;
+   }
+   if(!previousSignature)break; // baseline needs no additional Helius requests
+   if(page.length<pageSize){exhausted=true;break;}
+   const next=page.at(-1).signature;
+   if(next===before)throw Error('SIGNATURE_HISTORY_CURSOR_STALLED');
+   before=next;
+ }
+ return {signatures:all,anchored,pagesRead,exhausted,
+   sourceGap:!anchored,hitPageCap:!anchored&&!exhausted};
+}
 
 // Only the signatures actually committed to D1 may advance the cursor.
 // passed array order is ascending chain observation age (oldest first).

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {selectWindow,cursorAfterPersisted,classifyObservedTransaction,WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,WSOL} from '../src/smart-wallet-live-probe.mjs';
+import {collectSignatureHistory,selectWindow,cursorAfterPersisted,classifyObservedTransaction,WATCH_LIMITS,MAX_SUPPORTED_SOLANA_TRANSACTION_VERSION,WSOL} from '../src/smart-wallet-live-probe.mjs';
 import {PUMPSWAP} from '../src/pumpswap.mjs';
 
 const wallet='A'.repeat(44),mint='B'.repeat(44),sig='5'.repeat(88);
@@ -49,6 +49,7 @@ test('only bounded new signatures are selected with honest gap and truncation ac
  assert.equal(state.head,sigs[0].signature);
  const unknown=selectWindow(sigs,'Z'.repeat(88));
  assert.equal(unknown.gap,true);
+ assert.deepEqual(unknown.selected,[]);
  assert.equal(selectWindow(sigs,null).baseline,true);
  assert.equal(WATCH_LIMITS.maxWallets,3);assert.equal(WATCH_LIMITS.maxDecodesPerRun,6);
 });
@@ -103,4 +104,66 @@ test('invalid or zero decode limit cannot select any unprocessed transaction',()
  assert.equal(selectWindow(list,null,{limit:0}).selected.length,0);
  assert.equal(selectWindow(list,null,{limit:-1}).selected.length,0);
  assert.equal(selectWindow(list,null,{limit:100}).selected.length,WATCH_LIMITS.decodePerWallet);
+});
+
+test('bounded Helius page search reconnects an exact older cursor',async()=>{
+ const wallet='A'.repeat(44);
+ const sigs=Array.from({length:30},(_,i)=>({
+   signature:'5'.repeat(87)+'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[i],err:null
+ }));
+ const prev=sigs[23].signature,calls=[];
+ const history=await collectSignatureHistory(({limit,before})=>{
+   calls.push({limit,before});
+   const ix=before?sigs.findIndex(x=>x.signature===before)+1:0;
+   return sigs.slice(ix,ix+limit);
+ },wallet,prev);
+ assert.equal(history.anchored,true);
+ assert.equal(history.pagesRead,2);
+ assert.equal(calls[1].before,sigs[15].signature);
+ const win=selectWindow(history.signatures,prev);
+ assert.equal(win.gap,false);
+ assert.equal(win.selected.length,2);
+ assert.equal(cursorAfterPersisted(prev,win.selected.map(x=>x.signature).reverse()),
+   sigs[21].signature);
+});
+test('page cap leaves missing interval unknown and current cursor unchanged',async()=>{
+ const wallet='A'.repeat(44),previous='9'.repeat(88);
+ const sigs=Array.from({length:70},(_,i)=>({
+   signature:'5'.repeat(86)+'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[Math.floor(i/58)]+'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[i%58],err:null
+ }));
+ let calls=0;
+ const history=await collectSignatureHistory(({limit,before})=>{
+   calls++;
+   const ix=before?sigs.findIndex(x=>x.signature===before)+1:0;
+   return sigs.slice(ix,ix+limit);
+ },wallet,previous);
+ assert.equal(calls,WATCH_LIMITS.maxSignaturePages);
+ assert.equal(history.anchored,false);
+ assert.equal(history.hitPageCap,true);
+ const win=selectWindow(history.signatures,previous);
+ assert.equal(win.gap,true);
+ assert.deepEqual(win.selected,[]);
+ assert.equal(cursorAfterPersisted(previous,[]),previous);
+});
+test('failed chain transactions are accounted for, duplicate pages rejected',async()=>{
+ const wallet='A'.repeat(44);
+ const raw=[{signature:'4'.repeat(88),err:null},
+  {signature:'5'.repeat(88),err:{InstructionError:[0,'custom']}},
+  {signature:'6'.repeat(88),err:null}];
+ const win=selectWindow(raw,'6'.repeat(88));
+ assert.equal(win.selected.length,2);
+ assert.notEqual(win.selected[1].err,null);
+ await assert.rejects(()=>collectSignatureHistory(async()=>[raw[0],raw[0]],wallet,null),
+  /SIGNATURE_HISTORY_IDENTITY_INVALID/);
+});
+test('new live gap safeguard preserves all old source and Helius guard limits',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const s=await readFile('scripts/smart-wallet-live-probe.mjs','utf8');
+ assert.match(s,/SOURCE_GAP_UNRESOLVED/);
+ assert.match(s,/collectSignatureHistory/);
+ assert.equal(WATCH_LIMITS.maxWallets,3);
+ assert.equal(WATCH_LIMITS.decodePerWallet,2);
+ assert.equal(WATCH_LIMITS.maxDecodesPerRun,6);
+ assert.equal(WATCH_LIMITS.maxSignaturePages,4);
+ assert.doesNotMatch(s,/UPDATE smart_wallet_helius_historical_replay|DELETE FROM smart_wallet_webhook_events/);
 });
