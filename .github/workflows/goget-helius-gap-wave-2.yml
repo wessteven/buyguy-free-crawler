@@ -1,0 +1,44 @@
+name: GOGET Helius Wallet History Gap Wave 2 (isolated, bounded)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-helius-gap-wave-2.yml'
+      - 'scripts/goget-helius-gap-wave-2.mjs'
+      - 'src/goget-wallet-gap-wave.mjs'
+      - 'sql/goget-helius-gap-wave.sql'
+      - 'tests/goget-helius-gap-wave.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-helius-gap-wave-2
+  cancel-in-progress: false
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check exact time boundaries, journal continuity and immutable live state
+        run: |
+          node --check scripts/goget-helius-gap-wave-2.mjs
+          node --test tests/goget-helius-gap-wave.test.mjs
+      - name: Recover bounded, timestamped Helius history into independent D1 replay table
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-helius-gap-wave-2.mjs
+      - name: Preserve independent evidence and explicit incomplete windows
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-helius-gap-wave-2
+          path: goget-helius-gap-wave-2.json
+          retention-days: 30
+          if-no-files-found: warn
