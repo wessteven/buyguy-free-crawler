@@ -12,8 +12,9 @@ class WebhookSchemaDeploymentTests(unittest.TestCase):
     def test_deployment_never_reactivates_above_existing_helius_guard(self):
         workflow = (ROOT / '.github/workflows/deploy-smart-wallet-webhook.yml').read_text()
         budget = (ROOT / 'src/smart-wallet-budget.mjs').read_text()
-        self.assertIn('maxRecentHourEvents:350', budget)
-        self.assertIn('maxUtcDayAttemptedReservations:2200', budget)
+        self.assertIn('maxUtcDayEstimatedWebhookCredits:20000', budget)
+        self.assertIn('maxUtcDayAttemptedReservations:20000', budget)
+        self.assertNotIn('maxRecentHourEvents:350', budget)
         self.assertIn("import {assessWebhookBudget}", workflow)
         self.assertIn('id: provider_budget', workflow)
         self.assertIn("if: steps.provider_budget.outputs.safe == 'false'", workflow)
@@ -25,6 +26,21 @@ class WebhookSchemaDeploymentTests(unittest.TestCase):
         self.assertIn('PERSISTENT_SUSPENSION_OR_UNKNOWN', workflow)
         self.assertIn("latch[0].state==='ARMED'", workflow)
         self.assertIn('GOGET_WEBHOOK_SUSPENSION_LATCHED', (ROOT / 'scripts/provision-smart-wallet-webhook.mjs').read_text())
+
+    def test_credit_estimate_tracks_authenticated_deliveries_not_wallet_rows(self):
+        workflow = (ROOT / '.github/workflows/deploy-smart-wallet-webhook.yml').read_text()
+        webhook = (ROOT / 'src/smart-wallet-webhook-worker.mjs').read_text()
+        guard = (ROOT / 'scripts/provision-smart-wallet-webhook.mjs').read_text()
+        schema = (ROOT / 'sql/smart-wallet-webhook.sql').read_text()
+        self.assertIn('smart_wallet_webhook_credit_estimates', workflow)
+        self.assertIn('smart_wallet_webhook_credit_estimates', guard)
+        self.assertIn('smart_wallet_webhook_credit_estimates', webhook)
+        self.assertIn('smart_wallet_webhook_credit_estimates', schema)
+        self.assertIn('batch.received', webhook)
+        self.assertIn('storedEventsPerDay:20000', webhook)
+        self.assertIn('dayDeliveryCredits', workflow)
+        self.assertIn('dayDeliveryCredits', guard)
+        self.assertIn("if: steps.provider_budget.outputs.safe == 'false'", workflow)
 
     def test_bounded_restart_preserves_roster_and_excludes_high_volume_wallets(self):
         roster = json.loads((ROOT / 'research/smart-wallet-webhook-cohort.json').read_text())
