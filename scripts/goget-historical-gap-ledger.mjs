@@ -35,10 +35,26 @@ async function main(){
  const ratiosInvalid=ratioRows.filter(x=>x.original_activity_class!=='HELIUS_LABELED_SWAP_POOL_AND_MINT_HINT'||
   x.pool!==x.original_pool||Number(x.usd_price_reconstructed)!==0||
   (x.status==='HISTORIC_NATIVE_POOL_FLOW_RATIO_ONLY'&&!(Number(x.sol_per_token)>0)));
+ const walletReplayLedger=await read(
+  "SELECT wallet,status,COUNT(*) AS intervals,COALESCE(SUM(examined),0) AS examined,COALESCE(SUM(stored_new),0) AS stored_new FROM smart_wallet_helius_gap_wave_coverage WHERE window_start>= '2026-11-03T08:55:01.000Z' AND window_end_exclusive<='2026-11-04T10:00:00.000Z' GROUP BY wallet,status ORDER BY wallet,status LIMIT 21");
+ const replayProviderRows=await read(
+  "SELECT wallet,provider,COUNT(*) AS n FROM smart_wallet_helius_historical_replay WHERE provider IN ('HELIUS_ENHANCED_HISTORY_RECONSTRUCTION','HELIUS_ENHANCED_GAP_WAVE_2_HISTORICAL') GROUP BY wallet,provider ORDER BY wallet,provider LIMIT 12");
+ const replaySourceCount=replayProviderRows.filter(x=>x.provider==='HELIUS_ENHANCED_GAP_WAVE_2_HISTORICAL')
+  .reduce((n,x)=>n+Number(x.n||0),0);
+ const replayJournalCount=walletReplayLedger.reduce((n,x)=>n+Number(x.stored_new||0),0);
+ const replayWindowCount=walletReplayLedger.reduce((n,x)=>n+Number(x.intervals||0),0);
+ const replayCompletedCount=walletReplayLedger.filter(x=>x.status==='COMPLETE_ENHANCED')
+  .reduce((n,x)=>n+Number(x.intervals||0),0);
+ const replayWallets=new Set(walletReplayLedger.map(x=>x.wallet));
+ const replayJournalValid=replayWindowCount===21&&replayWallets.size===3&&
+  replayCompletedCount<=replayWindowCount&&replayJournalCount===replaySourceCount;
+ const replayWindowStatus=!replayJournalValid?'COVERAGE_JOURNAL_MISMATCH':
+  replayCompletedCount===21?'ENHANCED_REPLAY_WINDOWS_COMPLETE':
+  'ENHANCED_REPLAY_WINDOWS_PARTIAL';
  const toNum=v=>v==null?0:Number(v);
  const expected=toNum(counts.historical_price)+toNum(counts.historical_pool_activity)+toNum(counts.still_unaccounted);
  const total=toNum(counts.original_missing);
- const structurallyValid=toNum(counts.overlapping_evidence)===0&&expected===total&&
+ const structurallyValid=replayJournalValid&&toNum(counts.overlapping_evidence)===0&&expected===total&&
   toNum(prices.invalid)===0&&toNum(audit.invalid)===0&&ratiosInvalid.length===0;
  const status=!structurallyValid?'FAIL_CLOSED_UNVERIFIED':
   toNum(counts.still_unaccounted)>0?'RECONCILED_NEW_FORWARD_GAPS_PENDING':
@@ -56,6 +72,18 @@ async function main(){
   activityClassificationCounts:activity,
   nativeRatioEvidence:ratioRows,
   nativeRatioInvalid:ratiosInvalid.length,
+  historicalWalletReplayCoverage:{
+    journalRows:walletReplayLedger,storedSourceByWalletAndProvider:replayProviderRows,
+    expectedWindowWalletPairs:21,observedWindowWalletPairs:replayWindowCount,
+    enhancedCompleteWindowPairs:replayCompletedCount,
+    enhancedIncompleteWindowPairs:replayWindowCount-replayCompletedCount,
+    walletCount:replayWallets.size,
+    wave2JournalNewRows:replayJournalCount,
+    wave2D1SourceRows:replaySourceCount,
+    sourceTotalAcrossHistoricalWaves:replayProviderRows.reduce((n,x)=>n+Number(x.n||0),0),
+    sourceReconciled:replayJournalValid,status:replayWindowStatus,
+    limitation:'Complete Helius Enhanced filtered pages do not certify independently exhaustive raw Solana history or live polling coverage.'
+  },
   queryReads:n,heliusCalls:0,otherProviderCalls:0,d1Writes:0,realTrades:0,
   limitations:['No classified absence proves raw Solana chain inactivity.',
     'Historical OHLCV and native ratios are retrospective and not original forward market quotes.',
