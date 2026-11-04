@@ -1,0 +1,44 @@
+name: GOGET Historical Price Recovery (isolated evidence only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-historical-price-recovery.yml'
+      - 'scripts/goget-historical-price-recover.mjs'
+      - 'src/goget-historical-ohlcv.mjs'
+      - 'sql/goget-historical-price-recovery.sql'
+      - 'tests/goget-historical-ohlcv.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-history-replay-one-shot
+  cancel-in-progress: false
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test historical candle provenance and no-lookahead boundary
+        run: |
+          node --check scripts/goget-historical-price-recover.mjs
+          node --check src/goget-historical-ohlcv.mjs
+          node --test tests/goget-historical-ohlcv.test.mjs
+      - name: Persist verified historical OHLCV in separate D1 table
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-historical-price-recover.mjs
+      - name: Preserve explicit provenance and failed-coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-historical-price-recovery
+          path: goget-historical-price-recovery.json
+          retention-days: 30
+          if-no-files-found: warn
