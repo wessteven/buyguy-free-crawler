@@ -6,7 +6,12 @@ test('historical native ratio collector is bounded, distinct and cannot change f
  const schema=await readFile('sql/goget-historical-native-ratio.sql','utf8');
  assert.match(s,/calls>=8/);
  assert.match(s,/a.classification='HELIUS_LABELED_SWAP_POOL_AND_MINT_HINT'/);
- assert.match(s,/signature===s/);
+ assert.match(s,/transactions:sigs/);
+ assert.match(s,/method:'POST'/);
+ assert.match(s,/EXACT_SIGNATURE_COVERAGE_INCOMPLETE/);
+ assert.match(s,/ON CONFLICT\(mint,bucket,horizon_min\) DO UPDATE/);
+ assert.match(s,/WHERE goget_historical_native_ratio_audit.status='SOURCE_INCOMPLETE'/);
+ assert.match(s,/clean\[0\]/);
  assert.match(s,/INTO goget_historical_native_ratio_audit/);
  assert.doesNotMatch(s,/UPDATE goget_pre_signal_market_outcomes/i);
  assert.doesNotMatch(s,/UPDATE goget_historical_price_recovery/i);
