@@ -101,7 +101,7 @@ export function reviewRecoveredEvidence({rows=[],coverage=[],wallets=[],asOf=new
    if(!itemGroup.horizons.has(item.horizonMin)){
      itemGroup.horizons.set(item.horizonMin,{
        horizonMinutes:item.horizonMin,firstSignalBucket:item.bucket,
-       recoveredHistoricalChangePct:item.changePct,
+       recoveredHistoricalChangePct:fix(item.changePct),
        exactPool:item.pool,historicalCandleAt:item.candleAt});
    }
    byMint.set(item.mint,itemGroup);
