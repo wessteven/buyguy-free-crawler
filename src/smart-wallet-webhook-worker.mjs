@@ -3,7 +3,7 @@
 const ADDRESS=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const SIGNATURE=/^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
 export const WEBHOOK_LIMITS=Object.freeze({
-  bodyBytes:512000,eventsPerRequest:64,storedEventsPerDay:5000,
+  bodyBytes:512000,eventsPerRequest:64,storedEventsPerDay:20000,
   rawPerEventBytes:32000,rawBytesPerUtcDay:20000000,
   maxWallets:32,deadline:'2026-11-08T00:00:00Z'
 });
@@ -280,9 +280,26 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now(),ctx=nul
   const receivedAt=new Date(now).toISOString();
   const batch=summarizeHeliusBatch(body,watched,receivedAt);
   if(!batch.ok)return json({error:batch.error},413);
-  if(!batch.rows.length)return json({ok:true,accepted:0,duplicates:0,rejected:batch.reasonCounts,tradeEligible:false});
   const day=receivedAt.slice(0,10);
   try{
+    // Provider bills per delivered webhook event, not per normalized wallet
+    // row or per newly inserted unique signature. Count every authenticated
+    // batch payload record, including duplicates and excluded source hints.
+    // This estimate still cannot certify the account's actual Helius bill.
+    const estimateInit=await env.DB.prepare(
+      'INSERT OR IGNORE INTO smart_wallet_webhook_credit_estimates(day,observed_deliveries,last_at) VALUES(?,0,?)'
+    ).bind(day,receivedAt).run();
+    const estimateWrite=await env.DB.prepare(
+      'UPDATE smart_wallet_webhook_credit_estimates SET observed_deliveries=observed_deliveries+?,last_at=? WHERE day=?'
+    ).bind(batch.received,receivedAt,day).run();
+    if(estimateInit?.success!==true||estimateWrite?.success!==true||
+      (estimateWrite.meta?.changes??0)!==1)
+      return json({error:'WEBHOOK_CREDIT_ESTIMATE_UNVERIFIED'},503);
+    if(!batch.rows.length)return json({
+      ok:true,accepted:0,duplicates:0,rejected:batch.reasonCounts,
+      webhookDeliveryCreditEstimateAdded:batch.received,
+      tradeEligible:false});
+
     await env.DB.prepare('INSERT OR IGNORE INTO smart_wallet_webhook_budget(day,reserved) VALUES(?,0)').bind(day).run();
     const quota=await env.DB.prepare('UPDATE smart_wallet_webhook_budget SET reserved=reserved+? WHERE day=? AND reserved+?<=?')
       .bind(batch.rows.length,day,batch.rows.length,WEBHOOK_LIMITS.storedEventsPerDay).run();
@@ -306,6 +323,7 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now(),ctx=nul
         console.error('GOGET_WEBHOOK_ASYNC_ARCHIVE_FAILED',rawWriteErrorCode(error));
       }));
       return json({ok:true,received:batch.received,accepted:inserted,
+        webhookDeliveryCreditEstimateAdded:batch.received,
         duplicates:batch.rows.length-inserted,rejected:batch.reasonCounts,
         rawArchived:null,rawArchiveStatus:batch.rawRecords.length?
           'BACKGROUND_PENDING':'NO_ELIGIBLE_RAW_EVENTS',
@@ -315,6 +333,7 @@ export async function serveSmartWalletWebhook(request,env,now=Date.now(),ctx=nul
     // so its historical tests can assert exact stored record counts.
     const archive=await archiveTask;
     return json({ok:true,received:batch.received,accepted:inserted,
+      webhookDeliveryCreditEstimateAdded:batch.received,
       duplicates:batch.rows.length-inserted,rejected:batch.reasonCounts,
       ...archive,rawArchiveCompletionVerified:true,
       mode:'WATCH_ONLY',tradeEligible:false});
