@@ -78,8 +78,13 @@ export default {
    if(!await authorized(request.headers,env?.WATCHDOG_CONTROL_TOKEN))
     return reply({error:'UNAUTHORIZED'},401);
    try{return reply(await runSourceWatchdog(env));}
-   catch(e){console.error('GOGET_SOURCE_WATCHDOG_ERROR',/^(WATCHDOG_[A-Z_]+)$/.test(e.message)?e.message:'SOURCE_HEARTBEAT_UNVERIFIED');
-    return reply({error:'SOURCE_HEARTBEAT_UNVERIFIED'},503);}
+   catch(e){
+    const reason=/^(WATCHDOG_[A-Z_]+)$/.test(e?.message||'')?e.message:
+      /D1_ERROR|SQLITE_ERROR|no such table|syntax error/i.test(e?.message||'')?
+      'WATCHDOG_D1_QUERY_REJECTED':'SOURCE_HEARTBEAT_UNVERIFIED';
+    console.error('GOGET_SOURCE_WATCHDOG_ERROR',reason);
+    return reply({error:reason},503);
+   }
  },
  async scheduled(controller,env){
    try{await runSourceWatchdog(env,{now:Date.now(),

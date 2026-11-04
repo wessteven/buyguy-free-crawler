@@ -10,13 +10,27 @@ const info=await health.json();
 if(health.status!==200||info.build!=='2026_11_05_D1_CRON_V1'||
   info.enabled!==true||info.heliusCalls!==0||info.trades!==0)
  throw Error('GOGET_WATCHDOG_HEALTH_UNVERIFIED');
-const r=await fetch(url+'/run',{method:'POST',headers:{authorization:'Bearer '+bearer},
- signal:AbortSignal.timeout(20000)});
-const report=await r.json();
-if(r.status!==200||report.rpcExpected!==3||report.rpcFound!==3||
-  report.webhookRosterExpected!==12||report.d1Reads!==6||report.d1Writes!==1||
-  report.heliusCalls!==0||report.trades!==0||typeof report.runId!=='string')
+let report=null,lastStatus=null,lastError=null,good=false;
+for(let attempt=0;attempt<6;attempt++){
+ try{
+  const r=await fetch(url+'/run',{method:'POST',headers:{authorization:'Bearer '+bearer},
+    signal:AbortSignal.timeout(20000)});
+  report=await r.json();lastStatus=r.status;lastError=report?.error??null;
+  good=r.status===200&&report.rpcExpected===3&&report.rpcFound===3&&
+    report.webhookRosterExpected===12&&report.d1Reads===6&&report.d1Writes===1&&
+    report.heliusCalls===0&&report.trades===0&&typeof report.runId==='string';
+  if(good)break;
+  // Never repeat D1 manual writes if a 200 response had an invalid shape.
+  if(r.status===200)break;
+ }catch{lastError='NETWORK_OR_JSON_UNVERIFIED';lastStatus=null;}
+ if(attempt<5)await new Promise(resolve=>setTimeout(resolve,1200));
+}
+if(!good){
+ console.error('GOGET_WATCHDOG_GATE_DIAGNOSTIC',JSON.stringify({
+  httpStatus:lastStatus,errorCode:typeof lastError==='string'&&/^[A-Z_]+$/.test(lastError)?
+    lastError:'UNKNOWN',buildVerified:true,manualD1Verified:false}));
  throw Error('GOGET_WATCHDOG_D1_PRODUCTION_UNVERIFIED');
+}
 console.log('GOGET_WATCHDOG_PRODUCTION',JSON.stringify({status:report.status,
  providerDeliveryAgeMinutes:report.providerDeliveryAgeMinutes,
  rpcStale:report.rpcStale,rpcPending:report.rpcPending,
