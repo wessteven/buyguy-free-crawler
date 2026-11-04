@@ -63,7 +63,8 @@ async function main(){
    deferredRows:sourceRows.length-selected.reduce((n,g)=>n+g.rows.length,0),
    maxInputRows:FORENSIC_LIMITS.maxOutcomeRows,
    heliusCalls:0,heliusMaxCalls:FORENSIC_LIMITS.maxApiCallsPerBatch,
-   estimatedHeliusCreditsUpperBound:FORENSIC_LIMITS.estimatedProviderCreditsUpperBound,
+   creditPlanningEstimateAt165PerCall:FORENSIC_LIMITS.maxApiCallsPerBatch*165,
+   creditPlanningOnlyNotHeliusBilling:true,
    heliusUsageEstimateNotBilling:true,d1Writes:0,inserted:0,duplicates:0,
    completelyPagedGroups:0,partiallyPagedGroups:0,
    classificationCounts:{},groupReports:[],trades:0,
@@ -139,7 +140,12 @@ async function main(){
    }
   }
   if(!complete&&!providerFailure)providerFailure='MAX_PAGES_REACHED';
-  const evidence=classifyHistoricalPoolWindows(g.rows,transactions,{
+  // Helius time filters use whole UTC seconds: the original due timestamp
+  // includes milliseconds. Exclude boundary transactions, never round them
+  // into an absent forward-quote window or reject the entire otherwise-valid page.
+  const exactWindowTransactions=transactions.filter(x=>
+    x.timestamp*1000>=fromMs&&x.timestamp*1000<=toMs);
+  const evidence=classifyHistoricalPoolWindows(g.rows,exactWindowTransactions,{
    pool:g.pool,mint:g.mint,historyComplete:complete,
    providerFailure,asOf:new Date().toISOString()});
   // Treat each missing outcome independently and never overwrite existing
@@ -166,9 +172,10 @@ async function main(){
   if(complete)report.completelyPagedGroups++;else report.partiallyPagedGroups++;
   const summary={pool:g.pool,mint:g.mint,sourceRows:g.rows.length,
    pages,heliusCalls:heliusCalls-startingCall,enhancedTxRead:transactions.length,
+   enhancedTxInsideExactWindow:exactWindowTransactions.length,
    enhancedHistoryExhausted:complete,providerFailure,inserted,
    classifiedSwapWithMintHints:evidence.filter(x=>x.exactMintHintedSwaps>0).length,
-   labeledSwapTxCount:[...new Set(evidence.flatMap(x=>x.signatures.map(v=>v.signature)))].length,
+   sampledMintHintedSwapSignatures:[...new Set(evidence.flatMap(x=>x.signatures.map(v=>v.signature)))].length,
    outcomeClassifications:evidence.reduce((a,x)=>{
     a[x.classification]=(a[x.classification]||0)+1;return a;
    },{})};
