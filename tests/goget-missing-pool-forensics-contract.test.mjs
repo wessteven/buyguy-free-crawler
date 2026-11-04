@@ -14,7 +14,10 @@ test('historical pool forensic pass does not rewrite forward labels or trade',as
  assert.match(s,/INSERT INTO goget_historical_pool_activity_audit/);
  assert.match(s,/ON CONFLICT\(mint,bucket,horizon_min\) DO UPDATE/);
  assert.match(s,/excluded\.enhanced_history_complete=1/);
- assert.match(s,/retryIncomplete\?20:FORENSIC_LIMITS\.pageSize/);
+ assert.match(s,/retryIncomplete\?50:FORENSIC_LIMITS\.pageSize/);
+ assert.match(s,/PAGINATION_NO_NEW_SIGNATURES/);
+ assert.match(s,/PAGINATION_TIME_ORDER_REVERSED/);
+ assert.match(s,/signatureSeen\.add\(tx\.signature\)/);
  assert.match(s,/a\.enhanced_history_complete=0/);
  assert.match(s,/enhancedHistoryExhausted/);
  assert.match(s,/deferredRows/);

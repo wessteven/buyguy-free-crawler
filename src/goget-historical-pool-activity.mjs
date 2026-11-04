@@ -2,7 +2,7 @@
 // Enhanced parsed transaction types may be incomplete or misleading.
 // No amount of absence here proves an on-chain pool had zero trades.
 export const FORENSIC_LIMITS=Object.freeze({
-  maxPoolsPerBatch:12,maxApiCallsPerBatch:30,maxPagesPerPool:12,
+  maxPoolsPerBatch:12,maxApiCallsPerBatch:30,maxPagesPerPool:14,
   pageSize:100,maxOutcomeRows:500,maxD1Calls:180,
   maxEvidenceSignatures:3,afterDueMs:10*60000,
   maxSourceBytes:900000,heliusTimeoutMs:18000,

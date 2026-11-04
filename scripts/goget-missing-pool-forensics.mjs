@@ -121,10 +121,10 @@ async function main(){
     FORENSIC_LIMITS.afterDueMs;
   const transactions=[];
   const signatureSeen=new Set();
-  // Failed oversized reads are retried with 20-record pages, without
+  // Dense/oversized reads are retried with 50-record pages, without
   // expanding the existing 30-call provider budget.
   const retryIncomplete=g.rows.some(x=>Number(x.priorComplete)===0);
-  const pageLimit=retryIncomplete?20:FORENSIC_LIMITS.pageSize;
+  const pageLimit=retryIncomplete?50:FORENSIC_LIMITS.pageSize;
   let before=null,complete=false,providerFailure=null,pages=0;
   const startingCall=heliusCalls;
   for(let i=0;i<FORENSIC_LIMITS.maxPagesPerPool;i++){
@@ -136,9 +136,15 @@ async function main(){
    if(!SIG.test(pageLast)||pageLast===before){
     providerFailure='PAGINATION_CURSOR_STALLED';break;
    }
-   const overlap=got.items.some(x=>signatureSeen.has(x.signature));
-   if(overlap){providerFailure='PAGINATION_DUPLICATE_OR_LOOP';break;}
-   for(const tx of got.items){signatureSeen.add(tx.signature);transactions.push(tx);}
+   // Some Helius Enhanced pages repeat a cursor boundary signature. Skip
+   // repeats only if the cursor advances and new older evidence is supplied.
+   // A full duplicate page or reversed time ordering still fails closed.
+   const fresh=got.items.filter(x=>!signatureSeen.has(x.signature));
+   if(!fresh.length){providerFailure='PAGINATION_NO_NEW_SIGNATURES';break;}
+   if(transactions.length&&fresh[0].timestamp>transactions.at(-1).timestamp){
+     providerFailure='PAGINATION_TIME_ORDER_REVERSED';break;
+   }
+   for(const tx of fresh){signatureSeen.add(tx.signature);transactions.push(tx);}
    before=pageLast;
    if(heliusCalls>=FORENSIC_LIMITS.maxApiCallsPerBatch){
     providerFailure='GLOBAL_HELIUS_CALL_BUDGET';break;
