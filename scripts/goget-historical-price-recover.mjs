@@ -31,12 +31,18 @@ async function main(){
  };
  const from='2026-10-30T00:00:00.000Z',now=new Date().toISOString();
  const counts=await sql(
-  "SELECT COUNT(*) AS n FROM goget_pre_signal_market_outcomes WHERE status='MISSING_FUTURE_USD_QUOTE_COVERAGE' AND due_at>=?",
+  "SELECT COUNT(*) AS n,COALESCE(SUM(CASE WHEN p.mint IS NOT NULL THEN 1 ELSE 0 END),0) AS historical_price,COALESCE(SUM(CASE WHEN a.mint IS NOT NULL THEN 1 ELSE 0 END),0) AS forensic_classified,COALESCE(SUM(CASE WHEN p.mint IS NULL AND a.mint IS NULL THEN 1 ELSE 0 END),0) AS unassessed FROM goget_pre_signal_market_outcomes o LEFT JOIN goget_historical_price_recovery p ON p.mint=o.mint AND p.bucket=o.bucket AND p.horizon_min=o.horizon_min LEFT JOIN goget_historical_pool_activity_audit a ON a.mint=o.mint AND a.bucket=o.bucket AND a.horizon_min=o.horizon_min WHERE o.status='MISSING_FUTURE_USD_QUOTE_COVERAGE' AND o.due_at>=?",
   [from]);
- const totalMissing=Number(counts.results?.[0]?.n);
- if(!Number.isSafeInteger(totalMissing)||totalMissing<0)throw Error('SOURCE_COUNTS_UNVERIFIED');
+ const totals=counts.results?.[0]||{};
+ const totalMissing=Number(totals.n),preexistingPrices=Number(totals.historical_price),
+  preexistingForensics=Number(totals.forensic_classified),
+  unassessedAtStart=Number(totals.unassessed);
+ if([totalMissing,preexistingPrices,preexistingForensics,unassessedAtStart].some(
+   x=>!Number.isSafeInteger(x)||x<0)||totalMissing!==
+   preexistingPrices+preexistingForensics+unassessedAtStart)
+   throw Error('SOURCE_COUNTS_UNVERIFIED');
  const a=await sql(
-  "SELECT o.mint,o.bucket,o.horizon_min,o.due_at,o.pool,o.reference_price_usd,s.sample_kind,s.category FROM goget_pre_signal_market_outcomes o JOIN goget_pre_signal_snapshots s ON s.mint=o.mint AND s.bucket=o.bucket WHERE o.status='MISSING_FUTURE_USD_QUOTE_COVERAGE' AND o.due_at>=? ORDER BY o.due_at ASC LIMIT ?",
+  "SELECT o.mint,o.bucket,o.horizon_min,o.due_at,o.pool,o.reference_price_usd,s.sample_kind,s.category FROM goget_pre_signal_market_outcomes o JOIN goget_pre_signal_snapshots s ON s.mint=o.mint AND s.bucket=o.bucket LEFT JOIN goget_historical_price_recovery p ON p.mint=o.mint AND p.bucket=o.bucket AND p.horizon_min=o.horizon_min LEFT JOIN goget_historical_pool_activity_audit a ON a.mint=o.mint AND a.bucket=o.bucket AND a.horizon_min=o.horizon_min WHERE o.status='MISSING_FUTURE_USD_QUOTE_COVERAGE' AND o.due_at>=? AND p.mint IS NULL AND a.mint IS NULL ORDER BY o.due_at ASC LIMIT ?",
   [from,HISTORY_BOUNDS.maxMissingRows]);
  const rows=a.results;
  if(rows.length>HISTORY_BOUNDS.maxMissingRows)throw Error('SOURCE_RESULT_TOO_LARGE');
@@ -53,12 +59,14 @@ async function main(){
  const ordered=[...groups.values()].sort((a,b)=>a.rows[0].due_at.localeCompare(b.rows[0].due_at)||a.pool.localeCompare(b.pool));
  const selected=ordered.slice(0,HISTORY_BOUNDS.maxPoolReads);
  const report={at:now,mode:'ONE_SHOT_RETROSPECTIVE_RECOVERY_NO_FORWARD_LABEL_CHANGES',
-   totalMissingAtStart:totalMissing,selectedMissing:rows.length,
+   totalMissingAtStart:totalMissing,preexistingHistoricalPrices:preexistingPrices,
+   preexistingForensicClassifications:preexistingForensics,
+   unassessedAtStart,selectedMissing:rows.length,
    invalidAnchors:rows.length-valid.length,distinctPairs:ordered.length,
    processedPairs:0,externalCalls:0,providerFailures:{},noPostDueCandle:0,
    matched:0,inserted:0,duplicates:0,matchedSignals:0,matchedControls:0,
    unprocessedPairs:Math.max(0,ordered.length-selected.length),
-   truncatedByRowCap:totalMissing>rows.length,
+   truncatedByRowCap:unassessedAtStart>rows.length,
    source:'GECKOTERMINAL_PUBLIC_HISTORICAL_MINUTE_USD_OHLCV',
    resultsByPair:[],d1QueryCount:0,d1WriteCalls:0,
    historicalOnly:true,heliusCalls:0,trades:0,
@@ -158,7 +166,10 @@ async function main(){
  await flush();
  report.d1QueryCount=queries;report.d1WriteCalls=writes;
  report.unattemptedPairs=Math.max(0,ordered.length-report.processedPairs);
- report.missingNotReconstructed=totalMissing-report.matched;
+ report.missingNotReconstructed=totalMissing-preexistingPrices-report.matched;
+ report.remainingUnassessedFromThisPass=unassessedAtStart-report.matched;
+ report.sourceReconciliationValid=preexistingPrices+preexistingForensics+
+  unassessedAtStart===totalMissing;
  report.completeCoverageClaim=false;
  await writeFile('goget-historical-price-recovery.json',JSON.stringify(report,null,2)+'\n');
  console.log('GOGET_HISTORICAL_PRICE_RECOVERY',JSON.stringify(report));
