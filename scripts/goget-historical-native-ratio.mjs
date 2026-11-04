@@ -27,7 +27,7 @@ async function main(){
   .split(';').map(x=>x.trim()).filter(Boolean);
  for(const stmt of schema){await d1(stmt);writes++;}
  const rows=(await d1(
-  "SELECT a.mint,a.bucket,a.horizon_min,a.due_at,a.pool,a.signatures_json FROM goget_historical_pool_activity_audit a LEFT JOIN goget_historical_native_ratio_audit n ON n.mint=a.mint AND n.bucket=a.bucket AND n.horizon_min=a.horizon_min WHERE a.classification='HELIUS_LABELED_SWAP_POOL_AND_MINT_HINT' AND n.mint IS NULL ORDER BY a.due_at ASC LIMIT 8")).results;
+  "SELECT a.mint,a.bucket,a.horizon_min,a.due_at,a.pool,a.signatures_json FROM goget_historical_pool_activity_audit a LEFT JOIN goget_historical_native_ratio_audit n ON n.mint=a.mint AND n.bucket=a.bucket AND n.horizon_min=a.horizon_min WHERE a.classification='HELIUS_LABELED_SWAP_POOL_AND_MINT_HINT' AND (n.mint IS NULL OR n.status='SOURCE_INCOMPLETE') ORDER BY a.due_at ASC LIMIT 8")).results;
  const report={at:new Date().toISOString(),mode:'HELIUS_EXACT_POOL_NATIVE_SWAP_RATIO_ONLY',
    originalCandidateWindows:rows.length,heliusCalls:0,maxHeliusCalls:8,d1WriteCalls:0,
    nativeQuotesRecovered:0,ambiguousOrMissing:0,errors:{},items:[],
@@ -38,47 +38,52 @@ async function main(){
     'This is retrospective evidence, not a forward-observed signal.']};
  const address=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
  const signature=/^[1-9A-HJ-NP-Za-km-z]{64,88}$/;
- const insert="INSERT OR IGNORE INTO goget_historical_native_ratio_audit(mint,bucket,horizon_min,due_at,pool,status,tx_signature,tx_block_time,direction,sol_per_token,wsol_flow,token_flow,source,as_of,usd_price_reconstructed) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+ const insert="INSERT INTO goget_historical_native_ratio_audit(mint,bucket,horizon_min,due_at,pool,status,tx_signature,tx_block_time,direction,sol_per_token,wsol_flow,token_flow,source,as_of,usd_price_reconstructed) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(mint,bucket,horizon_min) DO UPDATE SET status=excluded.status,tx_signature=excluded.tx_signature,tx_block_time=excluded.tx_block_time,direction=excluded.direction,sol_per_token=excluded.sol_per_token,wsol_flow=excluded.wsol_flow,token_flow=excluded.token_flow,source=excluded.source,as_of=excluded.as_of WHERE goget_historical_native_ratio_audit.status='SOURCE_INCOMPLETE' AND excluded.status<>'SOURCE_INCOMPLETE'";
  for(const a of rows){
   if(!address.test(a.pool)||!address.test(a.mint)||!Number.isFinite(Date.parse(a.due_at)))
    throw Error('INVALID_EXACT_ANCHOR');
   const sigs=JSON.parse(a.signatures_json||'[]').map(x=>x.signature);
   if(!sigs.length||sigs.length>3||!sigs.every(s=>signature.test(s)))
    throw Error('UNVERIFIED_SOURCE_SIGNATURE');
-  let results=[],before=null,error=null;
+  let results=[],error=null;
   const due=Date.parse(a.due_at),until=due+10*60000;
-  // At most two source pages, never substitute a transaction from a different
-  // pool, mint or timestamp. No event is re-labelled as a historic USD price.
-  for(let page=0;page<2;page++){
-   if(calls>=8){error='HELIUS_CALL_LIMIT';break;}
+  // The source signatures are already exact and historically archived.
+  // Fetch only those signatures, never re-scan hundreds of unrelated
+  // busy-pool transactions or accept a different pool's data.
+  if(calls>=8)error='HELIUS_CALL_LIMIT';
+  else{
    if(calls)await sleep(1700);
-   const u=new URL('https://api-mainnet.helius-rpc.com/v0/addresses/'+encodeURIComponent(a.pool)+'/transactions');
-   for(const [k,v] of Object.entries({'api-key':helius,limit:'100',
-      'gte-time':String(Math.floor(due/1000)),
-      'lte-time':String(Math.ceil(until/1000)),
-      ...(before?{'before-signature':before}:{})}))u.searchParams.set(k,v);
    calls++;
    try{
-    const response=await fetch(u,{headers:{accept:'application/json'},
-      signal:AbortSignal.timeout(16000)});
-    if(!response.ok){error='HELIUS_HTTP_'+response.status;break;}
-    const payload=await response.text();
-    if(payload.length>900000){error='SOURCE_TOO_LARGE';break;}
-    const items=JSON.parse(payload);
-    if(!Array.isArray(items)||items.length>100){error='SOURCE_INVALID';break;}
-    results.push(...items);
-    if(sigs.every(s=>results.some(x=>x.signature===s))||!items.length)break;
-    const cursor=items.at(-1)?.signature;
-    if(!signature.test(cursor||'')||cursor===before){error='PAGINATION_UNVERIFIED';break;}
-    before=cursor;
-   }catch{error='SOURCE_UNAVAILABLE';break;}
+    const url='https://api-mainnet.helius-rpc.com/v0/transactions/?api-key='+encodeURIComponent(helius);
+    const response=await fetch(url,{method:'POST',
+      headers:{accept:'application/json','content-type':'application/json'},
+      body:JSON.stringify({transactions:sigs}),signal:AbortSignal.timeout(16000)});
+    if(!response.ok)error='HELIUS_HTTP_'+response.status;
+    else{
+      const payload=await response.text();
+      if(payload.length>600000)error='SOURCE_TOO_LARGE';
+      else{
+        const items=JSON.parse(payload);
+        if(!Array.isArray(items)||items.length>sigs.length||items.some(t=>
+          !signature.test(t?.signature||'')||!sigs.includes(t.signature)||
+          !Number.isSafeInteger(t.timestamp)||t.timestamp*1000<due||t.timestamp*1000>until||
+          !(t.accountData||[]).some(z=>z.account===a.pool)))error='SOURCE_IDENTITY_UNVERIFIED';
+        else results=items;
+      }
+    }
+   }catch{error='SOURCE_UNAVAILABLE';}
   }
   const matching=results.filter(t=>sigs.includes(t.signature)&&t.timestamp*1000>=due&&t.timestamp*1000<=until);
+  if(!error&&(matching.length!==sigs.length||new Set(matching.map(t=>t.signature)).size!==sigs.length))
+    error='EXACT_SIGNATURE_COVERAGE_INCOMPLETE';
   const candidates=matching.map(tx=>inferExactCounterpartyNativeRatio(tx,{pool:a.pool,mint:a.mint}));
-  // Do not use the best of several possible rates as if it were unique;
-  // a failed fetch invalidates the reconstruction even if one candidate appeared.
-  const clean=candidates.filter(x=>x.status==='HISTORIC_NATIVE_POOL_FLOW_RATIO_ONLY');
-  const chosen=clean.length===1&&candidates.length===1&&!error?clean[0]:null;
+  // Multiple swaps are possible within ten minutes. Use only the earliest
+  // unambiguous direct pool-flow ratio, and never claim it was the first trade.
+  // A missing exact source signature invalidates the entire batch.
+  const clean=candidates.filter(x=>x.status==='HISTORIC_NATIVE_POOL_FLOW_RATIO_ONLY')
+    .sort((x,y)=>x.blockTime.localeCompare(y.blockTime)||x.signature.localeCompare(y.signature));
+  const chosen=!error&&clean.length?clean[0]:null;
   const status=error?'SOURCE_INCOMPLETE':
    chosen?'HISTORIC_NATIVE_POOL_FLOW_RATIO_ONLY':
    candidates.length?'AMBIGUOUS_ENHANCED_SWAP_POOL_LEGS':'SIGNATURE_NOT_RECOVERED';
@@ -92,7 +97,8 @@ async function main(){
   writes++;report.d1WriteCalls=writes;
   if(chosen)report.nativeQuotesRecovered++;else report.ambiguousOrMissing++;
   report.items.push({mint:a.mint,pool:a.pool,dueAt:a.due_at,status,
-    originalSignatures:sigs,nativeRatio:v?.solPerToken??null,
+    originalSignatures:sigs,directRatioCandidates:clean.length,
+    nativeRatio:v?.solPerToken??null,
     sourceSignature:v?.signature??null,side:v?.side??null,
     error,stored:n===1});
  }
