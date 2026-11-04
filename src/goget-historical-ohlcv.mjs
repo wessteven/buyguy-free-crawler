@@ -2,8 +2,8 @@
 // GeckoTerminal candles are indicative trading prices, not executable entry/exit quotes.
 const BASE58=/^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 export const HISTORY_BOUNDS=Object.freeze({
- maxPoolReads:5,maxMissingRows:100,maxApiCalls:10,maxCandles:160,
- maxBytes:300000,forwardWindowMinutes:10,fetchTimeoutMs:10000
+ maxPoolReads:80,maxMissingRows:500,maxApiCalls:90,maxCandles:900,
+ maxBytes:400000,forwardWindowMinutes:10,fetchTimeoutMs:14000
 });
 const norm=x=>typeof x==='string'?x.replace(/^solana[_:]/,''):null;
 const positive=x=>x!==null&&x!==undefined&&x!==''&&Number.isFinite(Number(x))&&Number(x)>0?Number(x):null;
