@@ -56,7 +56,8 @@ jobs:
           from pathlib import Path
           a,d,t=[os.environ[k] for k in ('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')]
           url=f'https://api.cloudflare.com/client/v4/accounts/{a}/d1/database/{d}/query'
-          statements=[s.strip() for s in Path('sql/goget-live-source-watchdog.sql').read_text().split(';') if s.strip() and not s.strip().startswith('--')]
+          text='\n'.join(x for x in Path('sql/goget-live-source-watchdog.sql').read_text().splitlines() if not x.lstrip().startswith('--'))
+          statements=[s.strip() for s in text.split(';') if s.strip()]
           if not statements:raise SystemExit('WATCHDOG_SCHEMA_EMPTY')
           for stmt in statements:
             req=Request(url,data=json.dumps({'sql':stmt,'params':[]}).encode(),method='POST',
