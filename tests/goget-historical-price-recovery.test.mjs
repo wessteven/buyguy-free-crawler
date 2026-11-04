@@ -10,6 +10,6 @@ test('historical replay never rewrites prospective price outcomes or promotes tr
  assert.doesNotMatch(script,/DELETE FROM goget_pre_signal_market_outcomes/i);
  assert.match(schema,/PRIMARY KEY\(mint,bucket,horizon_min\)/);
  assert.match(script,/historicalOnly:true,heliusCalls:0,trades:0/);
- assert.match(script,/truncatedByRowCap:totalMissing>rows.length/);
+ assert.match(script,/truncatedByRowCap:unassessedAtStart>rows.length/);
  assert.match(script,/unattemptedPairs/);
 });
