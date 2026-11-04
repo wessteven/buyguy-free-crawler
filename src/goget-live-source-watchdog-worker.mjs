@@ -19,10 +19,10 @@ async function verifiedWrite(db,sql,...params){
 }
 export async function runSourceWatchdog(env,{now=Date.now(),scheduledAt=now,trigger='manual'}={}){
  if(env?.WATCHDOG_ENABLED!=='true')return {status:'DISABLED'};
- if(!env?.DB)throw Error('WATCHDOG_D1_MISSING');
  const stop=Date.parse(env.WATCHDOG_STOP_AT||'');
  if(!Number.isFinite(stop))throw Error('WATCHDOG_STOP_INVALID');
  if(now>=stop)return {status:'PILOT_EXPIRED',heliusCalls:0,trades:0};
+ if(!env?.DB)throw Error('WATCHDOG_D1_MISSING');
  const db=env.DB,at=new Date(now).toISOString(),slot=new Date(scheduledAt).toISOString();
  let reads=0,writes=0;
  const read=async(sql,...args)=>{
