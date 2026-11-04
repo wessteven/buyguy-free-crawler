@@ -20,7 +20,8 @@ test('historical pool forensic pass does not rewrite forward labels or trade',as
  assert.doesNotMatch(s,/INSERT INTO smart_wallet_webhook_events/i);
  assert.doesNotMatch(s,/secret.*console\.log/ig);
  assert.match(sql,/PRIMARY KEY\(mint,bucket,horizon_min\)/);
- assert.doesNotMatch(sql,/\b(?:DROP|ALTER|DELETE|UPDATE)\b/i);
+ assert.doesNotMatch(sql.split('\n').filter(x=>!x.trim().startsWith('--')).join('\n'),
+   /\b(?:DROP|ALTER|DELETE|UPDATE)\b/i);
  assert.match(workflow,/workflow_dispatch/);
  assert.match(workflow,/contents: read/);
 });
