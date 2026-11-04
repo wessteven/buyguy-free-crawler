@@ -51,6 +51,23 @@ async function main(){
   arrayFields:Object.entries(firstParsed).filter(([k,v])=>Array.isArray(v))
    .slice(0,12).map(([k,v])=>({field:k,items:v.length,
      firstKeys:Object.keys(v[0]||{}).slice(0,14)})),
+  summaryType:firstParsed.summary?.type??null,
+  parsedBlockTime:firstParsed.blockTime??null,
+  parsedBlockTimeType:typeof firstParsed.blockTime,
+  transactionStatus:firstParsed.transactionStatus??null,
+  firstTokenTransfer: firstParsed.tokenTransfers?.[0] && {
+    mint:firstParsed.tokenTransfers[0].mint,
+    rawTokenAmount:firstParsed.tokenTransfers[0].rawTokenAmount,
+    decimals:firstParsed.tokenTransfers[0].decimals,
+    rawTokenAmountType:typeof firstParsed.tokenTransfers[0].rawTokenAmount
+  },
+  distinctRawAmountShapes:[...new Set((firstParsed.tokenTransfers||[]).map(t=>
+    typeof t.rawTokenAmount+':'+(t.rawTokenAmount&&typeof t.rawTokenAmount==='object'?
+      Object.keys(t.rawTokenAmount).join(','):'scalar')))].slice(0,6),
+  poolDirectTransfers:(firstParsed.tokenTransfers||[]).filter(t=>
+    t.fromUserAccount===row.pool||t.toUserAccount===row.pool).length,
+  poolIncludedInInstructions:(firstParsed.instructions||[]).filter(x=>
+    x.rawAccounts?.includes(row.pool)).length,
   noForwardPriceWrites:true}));
 }
 main().catch(e=>{
