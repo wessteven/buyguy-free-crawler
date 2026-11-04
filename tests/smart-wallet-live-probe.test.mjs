@@ -109,7 +109,7 @@ test('invalid or zero decode limit cannot select any unprocessed transaction',()
 test('bounded Helius page search reconnects an exact older cursor',async()=>{
  const wallet='A'.repeat(44);
  const sigs=Array.from({length:30},(_,i)=>({
-   signature:(i+1).toString(36).toUpperCase().padStart(88,'5'),err:null
+   signature:'5'.repeat(87)+'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[i],err:null
  }));
  const prev=sigs[23].signature,calls=[];
  const history=await collectSignatureHistory(({limit,before})=>{
@@ -129,7 +129,7 @@ test('bounded Helius page search reconnects an exact older cursor',async()=>{
 test('page cap leaves missing interval unknown and current cursor unchanged',async()=>{
  const wallet='A'.repeat(44),previous='9'.repeat(88);
  const sigs=Array.from({length:70},(_,i)=>({
-   signature:(i+1).toString(36).toUpperCase().padStart(88,'5'),err:null
+   signature:'5'.repeat(87)+'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'[i],err:null
  }));
  let calls=0;
  const history=await collectSignatureHistory(({limit,before})=>{
