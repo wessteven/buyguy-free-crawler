@@ -19,6 +19,15 @@ test('recover only historical candle starting after the recorded due timestamp',
  assert.equal(m.changePct,10);
  assert.match(m.sourceKind,/NOT_FORWARD_OBSERVED/);
 });
+test('accepts GeckoTerminal UUID data.id only with exact requested pool path and mint in metadata',()=>{
+ const obj=payload([candle(unix+60,1.1)]);
+ obj.data.id='9e8e222d-13a8-4608-8e7e-003b16a29b1b';
+ const parsed=parseHistoricalOhlcv(obj,{mint,pool});
+ assert.equal(parsed.validatedMintFromMetadata,true);
+ assert.equal(parsed.validatedPoolFromEndpoint,true);
+ assert.equal(matchHistoricOutcome({due_at:'2026-11-03T12:05:29Z',
+   reference_price_usd:1},parsed.candles).status,'HISTORICAL_INDICATIVE_OHLCV_MATCH');
+});
 test('must not backfill price from before signal due or outside 10 minute tolerance',()=>{
  const o=parseHistoricalOhlcv(payload([
   candle(unix,0.9),candle(unix+12*60,1.5)]),{mint,pool});
