@@ -33,6 +33,9 @@ test('audit distinguishes historical matches, non-independent events and real mi
  assert.equal(report.horizonBands[1].medianChangePct,0);
  assert.equal(report.timeMatchedComparisons[0].matchedFiveMinuteBuckets,1);
  assert.equal(report.timeMatchedComparisons[0].medianBucketSignalMinusControlPct,25);
+ assert.equal(report.signalMintDetails.length,1);
+ assert.equal(report.signalMintDetails[0].firstSignalOutcomeByHorizon[0].recoveredHistoricalChangePct,25);
+ assert.equal(report.horizonBands.find(x=>x.horizonMin===1440&&x.sampleKind==='POTENTIAL_SIGNAL').meanChangePct,null);
  assert.equal(report.replayWalletCount,1);
  assert.equal(report.providerCalls,0);
  assert.equal(report.realTrades,0);
@@ -60,6 +63,11 @@ test('repeat sightings of the same mint do not create independent first-mint per
  assert.equal(report.horizonBands[0].uniqueMints,1);
  assert.equal(report.horizonBands[0].firstMintObservations,1);
  assert.equal(report.horizonBands[0].firstMintMedianPct,20);
+ assert.equal(report.signalMintDetails.length,1);
+ assert.equal(report.signalMintDetails[0].recoveredRecordCount,2);
+ assert.equal(report.signalMintDetails[0].uniqueSignalBuckets,2);
+ assert.equal(report.signalMintDetails[0].firstSignalOutcomeByHorizon.length,1);
+ assert.equal(report.signalMintDetails[0].firstSignalOutcomeByHorizon[0].recoveredHistoricalChangePct,20);
 });
 test('strict bounded source input and asOf validation',()=>{
  assert.throws(()=>reviewRecoveredEvidence({rows:Array(501).fill({})}),/AUDIT_BOUNDED_INPUT_REQUIRED/);
