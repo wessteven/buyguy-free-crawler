@@ -1,0 +1,43 @@
+name: GOGET RPC Source Quality — verify persisted 3-wallet coverage
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-rpc-source-quality.yml'
+      - 'src/goget-rpc-source-ledger.mjs'
+      - 'scripts/goget-rpc-source-quality.mjs'
+      - 'tests/goget-rpc-source-ledger.test.mjs'
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-rpc-source-quality
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify all source ledger denominators and unknowns
+        run: |
+          node --check src/goget-rpc-source-ledger.mjs
+          node --check scripts/goget-rpc-source-quality.mjs
+          node --test tests/goget-rpc-source-ledger.test.mjs
+      - name: Read actual Cloudflare source coverage and credit reservation records
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-rpc-source-quality.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: goget-rpc-source-quality
+          path: goget-rpc-source-quality.json
+          retention-days: 14
+          if-no-files-found: warn
