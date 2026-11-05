@@ -9,7 +9,11 @@ import {evaluateUnattendedReport} from '../src/goget-unattended-acceptance.mjs';
 import viewer from '../src/viewer.mjs';
 const asOf='2026-11-05T06:55:00Z',at=Date.parse(asOf);
 const journals=GAP_WALLETS.map((wallet,i)=>({wallet,legacy_cursor:'old-'+i,
- seed_head:'new-'+i,status:'COMPLETE_HELIUS_SIGNATURE_BRIDGE',pages:[2,9,3][i],examined:[173,887,300][i]}));
+ seed_head:'new-'+i,original_cursor_now:'old-'+i,
+ old_found:1,seed_found:1,recovered:[173,887,300][i],
+ original_live_matches:1,enhanced_historic_matches:[13,13,9][i],
+ source_overlap:[127,153,99][i],
+ status:'COMPLETE_HELIUS_SIGNATURE_BRIDGE',pages:[2,9,3][i],examined:[173,887,300][i]}));
 const states=GAP_WALLETS.map(wallet=>({wallet,status:'CHECKPOINT_CONNECTED',last_checked_at:'2026-11-05T06:50:11Z'}));
 const sourceCounts=GAP_WALLETS.map((wallet,i)=>({wallet,n:[130,154,100][i]}));
 const decode=GAP_WALLETS.map((wallet,i)=>({wallet,n:[130,154,100][i],
@@ -31,6 +35,12 @@ test('exact 3 legacy wallet bridges and 5m source cover independent truth states
  assert.equal(r.forwardSource.completeThreeWalletCronCycles,4);
  assert.equal(r.forwardSource.missingBetweenSampledCronReceipts,0);
  assert.equal(r.wallets[1].historical.signaturesExamined,887);
+ assert.equal(r.wallets[1].historical.archivedHistoricalSignatures,887);
+ assert.equal(r.wallets[1].historical.legacyAnchorStillArchived,true);
+ assert.equal(r.wallets[1].historical.seedHeadStillArchived,true);
+ assert.equal(r.wallets[1].historical.exactOriginalRpcEventMatches,1);
+ assert.equal(r.wallets[1].historical.exactHistoricalEnhancedMatches,13);
+ assert.equal(r.wallets[1].historical.exactNewCloudflareOverlap,153);
  assert.equal(r.wallets[0].decoding.newSourceSignatureDenominator,130);
  assert.equal(r.wallets[0].decoding.fullyDecodedNewSourceSignaturesUnverified,true);
  assert.equal(r.marketCandles.minuteOhlcvContinuityVerified,false);
@@ -143,4 +153,22 @@ test('incomplete 72-hour acceptance stays incomplete although workflow execution
  assert.equal(result.status,'INCOMPLETE');
  assert.equal(result.continuousCoverageVerified,false);
  assert.ok(result.reasons.includes('WINDOW_DEGRADED_SLOTS'));
+});
+
+test('historical bridge completed label alone cannot pass: independent old cursor, archived old signature and new seed are required',()=>{
+ for(const altered of [{original_cursor_now:'changed'},
+  {old_found:0},{seed_found:0},{recovered:0}]){
+  const result=evaluateWalletSourceQuality({...data,journals:journals.map((j,i)=>
+   i===1?{...j,...altered}:j)});
+  assert.equal(result.historicalBridgesComplete,2);
+  assert.equal(result.status,'HISTORICAL_SIGNATURE_BRIDGES_INCOMPLETE');
+ }
+});
+test('dashboard provides independently recovered overlap fields and candle status by horizon',async()=>{
+ const response=await viewer.fetch(new Request('https://go.test/dashboard'),{});
+ const html=await response.text();
+ assert.match(html,/exactHistoricalEnhancedMatches/);
+ assert.match(html,/exactNewCloudflareOverlap/);
+ assert.match(html,/Both original anchors independently reverified/);
+ assert.match(html,/RECORDED market outcome state/);
 });
