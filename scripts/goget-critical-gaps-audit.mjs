@@ -11,7 +11,7 @@ async function q(sql,args=[]){
  if(++reads>10||!/^(SELECT|WITH)\s/i.test(sql))throw Error('TRIAGE_READ_LIMIT');
  const r=await fetch(u,{method:'POST',headers:{authorization:'Bearer '+key,'content-type':'application/json'},
   body:JSON.stringify({sql,params:args}),signal:AbortSignal.timeout(18000)});
- if(!r.ok)throw Error('TRIAGE_HTTP_'+r.status+'_'+(sql.match(/\\bFROM\\s+([a-z_]+)/i)?.[1]||'UNCLASSIFIED'));
+ if(!r.ok)throw Error('TRIAGE_HTTP_'+r.status+'_SQL_'+sql.slice(0,62).replace(/[^A-Za-z0-9]+/g,'_'));
  const j=await r.json(),v=j?.result?.[0];
  if(j?.success!==true||v?.success!==true||!Array.isArray(v.results))throw Error('TRIAGE_D1_UNVERIFIED');
  return v.results;
