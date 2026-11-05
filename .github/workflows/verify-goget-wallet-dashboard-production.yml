@@ -1,0 +1,32 @@
+name: GOGET Dashboard Wallet Source — authenticated production gate
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-goget-wallet-dashboard-production.yml'
+      - 'scripts/verify-goget-wallet-dashboard-production.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Authenticate and inspect deployed wallet evidence without Helius or D1 writes
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          node --check scripts/verify-goget-wallet-dashboard-production.mjs
+          node scripts/verify-goget-wallet-dashboard-production.mjs
+      - name: Retain exact production evidence or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-wallet-dashboard-prod-verification
+          path: goget-wallet-dashboard-production-evidence.json
+          retention-days: 21
+          if-no-files-found: warn
