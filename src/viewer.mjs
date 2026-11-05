@@ -1,5 +1,6 @@
 export {FastRadar} from './fast-radar.mjs';
 import {discoveryQuality} from './discovery-quality.mjs';
+import {walletSourceQuality} from './goget-wallet-source-quality-panel.mjs';
 import {CLEAN_SLATE_AT,CLEAN_SLATE_ACTIVE_WHERE} from './clean-slate.mjs';
 import {getPaperSnapshot} from './paper-ops.mjs';
 import {scheduledResearch} from './scheduled-research.mjs';
@@ -229,6 +230,15 @@ body{box-sizing:border-box;width:100%;max-width:100%;overflow-x:clip}
 <p id="qualitySummary" role="status" aria-live="polite">Not loaded — no D1 reads spent.</p>
 <div id="qualityReport" aria-label="Discovery quality observations"></div>
 <p class="hint">Recorded pool strings are not chain-certified. The counts of 5m buys/sells are transactions, not independently verified buyers. UNKNOWN paths remain unknown.</p>
+</section>
+<section aria-label="GOGET wallet source quality">
+<h2>GOGET WALLET SOURCES // HISTORICAL VS LIVE</h2>
+<p class="hint">Separate verified retrospective signature bridges from five-minute source receipts. An archived signature is not a decoded swap, wallet signing proof, 1-minute candle or trade P&amp;L. This bounded D1 audit makes no Helius or market provider calls.</p>
+<button id="walletSourceLoad" type="button">GO · VERIFY WALLET SOURCE COVERAGE</button>
+<p id="walletSourceSummary" role="status" aria-live="polite">Not loaded — zero source-quality D1 reads.</p>
+<div id="walletSourceReport" aria-label="GOGET exact three-wallet historical and live RPC source evidence"></div>
+<p id="walletDecodeSummary" class="hint" role="status"></p>
+<p id="walletCandleSummary" class="hint" role="status"></p>
 </section></div>
 <div class="tab-panel" id="panel-outcomes" role="tabpanel" aria-labelledby="tab-outcomes" hidden>
 <section><h2>OUR SCORE LEARNING JOURNAL</h2>
@@ -1503,6 +1513,56 @@ document.getElementById('qualityLoad').addEventListener('click',async()=>{
  }catch{summary.textContent='Report unavailable — no observations inferred.';}
  finally{button.disabled=false;}
 });
+document.getElementById('walletSourceLoad').addEventListener('click',async()=>{
+ const button=document.getElementById('walletSourceLoad');
+ const summary=document.getElementById('walletSourceSummary');
+ const container=document.getElementById('walletSourceReport');
+ const decode=document.getElementById('walletDecodeSummary');
+ const candle=document.getElementById('walletCandleSummary');
+ if(d1QuotaBlocked){summary.textContent='Daily D1 read quota blocked — no fresh source audit.';return;}
+ button.disabled=true;
+ summary.textContent='Verifying historical vs live D1 evidence without provider calls…';
+ container.textContent='';decode.textContent='';candle.textContent='';
+ try{
+  const response=await fetch('/api/wallet-source-quality',{credentials:'same-origin',cache:'no-store'});
+  const x=await response.json();
+  if(!response.ok){
+   if(x.error==='D1_READ_QUOTA')setD1QuotaBlocked(true);
+   summary.textContent=x.error==='D1_READ_QUOTA'?'D1 read quota exhausted — no verified source report.':
+    response.status===401?'Session expired — sign in again.':
+    'Wallet source evidence unavailable (HTTP '+response.status+').';
+   return;
+  }
+  const f=x.forwardSource||{},b=x.budgets||{},m=x.marketCandles||{};
+  summary.textContent='STATUS '+x.status+' | HISTORICAL BRIDGES '+x.historicalBridgesComplete+'/3'+
+   ' (RETROSPECTIVE, NOT LIVE) | NEW 5-MIN CRON '+f.completeThreeWalletCronCycles+'/'+
+   f.sampledCronCycles+' sampled | MISSING RECORDED INTERVALS '+f.missingBetweenSampledCronReceipts+
+   ' | UTC RPC RESERVED '+b.allRpcReserved+'/'+b.rpcDailyCap+
+   ' | WEBHOOK EST. '+b.estimatedWebhookDelivered+' | D1 reads '+x.d1Reads;
+  container.innerHTML=table(['Original wallet','Historical signature bridge (retrospective)',
+   'Helius bridge pages','Historic signatures examined',
+   '5m Cloudflare forward checkpoint','5m source last seen (UTC)',
+   'Archived signature receipts','Forward unresolved source windows',
+   'Original RPC decoded matches','Historical Enhanced matches',
+   'Live webhook Enhanced matches'],(x.wallets||[]).map(w=>[
+    w.wallet,w.historical?.state,w.historical?.pagesRead,w.historical?.signaturesExamined,
+    w.forward?.state,w.forward?.lastCheckedAt,w.forward?.archivedSignatures,
+    w.forward?.unresolvedGapWindows,w.decoding?.originalRpcDecodedMatches,
+    w.decoding?.historicalEnhancedParsedMatches,w.decoding?.liveEnhancedWebhookMatches
+   ]));
+  const notes=document.createElement('p');notes.className='hint';
+  notes.textContent=(x.limitations||[]).join(' ');
+  container.append(notes);
+  decode.textContent='TRANSACTION DECODING // Counts above are exact signature joins only. '+
+   'Source signatures have NOT all been decoded; signer, buy/sell and executable prices remain unverified.';
+  candle.textContent='MARKET CANDLES // Latest '+m.outcomeSampled+' outcome rows: '+
+   m.missingFutureUsdStatusRows+' originally missing future USD quotes; '+
+   m.exactHistoricalCandleMatches+' linked retrospective candle matches; '+
+   m.stillMissingUsdInSample+' still without a linked historic USD close. '+
+   'Continuous 1-minute OHLCV coverage remains UNVERIFIED; candles do not certify trades.';
+ }catch{summary.textContent='Source-quality audit failed — no historical or live completeness inferred.';}
+ finally{button.disabled=false;}
+});
 let fastPolling=false;
 async function pollFastRadar(action){
  if(fastPolling||document.hidden)return;fastPolling=true;
@@ -1563,8 +1623,8 @@ if(path==='/api/logout'){
  output.headers.set('set-cookie',clearSessionCookie());
  return output;
 }
-if(!fastPath&&path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock'&&path!=='/api/top5-refresh'&&path!=='/api/discovery-quality')return json({error:'not_found'},404);
-if(((path==='/api/status'||path==='/api/scan-clock'||path==='/api/discovery-quality')&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&request.method!=='POST'))
+if(!fastPath&&path!=='/api/status'&&path!=='/api/watchlist'&&path!=='/api/audit'&&path!=='/api/scan-clock'&&path!=='/api/top5-refresh'&&path!=='/api/discovery-quality'&&path!=='/api/wallet-source-quality')return json({error:'not_found'},404);
+if(((path==='/api/status'||path==='/api/scan-clock'||path==='/api/discovery-quality'||path==='/api/wallet-source-quality')&&request.method!=='GET')||((path==='/api/watchlist'||path==='/api/audit'||path==='/api/top5-refresh')&&request.method!=='POST'))
  return json({error:'method_not_allowed'},405);
 const bearer=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'');
 const cookie=readSessionCookie(request.headers.get('cookie'));
@@ -1582,6 +1642,10 @@ if(!env.DB)return json({error:'database_not_configured'},503);
 if(path==='/api/discovery-quality'){
  try{return json(await discoveryQuality(env.DB))}
  catch(e){return json({error:d1ReadQuota(e)?'D1_READ_QUOTA':'quality_report_unavailable'},503)}
+}
+if(path==='/api/wallet-source-quality'){
+ try{return json(await walletSourceQuality(env.DB));}
+ catch(e){return json({error:d1ReadQuota(e)?'D1_READ_QUOTA':'wallet_source_quality_unavailable'},503);}
 }
 if(path==='/api/scan-clock'){
  try{
