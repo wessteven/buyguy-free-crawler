@@ -34,3 +34,16 @@ test('manual-only is not evidence of scheduled collection',()=>{
   'MANUAL_VERIFIED_CRON_NOT_YET_OBSERVED');
  assert.equal(evaluateRpcSourceLedger({...args,states:states.slice(1)}).status,'MISSING_WALLET_SCOPE');
 });
+
+test('three scanned wallets with an acknowledged source gap are NOT complete',()=>{
+ const changed={...cycles[2],source_gaps:1};
+ const report=evaluateRpcSourceLedger({...args,cycles:[cycles[0],cycles[1],changed,cycles[3]]});
+ assert.equal(report.completeThreeWalletCronCycles,2);
+ assert.equal(report.status,'SOURCE_COVERAGE_INCOMPLETE_OR_GAPS');
+});
+test('provider returning empty or baseline source cannot silently certify forward continuity',()=>{
+ const badStates=states.map((s,i)=>i===0?{...s,status:'EMPTY_PROVIDER_PAGE_UNVERIFIED'}:s);
+ const report=evaluateRpcSourceLedger({...args,states:badStates});
+ assert.equal(report.sourceWalletsNotContiguouslyVerified,1);
+ assert.equal(report.status,'SOURCE_COVERAGE_INCOMPLETE_OR_GAPS');
+});
