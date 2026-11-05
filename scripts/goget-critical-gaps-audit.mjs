@@ -19,7 +19,7 @@ async function q(sql,args=[]){
 const report={asOf:now,scope:'12_HELIUS_WEBHOOK_AND_3_CLOUDFLARE_RPC_PLUS_MARKET',reads:0,
  heliusCalls:0,marketCalls:0,d1Writes:0,trades:0,exactStatus:'EVIDENCE_INCOMPLETE'};
 try{
- const [rawHealth,rawBudget,archiveSample,delivery,normalized,source,fast,marketMissing,marketRecovered]=await Promise.all([
+ const [rawHealth,rawBudget,archiveSample,delivery,normalized,source,fast,marketMissing,marketRecovered,missingByDay]=await Promise.all([
   q('SELECT day,attempted_records,recovered_records,degraded_requests,still_failed_records,failed_batches,last_error_code,last_at FROM smart_wallet_webhook_raw_health ORDER BY day DESC LIMIT 4'),
   q('SELECT day,bytes_reserved FROM smart_wallet_webhook_raw_budget ORDER BY day DESC LIMIT 4'),
   q(`SELECT COUNT(DISTINCT e.signature) AS sampled_unique,
@@ -34,9 +34,17 @@ try{
   q('SELECT slot_utc,status,wallets_scanned,helius_calls,credits_reserved,source_gaps FROM goget_rpc_source_cycles ORDER BY slot_utc DESC LIMIT 6'),
   q("SELECT token,expires_at FROM leases WHERE name='fast-radar:trial-proof' LIMIT 1"),
   q("SELECT horizon_min,COUNT(*) AS n FROM (SELECT horizon_min FROM goget_pre_signal_market_outcomes WHERE status='MISSING_FUTURE_USD_QUOTE_COVERAGE' ORDER BY due_at DESC LIMIT 500) GROUP BY horizon_min ORDER BY horizon_min"),
-  q('SELECT COUNT(*) AS n FROM (SELECT mint FROM goget_historical_price_recovery ORDER BY recovered_at DESC LIMIT 500)')
+  q('SELECT COUNT(*) AS n FROM (SELECT mint FROM goget_historical_price_recovery ORDER BY recovered_at DESC LIMIT 500)'),
+  q(`SELECT substr(e.observed_at,1,10) AS day,
+    COUNT(DISTINCT e.signature) AS source_signatures,
+    COUNT(DISTINCT CASE WHEN r.signature IS NULL THEN e.signature END) AS no_original_raw,
+    COUNT(DISTINCT CASE WHEN r.signature IS NOT NULL THEN e.signature END) AS original_raw
+    FROM (SELECT signature,observed_at FROM smart_wallet_webhook_events
+      WHERE observed_at>=? ORDER BY observed_at DESC LIMIT 800) e
+    LEFT JOIN smart_wallet_webhook_raw r ON r.signature=e.signature
+    GROUP BY substr(e.observed_at,1,10) ORDER BY day DESC LIMIT 4`,[from])
  ]);
- report.rawHealth=rawHealth;report.rawBudget=rawBudget;
+ report.rawHealth=rawHealth;report.rawBudget=rawBudget;report.rawCoverageByUtcDay=missingByDay;
  report.archiveSample=archiveSample[0]??null;
  report.providerDeliveryEstimate=delivery;
  report.lastNormalized=normalized[0]??null;
