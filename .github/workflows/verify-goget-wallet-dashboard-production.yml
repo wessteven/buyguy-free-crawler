@@ -1,5 +1,9 @@
 name: GOGET Dashboard Wallet Source — authenticated production gate
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-goget-wallet-dashboard-production.yml'
+      - 'scripts/verify-goget-wallet-dashboard-production.mjs'
   push:
     branches: [main]
     paths:
@@ -16,7 +20,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
+      - name: Check read-only dashboard smoke script and all GOGET regression tests
+        run: |
+          node --check scripts/verify-goget-wallet-dashboard-production.mjs
+          node --test tests/*.test.mjs
       - name: Authenticate and inspect deployed wallet evidence without Helius or D1 writes
+        if: github.event_name != 'pull_request'
         env:
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
         run: |
