@@ -242,7 +242,7 @@ async function oneWallet(scope){
   throw Error('LEGACY_RECONCILE_ANCHORS_UNVERIFIED');
  report.complete=report.status==='COMPLETE_HELIUS_SIGNATURE_BRIDGE';
  report.unresolved=report.complete?null:report.status;
- report.pagesTotalAtLastRead=state.pages+report.pagesReadThisRun;
+ report.pagesTotalAtLastRead=state.pages;
  report.oldCursorNotMutated=true;
  console.log('GOGET_LEGACY_REPLAY_WALLET',JSON.stringify(report));
  return report;
