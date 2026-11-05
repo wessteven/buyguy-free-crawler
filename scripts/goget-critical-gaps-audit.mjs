@@ -22,14 +22,13 @@ try{
  const [rawHealth,rawBudget,archiveSample,delivery,normalized,source,fast,marketMissing,marketRecovered]=await Promise.all([
   q('SELECT day,attempted_records,recovered_records,degraded_requests,still_failed_records,failed_batches,last_error_code,last_at FROM smart_wallet_webhook_raw_health ORDER BY day DESC LIMIT 4'),
   q('SELECT day,bytes_reserved FROM smart_wallet_webhook_raw_budget ORDER BY day DESC LIMIT 4'),
-  q(`WITH recent AS (SELECT wallet,signature,observed_at FROM smart_wallet_webhook_events
-     WHERE observed_at>=? ORDER BY observed_at DESC LIMIT 2400),
-    uniq AS (SELECT signature,MAX(observed_at) AS observed_at FROM recent GROUP BY signature)
-   SELECT COUNT(*) AS sampled_unique,MIN(observed_at) AS oldest,
-     MAX(observed_at) AS newest,
-     SUM(CASE WHEN r.signature IS NULL THEN 1 ELSE 0 END) AS no_original_raw,
-     SUM(CASE WHEN r.signature IS NOT NULL THEN 1 ELSE 0 END) AS original_raw
-   FROM uniq LEFT JOIN smart_wallet_webhook_raw r ON r.signature=uniq.signature`,[from]),
+  q(`SELECT COUNT(DISTINCT e.signature) AS sampled_unique,
+     MIN(e.observed_at) AS oldest,MAX(e.observed_at) AS newest,
+     COUNT(DISTINCT CASE WHEN r.signature IS NULL THEN e.signature END) AS no_original_raw,
+     COUNT(DISTINCT CASE WHEN r.signature IS NOT NULL THEN e.signature END) AS original_raw
+     FROM (SELECT signature,observed_at FROM smart_wallet_webhook_events
+       WHERE observed_at>=? ORDER BY observed_at DESC LIMIT 800) e
+     LEFT JOIN smart_wallet_webhook_raw r ON r.signature=e.signature`,[from]),
   q('SELECT day,observed_deliveries,last_at FROM smart_wallet_webhook_credit_estimates ORDER BY day DESC LIMIT 3'),
   q('SELECT MAX(observed_at) AS last_normalized,COUNT(*) AS sampled FROM (SELECT observed_at FROM smart_wallet_webhook_events WHERE observed_at>=? ORDER BY observed_at DESC LIMIT 2400)',[from]),
   q('SELECT slot_utc,status,wallets_scanned,helius_calls,credits_reserved,source_gaps FROM goget_rpc_source_cycles ORDER BY slot_utc DESC LIMIT 6'),
