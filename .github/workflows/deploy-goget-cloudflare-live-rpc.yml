@@ -1,0 +1,128 @@
+name: GOGET Cloudflare independent three-wallet RPC source — deploy
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-goget-cloudflare-live-rpc.yml'
+      - 'src/goget-cloudflare-live-rpc*.mjs'
+      - 'tests/goget-cloudflare-live-rpc.test.mjs'
+      - 'scripts/verify-goget-cloudflare-live-rpc.mjs'
+      - 'sql/goget-cloudflare-live-rpc.sql'
+      - 'wrangler.live-rpc.toml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-goget-cloudflare-live-rpc.yml'
+      - 'src/goget-cloudflare-live-rpc*.mjs'
+      - 'tests/goget-cloudflare-live-rpc.test.mjs'
+      - 'scripts/verify-goget-cloudflare-live-rpc.mjs'
+      - 'sql/goget-cloudflare-live-rpc.sql'
+      - 'wrangler.live-rpc.toml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-live-rpc-collector-deploy
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: All GOGET JavaScript regression and new source/budget gate
+        run: |
+          node --check src/goget-cloudflare-live-rpc.mjs
+          node --check src/goget-cloudflare-live-rpc-worker.mjs
+          node --check scripts/verify-goget-cloudflare-live-rpc.mjs
+          node --test tests/*.test.mjs
+      - name: New isolated D1 schema is valid and reentrant
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          text=Path('sql/goget-cloudflare-live-rpc.sql').read_text()
+          db=sqlite3.connect(':memory:')
+          db.executescript(text);db.executescript(text)
+          tables={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          required={'goget_rpc_source_budget','goget_rpc_source_lease','goget_rpc_source_cycles',
+                    'goget_rpc_source_wallets','goget_rpc_source_signatures','goget_rpc_source_gaps'}
+          assert required<=tables,(required-tables)
+          assert len([x for x in tables if x.startswith('goget_rpc_source_')])==6
+          print('RPC_D1_SCHEMA_IDEMPOTENT_SIX_ISOLATED_TABLES')
+          PY
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install existing Wrangler dependency
+        run: npm install --no-audit --no-fund
+      - name: Inject existing D1 binding only in ephemeral config
+        env:
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          ident=os.environ.get('CF_DATABASE_ID','')
+          if len(ident)<16:raise SystemExit('RPC_EXISTING_D1_ID_UNAVAILABLE')
+          p=Path('wrangler.live-rpc.toml')
+          p.write_text(p.read_text().replace('REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID',ident))
+          PY
+      - name: Create only isolated, idempotent D1 research sources and budget
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from urllib.request import Request,urlopen
+          from pathlib import Path
+          a,d,t=[os.environ[k] for k in ('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')]
+          url=f'https://api.cloudflare.com/client/v4/accounts/{a}/d1/database/{d}/query'
+          source='\n'.join(l for l in Path('sql/goget-cloudflare-live-rpc.sql').read_text().splitlines()
+                           if not l.lstrip().startswith('--'))
+          statements=[x.strip() for x in source.split(';') if x.strip()]
+          if len(statements)!=8:raise SystemExit('RPC_SCHEMA_STATEMENT_COUNT_UNVERIFIED')
+          for stmt in statements:
+            if not any(x in stmt for x in ('goget_rpc_source_','VALUES(\'runner\'')):
+              raise SystemExit('RPC_SCHEMA_TOUCHES_FOREIGN_TABLE')
+            req=Request(url,data=json.dumps({'sql':stmt,'params':[]}).encode(),method='POST',
+              headers={'authorization':'Bearer '+t,'content-type':'application/json'})
+            with urlopen(req,timeout=20) as resp:body=json.load(resp)
+            if body.get('success') is not True or body.get('result',[{}])[0].get('success') is not True:
+              raise SystemExit('RPC_D1_MIGRATION_UNVERIFIED')
+          print('GOGET_RPC_D1_SCHEMA_ISOLATED',len(statements))
+          PY
+      - name: Deploy independent five-minute Cloudflare Worker (no existing Worker modifications)
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: npx wrangler deploy --config wrangler.live-rpc.toml
+      - name: Install read-only Helius API key in this Worker only, without logging it
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node -e 'const k=process.env.HELIUS_API_KEY;if(!k||k.length<12)process.exit(1);process.stdout.write(k)' | npx wrangler secret put HELIUS_API_KEY --config wrangler.live-rpc.toml
+      - name: Install purpose-separated read-only manual verification token
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node -e 'const {createHmac}=require("node:crypto");const s=process.env.ADMIN_TOKEN;if(!s||s.length<24)process.exit(1);process.stdout.write(createHmac("sha256",s).update("GOGET:LIVE_RPC:READ_ONLY:v1").digest("base64url"))' | npx wrangler secret put GOGET_RPC_CONTROL_TOKEN --config wrangler.live-rpc.toml
+      - name: Verify deployed Worker revision, exact three RPC sources, D1 receipts and credit cap
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: node scripts/verify-goget-cloudflare-live-rpc.mjs
