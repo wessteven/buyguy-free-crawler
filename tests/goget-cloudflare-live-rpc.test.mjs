@@ -112,3 +112,10 @@ test('Cloudflare Worker code is source-only and cannot send transactions or chan
  assert.match(src,/smart_wallet_webhook_control/);
  assert.doesNotMatch(src,/sendTransaction|signTransaction|privateKey|UPDATE smart_wallet_live_cursors|INSERT INTO smart_wallet_webhook_events|UPDATE goget_pre_signal_market_outcomes/i);
 });
+
+test('post-deployment verification retries authentication only and never retries a spent RPC cycle',async()=>{
+ const s=await readFile('scripts/verify-goget-cloudflare-live-rpc.mjs','utf8');
+ assert.match(s,/response.status!==401\|\|report\?\.error!=='UNAUTHORIZED'/);
+ assert.match(s,/Do NOT retry HTTP 503/);
+ assert.doesNotMatch(s,/if\(response.status===503\).*continue/);
+});
