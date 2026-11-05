@@ -9,7 +9,7 @@ const url='https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(ac
 let reads=0;
 const db={
  prepare(sql){
-  if(!/^(SELECT|WITH)\\s/i.test(sql))throw Error('WALLET_QUALITY_NOT_READ_ONLY');
+  if(!/^(SELECT|WITH)\s/i.test(sql))throw Error('WALLET_QUALITY_NOT_READ_ONLY');
   return {
    bind(...params){
     return {
