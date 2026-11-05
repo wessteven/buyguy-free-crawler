@@ -1,0 +1,37 @@
+name: GOGET Original Source/Archive and Fast Radar Failure Triage (read only)
+on:
+  pull_request:
+    paths:
+      - 'scripts/goget-critical-gaps-audit.mjs'
+      - '.github/workflows/goget-critical-gaps-audit.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/goget-critical-gaps-audit.mjs'
+      - '.github/workflows/goget-critical-gaps-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node --check scripts/goget-critical-gaps-audit.mjs
+      - name: Read bounded D1 originals, 12-wallet raw archive and five-pool proof state
+        if: github.event_name != 'pull_request'
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-critical-gaps-audit.mjs
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-critical-gap-triage
+          path: goget-critical-gap-triage.json
+          if-no-files-found: warn
+          retention-days: 21
