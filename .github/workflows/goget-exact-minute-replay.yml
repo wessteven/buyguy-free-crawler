@@ -1,0 +1,113 @@
+name: GOGET Exact One-Minute Historical USD OHLCV — resumable free-provider repair
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/goget-exact-minute-replay.yml'
+      - 'src/goget-exact-minute-replay.mjs'
+      - 'scripts/goget-exact-minute-replay.mjs'
+      - 'sql/goget-exact-minute-replay.sql'
+      - 'tests/goget-exact-minute-replay.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-exact-minute-replay.yml'
+      - 'src/goget-exact-minute-replay.mjs'
+      - 'scripts/goget-exact-minute-replay.mjs'
+      - 'sql/goget-exact-minute-replay.sql'
+      - 'tests/goget-exact-minute-replay.test.mjs'
+  schedule:
+    - cron: '39 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-exact-minute-ohlcv-replay-budget-and-source
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Full existing GOGET tests and exact minute OHLCV identity regressions
+        run: |
+          node --check src/goget-exact-minute-replay.mjs
+          node --check scripts/goget-exact-minute-replay.mjs
+          node --test tests/*.test.mjs
+      - name: Additive one-minute schema in temporary SQLite, repeated safely
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          text=Path('sql/goget-exact-minute-replay.sql').read_text()
+          db=sqlite3.connect(':memory:')
+          db.executescript(text);db.executescript(text)
+          tables={r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          expected={'goget_exact_minute_replay_budget',
+           'goget_exact_minute_replay_outcomes','goget_exact_minute_replay_runs'}
+          assert tables==expected
+          print('EXACT_MINUTE_THREE_TABLES_ISOLATED_AND_IDEMPOTENT')
+          PY
+  recover:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Enforce original Nov 8 UTC cutoff
+        id: stop
+        run: |
+          if [ "$(date -u +%s)" -ge "1794096000" ]; then
+            echo 'go=false' >> "$GITHUB_OUTPUT"
+            echo 'GOGET_MINUTE_REPLAY_CUTOFF_NO_CALLS'
+          else
+            echo 'go=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create only exact-minute research tables, without touching forward outcomes
+        if: steps.stop.outputs.go == 'true'
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os,json
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          a,d,t=[os.environ[x] for x in ('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')]
+          url=f'https://api.cloudflare.com/client/v4/accounts/{a}/d1/database/{d}/query'
+          source='\n'.join(x for x in Path('sql/goget-exact-minute-replay.sql').read_text().splitlines()
+                           if not x.lstrip().startswith('--'))
+          statements=[x.strip() for x in source.split(';') if x.strip()]
+          if len(statements)!=4:raise SystemExit('MINUTE_SCHEMA_STATEMENT_SCOPE_UNVERIFIED')
+          for stmt in statements:
+            if not stmt.startswith(('CREATE TABLE IF NOT EXISTS goget_exact_minute_replay_',
+                                    'CREATE INDEX IF NOT EXISTS goget_exact_minute_replay_')):
+              raise SystemExit('MINUTE_SCHEMA_FOREIGN_MUTATION_FORBIDDEN')
+            req=Request(url,data=json.dumps({'sql':stmt,'params':[]}).encode(),method='POST',
+              headers={'authorization':'Bearer '+t,'content-type':'application/json'})
+            with urlopen(req,timeout=18) as r:res=json.load(r)
+            if res.get('success') is not True or res.get('result',[{}])[0].get('success') is not True:
+              raise SystemExit('MINUTE_SCHEMA_D1_UNVERIFIED')
+          print('GOGET_EXACT_MINUTE_SCHEMA_FOUR_STATEMENTS_ONLY')
+          PY
+      - name: Recover original missing USD outcomes against exact GeckoTerminal one-minute candle grid
+        if: steps.stop.outputs.go == 'true'
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-exact-minute-replay.mjs
+      - name: Preserve all remaining unknowns, rate limits and raw minute missing-cell counts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-exact-minute-pool-candle-coverage
+          path: goget-exact-minute-replay-report.json
+          retention-days: 30
+          if-no-files-found: warn
