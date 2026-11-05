@@ -68,6 +68,6 @@ try{
  await writeFile('goget-critical-gap-triage.json',JSON.stringify(report,null,2)+'\n');
 }catch(e){
  report.reads=reads;
- report.error=/^TRIAGE_[A-Z0-9_]+$/.test(e?.message||'')?e.message:'PRODUCTION_SOURCE_UNKNOWN';
+ report.error=typeof e?.message==='string'&&e.message.startsWith('TRIAGE_HTTP_')?e.message.toUpperCase().slice(0,140):'PRODUCTION_SOURCE_UNKNOWN';
  console.error('GOGET_CRITICAL_GAP_TRIAGE_FAILED',JSON.stringify(report));process.exitCode=1;
 }
