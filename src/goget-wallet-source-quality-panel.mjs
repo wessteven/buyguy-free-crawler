@@ -33,11 +33,21 @@ export function evaluateWalletSourceQuality({journals,states,cycles,sourceCounts
  const wallets=GAP_WALLETS.map(wallet=>{
   const j=J.get(wallet),s=S.get(wallet),t=T.get(wallet),g=G.get(wallet),d=D.get(wallet);
   const anchorsVerified=!!j&&j.status==='COMPLETE_HELIUS_SIGNATURE_BRIDGE'&&
-    j.legacy_cursor!==null&&j.seed_head!==null;
+    j.legacy_cursor!==null&&j.seed_head!==null&&
+    j.original_cursor_now===j.legacy_cursor&&
+    number(j.old_found)===1&&number(j.seed_found)===1&&
+    number(j.recovered)>0;
   return {wallet,
    historical:{state:j?.status??'NOT_VERIFIED',bridgeComplete:anchorsVerified,
     originalCursor:j?.legacy_cursor??null,seedSignature:j?.seed_head??null,
     pagesRead:number(j?.pages),signaturesExamined:number(j?.examined),
+    archivedHistoricalSignatures:number(j?.recovered),
+    originalCursorStillPreserved:j?.original_cursor_now===j?.legacy_cursor,
+    legacyAnchorStillArchived:number(j?.old_found)===1,
+    seedHeadStillArchived:number(j?.seed_found)===1,
+    exactOriginalRpcEventMatches:number(j?.original_live_matches),
+    exactHistoricalEnhancedMatches:number(j?.enhanced_historic_matches),
+    exactNewCloudflareOverlap:number(j?.source_overlap),
     recoveryJournalIsRetrospective:true},
    forward:{state:s?.status??'NO_CHECKPOINT',lastCheckedAt:s?.last_checked_at??null,
      lastCheckedAgeMinutes:age(s?.last_checked_at,now),
@@ -109,7 +119,7 @@ export function evaluateWalletSourceQuality({journals,states,cycles,sourceCounts
   heliusCalls:0,d1Writes:0,trades:0,
   limitations:[
    'Three original pilot RPC wallets only; does not replace the independently audited 12-wallet webhook roster.',
-   'Historical signature bridges connect immutable old cursors to new source seeds; do not relabel as forward live observations.',
+   'Historical signature bridges independently require saved original cursor equality, archived old-signature and archived seed-signature identities; do not relabel as forward live observations.',
    'Source archive retains signatures/slots/status, not a decoded transaction body or 1-minute candles.',
    'A signed wallet action and a profitable buy cannot be inferred from source signature counts.',
    'Latest 72 recorded cycles and 300 sampled market outcomes; all-time/whole-chain coverage is not certified.',
@@ -121,7 +131,19 @@ export async function walletSourceQuality(db,{now=Date.now()}={}){
  const w=GAP_WALLETS,day=new Date(now).toISOString().slice(0,10),used={count:0};
  const [journals,states,cycles,sourceCounts,openGaps,budgets,webhook,decode,market,marketGroups]
   =await Promise.all([
-   read(db,'SELECT wallet,legacy_cursor,seed_head,status,pages,examined FROM goget_legacy_rpc_replay_journal WHERE wallet IN (?,?,?) LIMIT 3',w,used),
+   read(db,[
+    'SELECT j.wallet,j.legacy_cursor,j.seed_head,j.status,j.pages,j.examined,',
+    'l.last_signature AS original_cursor_now,',
+    '(SELECT COUNT(*) FROM goget_legacy_rpc_replay_signatures a WHERE a.wallet=j.wallet AND a.signature=j.legacy_cursor) AS old_found,',
+    '(SELECT COUNT(*) FROM goget_rpc_source_signatures b WHERE b.wallet=j.wallet AND b.signature=j.seed_head) AS seed_found,',
+    '(SELECT COUNT(*) FROM goget_legacy_rpc_replay_signatures c WHERE c.wallet=j.wallet) AS recovered,',
+    '(SELECT COUNT(*) FROM goget_legacy_rpc_replay_signatures d JOIN smart_wallet_live_events e ON e.wallet=d.wallet AND e.signature=d.signature WHERE d.wallet=j.wallet) AS original_live_matches,',
+    '(SELECT COUNT(*) FROM goget_legacy_rpc_replay_signatures d JOIN smart_wallet_helius_historical_replay h ON h.wallet=d.wallet AND h.signature=d.signature WHERE d.wallet=j.wallet) AS enhanced_historic_matches,',
+    '(SELECT COUNT(*) FROM goget_legacy_rpc_replay_signatures d JOIN goget_rpc_source_signatures x ON x.wallet=d.wallet AND x.signature=d.signature WHERE d.wallet=j.wallet) AS source_overlap',
+    'FROM goget_legacy_rpc_replay_journal j',
+    'LEFT JOIN smart_wallet_live_cursors l ON l.wallet=j.wallet',
+    'WHERE j.wallet IN (?,?,?) LIMIT 3'
+   ].join(' '),w,used),
    read(db,'SELECT wallet,status,last_checked_at FROM goget_rpc_source_wallets WHERE wallet IN (?,?,?) LIMIT 3',w,used),
    read(db,'SELECT slot_utc,trigger,status,wallets_scanned,helius_calls,credits_reserved,source_gaps FROM goget_rpc_source_cycles ORDER BY slot_utc DESC LIMIT 72',[],used),
    read(db,'SELECT wallet,COUNT(*) AS n FROM goget_rpc_source_signatures WHERE wallet IN (?,?,?) GROUP BY wallet LIMIT 3',w,used),
