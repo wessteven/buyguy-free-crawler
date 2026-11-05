@@ -7,20 +7,28 @@ const requireEnv=k=>{const v=process.env[k];if(!v)throw Error('MISSING_'+k);retu
 const account=requireEnv('CF_ACCOUNT_ID'),database=requireEnv('CF_DATABASE_ID'),secret=requireEnv('CF_D1_API_TOKEN');
 const url='https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account)+'/d1/database/'+encodeURIComponent(database)+'/query';
 let reads=0;
-const db={prepare(sql){
- if(!/^(SELECT|WITH)\s/i.test(sql))throw Error('WALLET_QUALITY_NOT_READ_ONLY');
- return {bind(...params){return {async all(){
-  if(++reads>10)throw Error('WALLET_QUALITY_READ_BUDGET');
-  const r=await fetch(url,{method:'POST',headers:{
-   authorization:'Bearer '+secret,'content-type':'application/json'},
-   body:JSON.stringify({sql,params}),signal:AbortSignal.timeout(19000)});
-  if(!r.ok)throw Error('WALLET_QUALITY_HTTP_'+r.status);
-  const doc=await r.json(),result=doc?.result?.[0];
-  if(doc?.success!==true||result?.success!==true||!Array.isArray(result.results))
-   throw Error('WALLET_QUALITY_D1_INVALID');
-  return result;
- }};}
- }};
+const db={
+ prepare(sql){
+  if(!/^(SELECT|WITH)\\s/i.test(sql))throw Error('WALLET_QUALITY_NOT_READ_ONLY');
+  return {
+   bind(...params){
+    return {
+     async all(){
+      if(++reads>10)throw Error('WALLET_QUALITY_READ_BUDGET');
+      const r=await fetch(url,{method:'POST',headers:{
+       authorization:'Bearer '+secret,'content-type':'application/json'},
+       body:JSON.stringify({sql,params}),signal:AbortSignal.timeout(19000)});
+      if(!r.ok)throw Error('WALLET_QUALITY_HTTP_'+r.status);
+      const doc=await r.json(),result=doc?.result?.[0];
+      if(doc?.success!==true||result?.success!==true||!Array.isArray(result.results))
+       throw Error('WALLET_QUALITY_D1_INVALID');
+      return result;
+     }
+    };
+   }
+  };
+ }
+};
 async function main(){
  const report=await walletSourceQuality(db);
  report.d1Reads=reads;
