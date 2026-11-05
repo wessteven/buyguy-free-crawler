@@ -1539,13 +1539,18 @@ document.getElementById('walletSourceLoad').addEventListener('click',async()=>{
    f.sampledCronCycles+' sampled | MISSING RECORDED INTERVALS '+f.missingBetweenSampledCronReceipts+
    ' | UTC RPC RESERVED '+b.allRpcReserved+'/'+b.rpcDailyCap+
    ' | WEBHOOK EST. '+b.estimatedWebhookDelivered+' | D1 reads '+x.d1Reads;
-  container.innerHTML=table(['Original wallet','Historical signature bridge (retrospective)',
-   'Helius bridge pages','Historic signatures examined',
-   '5m Cloudflare forward checkpoint','5m source last seen (UTC)',
-   'Archived signature receipts','Forward unresolved source windows',
-   'Original RPC decoded matches','Historical Enhanced matches',
-   'Live webhook Enhanced matches'],(x.wallets||[]).map(w=>[
-    w.wallet,w.historical?.state,w.historical?.pagesRead,w.historical?.signaturesExamined,
+  container.innerHTML=table(['Original wallet','Retrospective Helius bridge',
+   'Both original anchors independently reverified','Historic signatures archived',
+   'Bridge exact original decoded matches','Bridge exact historical Enhanced matches',
+   'Bridge exact new-source overlap','5m Cloudflare forward checkpoint',
+   '5m last source receipt (UTC)','New forward signatures archived',
+   'Forward unresolved source windows','Forward exact original decoded matches',
+   'Forward historical Enhanced matches','Forward live webhook matches'],(x.wallets||[]).map(w=>[
+    w.wallet,w.historical?.state,w.historical?.bridgeComplete?'YES — RETROSPECTIVE':'UNVERIFIED',
+    w.historical?.archivedHistoricalSignatures,
+    w.historical?.exactOriginalRpcEventMatches,
+    w.historical?.exactHistoricalEnhancedMatches,
+    w.historical?.exactNewCloudflareOverlap,
     w.forward?.state,w.forward?.lastCheckedAt,w.forward?.archivedSignatures,
     w.forward?.unresolvedGapWindows,w.decoding?.originalRpcDecodedMatches,
     w.decoding?.historicalEnhancedParsedMatches,w.decoding?.liveEnhancedWebhookMatches
@@ -1553,6 +1558,10 @@ document.getElementById('walletSourceLoad').addEventListener('click',async()=>{
   const notes=document.createElement('p');notes.className='hint';
   notes.textContent=(x.limitations||[]).join(' ');
   container.append(notes);
+  const candleBreakdown=document.createElement('div');
+  candleBreakdown.innerHTML=table(['RECORDED market outcome state','Horizon (minutes)','Rows in latest sample'],
+   (m.outcomeStatuses||[]).map(t=>[t.outcomeStatus,t.horizonMinutes,t.rows]));
+  container.append(candleBreakdown);
   decode.textContent='TRANSACTION DECODING // Counts above are exact signature joins only. '+
    'Source signatures have NOT all been decoded; signer, buy/sell and executable prices remain unverified.';
   candle.textContent='MARKET CANDLES // Latest '+m.outcomeSampled+' outcome rows: '+
