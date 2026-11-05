@@ -18,9 +18,17 @@ for(let i=0;i<5;i++){
 }
 if(health?.build!=='GOGET_2026_11_05_SOURCE_CYCLE_V1'||health.enabled!==true||
  health.trades!==0)throw Error('RPC_DEPLOYED_REVISION_UNVERIFIED');
-const response=await fetch(url+'/run',{method:'POST',
- headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(45000)});
-const report=await response.json().catch(()=>null);
+let response=null,report=null;
+for(let attempt=0;attempt<7;attempt++){
+ response=await fetch(url+'/run',{method:'POST',
+  headers:{authorization:'Bearer '+token},signal:AbortSignal.timeout(45000)});
+ report=await response.json().catch(()=>null);
+ // Newly added Wrangler Worker secrets can take time to propagate. A verified
+ // authentication rejection happens BEFORE any Helius calls or D1 writes.
+ // Do NOT retry HTTP 503, partial sources, quota trips, or malformed success.
+ if(response.status!==401||report?.error!=='UNAUTHORIZED')break;
+ if(attempt<6)await new Promise(resolve=>setTimeout(resolve,1600));
+}
 if(response.status!==200||report?.status!=='SOURCES_ARCHIVED_GAPS_DISCLOSED'||
  report.walletsExpected!==3||report.walletsScanned!==3||
  report.heliusCalls!==3||report.creditsReserved!==30||report.dbReads>3||
