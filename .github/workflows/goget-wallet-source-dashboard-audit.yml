@@ -1,0 +1,55 @@
+name: GOGET Dashboard Wallet Source — evidence audit (no Helius)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/goget-wallet-source-dashboard-audit.yml'
+      - 'src/goget-wallet-source-quality-panel.mjs'
+      - 'tests/goget-wallet-source-quality-panel.test.mjs'
+      - 'scripts/goget-wallet-source-quality-audit.mjs'
+      - 'scripts/goget-source-control-audit.mjs'
+      - 'scripts/goget-unattended-status.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-wallet-source-dashboard-audit.yml'
+      - 'src/goget-wallet-source-quality-panel.mjs'
+      - 'tests/goget-wallet-source-quality-panel.test.mjs'
+      - 'scripts/goget-wallet-source-quality-audit.mjs'
+      - 'scripts/goget-source-control-audit.mjs'
+      - 'scripts/goget-unattended-status.mjs'
+  schedule:
+    - cron: '49 */3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-wallet-source-dashboard-quality
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify all provider-independent source, decoding and OHLCV gap classifications
+        run: |
+          node --check src/goget-wallet-source-quality-panel.mjs
+          node --check scripts/goget-wallet-source-quality-audit.mjs
+          node --test tests/goget-wallet-source-quality-panel.test.mjs
+      - name: Read actual exact 3-wallet D1 evidence, 10 bounded SELECTs, no source writes
+        if: github.event_name != 'pull_request'
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: node scripts/goget-wallet-source-quality-audit.mjs
+      - name: Preserve query evidence and all unknowns
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goget-wallet-source-dashboard-quality
+          path: goget-wallet-source-quality-audit.json
+          retention-days: 21
+          if-no-files-found: warn

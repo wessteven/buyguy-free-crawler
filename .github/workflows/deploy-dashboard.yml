@@ -13,6 +13,9 @@ on:
       - 'src/helius-fast-quotes.mjs'
       - 'tests/fast-radar.test.mjs'
       - 'src/discovery-quality.mjs'
+      - 'src/goget-wallet-source-quality-panel.mjs'
+      - 'tests/goget-wallet-source-quality-panel.test.mjs'
+      - 'scripts/goget-wallet-source-quality-audit.mjs'
       - 'src/clean-slate.mjs'
       - 'tests/clean-slate.test.mjs'
       - 'tests/discovery-quality.test.mjs'
@@ -63,6 +66,8 @@ jobs:
       - name: Test JavaScript and execute SQLite integration tests before deployment
         run: |
           node --check src/viewer.mjs
+          node --check src/goget-wallet-source-quality-panel.mjs
+          node --check scripts/goget-wallet-source-quality-audit.mjs
           node --check src/light-scan.mjs
           node --check src/score-journal.mjs
           node --check src/our-score-core.mjs
