@@ -29,7 +29,8 @@ export function evaluateRpcSourceLedger({cycles,states,signatures,gaps,rpcBudget
  const last=cycles.length?Math.max(...cycles.map(x=>Date.parse(x.slot_utc))):null;
  const lastAge=last===null?null:Math.max(0,Math.round((Date.parse(asOf)-last)/60000));
  const full=cron.filter(x=>x.wallets_scanned===3&&x.helius_calls===3&&
-    Number(x.credits_reserved)===30&&x.status==='SOURCES_ARCHIVED_GAPS_DISCLOSED');
+    Number(x.credits_reserved)===30&&Number(x.source_gaps??0)===0&&
+    x.status==='SOURCES_ARCHIVED_GAPS_DISCLOSED');
  const unresolved=wallets.reduce((n,w)=>n+w.currentlyUnresolvedGapWindows,0);
  const failures=cycles.filter(x=>x.status!=='SOURCES_ARCHIVED_GAPS_DISCLOSED').map(x=>({
     slot:x.slot_utc,trigger:x.trigger,status:x.status,scanned:x.wallets_scanned,
@@ -39,7 +40,8 @@ export function evaluateRpcSourceLedger({cycles,states,signatures,gaps,rpcBudget
  const reserved=Number(rpc?.reserved_credits??0),delivered=Number(webhook?.observed_deliveries??0);
  const status=wallets.some(x=>x.sourceState==='NEVER_CHECKED')?'MISSING_WALLET_SCOPE':
    !cron.length?'MANUAL_VERIFIED_CRON_NOT_YET_OBSERVED':
-   missing>0||lastAge>15||full.length<cron.length||unresolved>0?
+   missing>0||lastAge>15||full.length<cron.length||unresolved>0||
+   wallets.some(x=>x.sourceState!=='CHECKPOINT_CONNECTED')?
     'SOURCE_COVERAGE_INCOMPLETE_OR_GAPS':'RECORDED_CRON_CYCLES_THREE_WALLETS_NO_KNOWN_GAPS';
  return {status,asOf,expectedWallets:3,wallets,
   allSourceWalletsPresent:wallets.every(x=>x.sourceState!=='NEVER_CHECKED'),
@@ -47,6 +49,7 @@ export function evaluateRpcSourceLedger({cycles,states,signatures,gaps,rpcBudget
   completeThreeWalletCronCycles:full.length,missingIntervalsBetweenCronReceipts:missing,
   maxCronIntervalMinutes:maxStep?Math.round(maxStep/60000):null,
   lastRecordedCycleAgeMinutes:lastAge,failures,unresolvedGapWindows:unresolved,
+  sourceWalletsNotContiguouslyVerified:wallets.filter(x=>x.sourceState!=='CHECKPOINT_CONNECTED').length,
   utcBudget:{day,rpcCreditsReserved:reserved,webhookDeliveryEstimate:delivered,
    localCombinedEstimate:reserved+delivered,rpcHardCap:9000,localCombinedCeiling:20000,
    actualHeliusAccountCreditsNotMeasured:true},
