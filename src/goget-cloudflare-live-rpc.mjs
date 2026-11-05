@@ -41,9 +41,10 @@ export function interpretPage(rows,previousHead){
  const newRows=anchored?rows.slice(0,index):rows;
  return {previousHead,head:rows[0]?.signature??previousHead,
     anchored,baseline:previousHead===null,
-    gap:previousHead!==null&&!anchored,
+    gap:previousHead!==null&&!anchored&&rows.length>0,
     newRows,scanned:rows.length,
     status:previousHead===null?'BASELINE_HISTORY_UNVERIFIED':
+      rows.length===0?'EMPTY_PROVIDER_PAGE_UNVERIFIED':
       anchored?'CHECKPOINT_CONNECTED':'UNRESOLVED_SOURCE_INTERVAL'};
 }
 export function planBudget({newReserved,webhookDeliveries,increment=30,armed}){
