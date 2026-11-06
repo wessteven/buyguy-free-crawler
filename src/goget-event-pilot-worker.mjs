@@ -50,6 +50,11 @@ export class GogetEventPilot {
   sql.exec('CREATE INDEX IF NOT EXISTS event_pilot_events_time ON event_pilot_events(pool,received_ms)');
   sql.exec('CREATE TABLE IF NOT EXISTS event_pilot_segments(start_ms INTEGER PRIMARY KEY,end_ms INTEGER)');
   sql.exec('CREATE TABLE IF NOT EXISTS event_pilot_stats(key TEXT PRIMARY KEY,value INTEGER NOT NULL)');
+  // After isolate reconstruction, an old outbound socket's liveness is unknown.
+  // Invalidate unclosed segments rather than treating them as continuous proof.
+  const stale=sql.exec('SELECT COUNT(*) AS n FROM event_pilot_segments WHERE end_ms IS NULL').one().n;
+  if(stale){sql.exec('UPDATE event_pilot_segments SET end_ms=start_ms WHERE end_ms IS NULL');
+   incr(sql,'isolate_restart_gaps',stale);}
  }
  sql(){return this.ctx.storage.sql;}
  async fetch(request){
@@ -57,7 +62,12 @@ export class GogetEventPilot {
   try{
    if(path==='/start'&&request.method==='POST')return reply(await this.start());
    if(path==='/tick'&&request.method==='POST')return reply(await this.tick());
-   if(path==='/stop'&&request.method==='POST')return reply(await this.finish('MANUAL_STOP'));
+   if(path==='/stop'&&request.method==='POST'){
+    const r=await this.ctx.storage.get('pilot_run');
+    if(!r||r.status!=='ACTIVE')return reply({status:r?.status||'NOT_STARTED'});
+    r.end=Date.now();await this.ctx.storage.put('pilot_run',r);
+    return reply(await this.tick());
+   }
    if(path==='/status'&&request.method==='GET'){
     const r=await this.ctx.storage.get('pilot_run');
     return reply({run:r?{id:r.id,status:r.status,startedAt:stamp(r.start),endsAt:stamp(r.end),
@@ -127,6 +137,7 @@ export class GogetEventPilot {
    });
   });
   ws.addEventListener('message',event=>{
+   if(this.ws!==ws)return;
    try{
     const raw=event.data;
     if(typeof raw!=='string'||raw.length>PILOT.maxEventBytes)throw Error('PILOT_STREAM_MESSAGE_OVERSIZE');
@@ -158,8 +169,8 @@ export class GogetEventPilot {
     }else incr(this.sql(),'other_messages');
    }catch(e){incr(this.sql(),'stream_parse_errors');this.drop('STREAM_VALIDATION_FAILED');}
   });
-  ws.addEventListener('close',()=>this.drop('WEBSOCKET_CLOSED',false));
-  ws.addEventListener('error',()=>this.drop('WEBSOCKET_ERROR',false));
+  ws.addEventListener('close',()=>{if(this.ws===ws)this.drop('WEBSOCKET_CLOSED',false);});
+  ws.addEventListener('error',()=>{if(this.ws===ws)this.drop('WEBSOCKET_ERROR',false);});
  }
  drop(reason,close=true){
   if(!this.ws&&!this.ready)return;
@@ -224,9 +235,16 @@ export class GogetEventPilot {
    'UPDATE goget_event_pilot_runs SET streamed_bytes=?,unique_events=?,duplicate_events=?,streamed_estimated_credits=?,ws_connections=?,stream_gap_count=? WHERE run_id=?',
    stats.streamed_bytes||0,stats.unique_events||0,stats.duplicate_events||0,
    Math.ceil((stats.streamed_bytes||0)/100000)*2,stats.ws_connections||0,stats.disconnects||0,run.id);
-  if(now>=run.end||stats.limit_breaches)return this.finish(stats.limit_breaches?'LIMIT_REACHED':'TIMED_END');
+  if(now>=run.end||stats.limit_breaches){
+   // Bounded drain: never finalize while past complete-minute windows are unflushed.
+   if(run.nextMinute<minuteStart(end)){
+    await this.ctx.storage.setAlarm(Date.now()+20000);
+    return {status:'PENDING_COMPLETE_WINDOW_DRAIN',remainingMinutes:(minuteStart(end)-run.nextMinute)/60000};
+   }
+   return this.finish(stats.limit_breaches?'LIMIT_REACHED':'TIMED_END');
+  }
   if(!this.ws||this.ws.readyState>1){
-   this.drop('RECONNECT_REQUIRED',false);
+   if(this.ws)this.drop('RECONNECT_REQUIRED',false);
    this.connect(run);
   }
   return {status:'COLLECTING',runId:run.id,streamedBytes:stats.streamed_bytes||0,
@@ -278,6 +296,7 @@ export class GogetEventPilot {
    'CONTINUOUS_STREAM',run.id);
   const fullWindows=Number(audit[0]?.total||0)>=PILOT.pools*58&&Number(audit[0]?.incomplete||0)===0;
   run.status=reason==='TIMED_END'&&full===PILOT.pools&&fullWindows&&
+    (stats.isolate_restart_gaps||0)===0&&
     (stats.disconnects||0)===0&&(stats.stream_parse_errors||0)===0&&
     (stats.subscription_rejections||0)===0?
     'RECORDED_WITH_BOUNDED_RPC_COVERAGE':'PARTIAL_OR_UNVERIFIED_COVERAGE';
