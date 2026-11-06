@@ -36,11 +36,12 @@ function incr(sql,key,amount=1){
 const asofSQL=`SELECT seen_at,price,buys_m5,sells_m5 FROM observations
  WHERE asset_key=? AND pool=? AND seen_at<=?
  ORDER BY seen_at DESC LIMIT 1`;
-const rosterSQL=`SELECT a.pool,a.address AS mint,a.asset_key,o.seen_at AS quote_at
+const rosterSQL=`SELECT a.pool,a.address AS mint,a.asset_key,MAX(o.seen_at) AS quote_at
  FROM assets a JOIN observations o ON o.asset_key=a.asset_key AND o.pool=a.pool
  WHERE a.chain='solana' AND a.pool IS NOT NULL AND o.price>0
  AND o.seen_at>=? AND o.seen_at<=?
- ORDER BY a.pinned DESC,a.score DESC,o.seen_at DESC LIMIT 100`;
+ GROUP BY a.asset_key,a.pool,a.address
+ ORDER BY MAX(a.pinned) DESC,MAX(a.score) DESC,quote_at DESC LIMIT 60`;
 export class GogetEventPilot {
  constructor(ctx,env){
   this.ctx=ctx;this.env=env;this.ws=null;this.subToPool=new Map();
@@ -152,6 +153,7 @@ export class GogetEventPilot {
      if(!pool)throw Error('PILOT_UNKNOWN_SUBSCRIPTION_ACK');
      this.subToPool.set(parsed.subscription,pool);
      if(this.subToPool.size===run.pools.length&&!this.ready){
+      incr(this.sql(),'full_acknowledgement_sets');
       this.ready=true;
       this.sql().exec('INSERT INTO event_pilot_segments(start_ms,end_ms) VALUES(?,NULL)',Date.now());
      }
