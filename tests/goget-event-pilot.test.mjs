@@ -42,9 +42,9 @@ test('scheduled comparison must be fresh and decision-time only',()=>{
  assert.equal(classifyScheduled({buys:8,sells:2,quoteAt:new Date(now+1000).toISOString(),asOf:now}).triggered,null);
  assert.equal(classifyScheduled({buys:8,sells:2,quoteAt:new Date(now-11*60000).toISOString(),asOf:now}).triggered,null);
 });
-test('bounded RPC page cannot prove complete when 100 signatures all in-window',()=>{
+test('bounded RPC page cannot prove complete when 1000 signatures all in-window',()=>{
  const start=now-300000,end=now;
- const page=Array.from({length:100},(_,i)=>({signature:sig(String(i%8+1)),slot:500-i,blockTime:Math.floor((now-1000)/1000)}));
+ const page=Array.from({length:PILOT.maxRpcPage},(_,i)=>({signature:sig(String(i%8+1)),slot:500-i,blockTime:Math.floor((now-1000)/1000)}));
  const seen=new Set([page[0].signature]);
  const outcome=rpcPageCoverage(page,start,end,seen);
  assert.equal(outcome.complete,false);
