@@ -9,7 +9,7 @@ async function live(){
    'User-Agent':'GOGET-Independent-Evidence-Audit/1.0',accept:'application/json'},
    signal:AbortSignal.timeout(12000)});
  const j=await r.json().catch(()=>null);
- if(r.status!==200||j?.build!=='GOGET_EVENT_STREAM_PILOT_2026_11_07_V1')
+ if(r.status!==200||j?.build!=='GOGET_EVENT_STREAM_PILOT_2026_11_07_V2_HELIUS_ADMISSION')
   throw Error('PILOT_STATUS_UNVERIFIED_HTTP_'+r.status);
  return j;
 }
