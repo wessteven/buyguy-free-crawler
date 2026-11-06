@@ -119,6 +119,58 @@ jobs:
               raise SystemExit('PILOT_SCHEMA_D1_UNVERIFIED')
           print('GOGET_EVENT_PILOT_ONLY_NEW_D1_SCHEMA',len(statements))
           PY
+      - name: Ensure ONLY the isolated pilot Worker is registered before Wrangler deployment
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DEPLOY_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os,json
+          from urllib.request import Request,urlopen
+          from urllib.error import HTTPError
+          account=os.environ.get('CF_ACCOUNT_ID','')
+          token=os.environ.get('CF_DEPLOY_API_TOKEN','')
+          if len(account)<16 or len(token)<16:
+            raise SystemExit('PILOT_WORKER_BOOTSTRAP_CREDENTIALS_MISSING')
+          name='goget-event-stream-pilot'
+          base=f'https://api.cloudflare.com/client/v4/accounts/{account}/workers/workers'
+          def call(method,url,body=None):
+            data=None if body is None else json.dumps(body).encode()
+            req=Request(url,data=data,method=method,headers={
+              'Authorization':'Bearer '+token,
+              'Accept':'application/json','Content-Type':'application/json'})
+            try:
+              with urlopen(req,timeout=25) as response:
+                status=response.status;result=json.load(response)
+            except HTTPError as err:
+              status=err.code
+              try:result=json.load(err)
+              except:result={}
+            return status,result
+          status,payload=call('GET',base+'/'+name)
+          if status==200 and payload.get('success'):
+            found=payload.get('result') or {}
+            if found.get('name')!=name:
+              raise SystemExit('PILOT_WORKER_NAME_MISMATCH')
+            print('PILOT_WORKER_REGISTRY_ALREADY_EXISTS')
+          elif status==404 and any(str(e.get('code'))=='10007' for e in payload.get('errors',[])):
+            print('PILOT_WORKER_REGISTRY_MISSING_CREATING_ONLY_NAMED_PILOT')
+            status,result=call('POST',base,{'name':name})
+            if not (status in (200,201) and result.get('success') and
+                    (result.get('result') or {}).get('name')==name):
+              codes=[e.get('code') for e in result.get('errors',[]) if isinstance(e,dict)]
+              print('PILOT_WORKER_REGISTRATION_FAILED',status,codes)
+              raise SystemExit('PILOT_WORKER_BOOTSTRAP_REFUSED')
+            print('PILOT_WORKER_REGISTRATION_CREATED')
+          else:
+            codes=[e.get('code') for e in payload.get('errors',[]) if isinstance(e,dict)]
+            print('PILOT_WORKER_REGISTRY_READ_UNVERIFIED',status,codes)
+            raise SystemExit('PILOT_WORKER_BOOTSTRAP_REFUSED')
+          status,proof=call('GET',base+'/'+name)
+          if status!=200 or not proof.get('success') or (proof.get('result') or {}).get('name')!=name:
+            raise SystemExit('PILOT_WORKER_REGISTRY_POSTCHECK_UNVERIFIED')
+          print('PILOT_WORKER_REGISTRY_EXACT_NAME_VERIFIED')
+          PY
       - name: Deploy isolated Worker + new SQLite Durable Object class
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
