@@ -39,6 +39,15 @@ jobs:
           node --test tests/*.test.mjs
       - name: Existing Python tests
         run: python -m unittest discover -s tests -v
+      - name: Cloudflare bundler dry-run catches Worker and Durable Object compatibility errors
+        run: |
+          npm install --no-audit --no-fund
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('wrangler.event-pilot.toml')
+          p.write_text(p.read_text().replace('REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID','a'*32))
+          PY
+          npx wrangler deploy --config wrangler.event-pilot.toml --dry-run --outdir /tmp/goget-event-pilot-bundle
       - name: New additive SQLite schema remains valid and idempotent
         run: |
           python - <<'PY'
