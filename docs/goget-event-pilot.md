@@ -125,7 +125,7 @@ outcome denominators, and both provider usage ledgers.
 Go only after the above checks. The original collector and project
 coverage must never be silently reduced to make room for this pilot.
 
-## Fresh exact-pool admission after 2026-11-07 audit
+## Superseded: Dex aggregate admission investigated on 2026-11-07
 
 The D1 readiness audit found **0** exact Solana pool `observations` fresher than
 30 minutes, but **47** with observations within two hours and **5** exact-pool
@@ -149,3 +149,34 @@ one-hour outcome evaluation must still show absent scheduled baseline
 data as **unknown**, not infer an answer from this new admission quote.
 The user-requested fair stream versus scheduled comparison only exists if
 prospective as-of and later exact-pool prices both become available.
+
+## Active admission: independent on-chain pool identity (2026-11-07)
+
+The exact Dex pool validation was **not** successful in production: the provider
+returned HTTP 429. We preserve that finding; no Dex cooldowns are shortened or
+modified. One independent public Solana `getMultipleAccounts` probe returned
+**28 exact owner/layout/mint-verified accounts out of 30**: 25 PumpSwap, 3
+Raydium CPMM, 2 unsupported programs, no mint mismatches (source GitHub
+workflow: `goget-event-pilot-onchain-probe.yml`).
+
+The active stream admission now:
+- Reads up to 30 exact recent existing GOGET pool identities (historical
+  observations no older than two hours, identity only).
+- Calls public Solana RPC **once**, `getMultipleAccounts`, commitment
+  `confirmed`, base64 full state, 16-second timeout and 500k response cap.
+  This is not a Helius call and does not alter the separate Dex cooldown.
+- Checks Solana account program owner, trusted PumpSwap/Raydium layout
+  discriminators and exact original target mint. Raydium pools must have
+  swap flag enabled. Requires **ten** matched accounts; otherwise no
+  stream starts or Helius credits are reserved.
+- Retains all original 200-credit Helius forward reservation, daily caps,
+  original webhook-control latch, 10 pools, 60-minute duration and exact
+  retrospective RPC reconciliation.
+- Records source, confirmed slot, verified program owner, exact mint,
+  receipt timestamp and historical baseline observation timestamp in
+  the run notes. **No current USD price, vault reserve, executable depth,
+  future momentum or trade safety is asserted.**
+
+This displaces, rather than weakens, the rate-limited Dex admission route.
+The scheduled comparator must still be supported by fresh original
+`observations`; missing comparison rows remain **unknown**.
