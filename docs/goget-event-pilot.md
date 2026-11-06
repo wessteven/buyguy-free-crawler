@@ -150,7 +150,7 @@ data as **unknown**, not infer an answer from this new admission quote.
 The user-requested fair stream versus scheduled comparison only exists if
 prospective as-of and later exact-pool prices both become available.
 
-## Active admission: independent on-chain pool identity (2026-11-07)
+## Superseded: public Solana RPC on-chain admission (2026-11-07)
 
 The exact Dex pool validation was **not** successful in production: the provider
 returned HTTP 429. We preserve that finding; no Dex cooldowns are shortened or
@@ -180,3 +180,37 @@ The active stream admission now:
 This displaces, rather than weakens, the rate-limited Dex admission route.
 The scheduled comparator must still be supported by fresh original
 `observations`; missing comparison rows remain **unknown**.
+
+## Active quota-guarded Helius on-chain admission (2026-11-07, V2)
+
+The **GitHub runner** public RPC check confirmed 28/30 on-chain candidate
+pool/mint identities, but the deployed **Cloudflare Worker** could not reach
+that public RPC endpoint (HTTP error). The current code now uses the
+existing Helius RPC endpoint for the *same one batched*
+`getMultipleAccounts` request (up to 30 accounts, 16s/500k caps), relying
+on official PumpSwap/Raydium binary layouts and exact pool+mint matching.
+It does not call DexScreener or change shared provider cooldown state.
+
+Before the FIRST billable Helius request the one-time admission attempt is
+persisted in `goget_event_pilot_runs` for the UTC day. The complete
+**200-credit reservation** is atomically made in
+`goget_rpc_source_budget`, protecting the original remaining 3-wallet
+forward cycles, separate decode reserve, original webhook ARMED control and
+20k combined cap. The admission request itself is pre-recorded as
+`rpc_attempts=1`, even if the HTTP call fails. The initial verified
+roster is written only after ten exact owner/layout/mint proofs succeed.
+Every failure remains explicit as ADMISSION_UNVERIFIED / BUDGET_DEFERRED
+with no started WebSocket.
+
+At the end, the ledger reports **one Helius admission attempt plus ten
+independent archival reconciliation attempts** (maximum eleven calls
+total), while always recording provider billing as unknown until actual
+project usage is measured. Ten subscriptions still require real ACKs,
+continuous minutes and end-of-run independently verified signature
+coverage. The current code never equates a pool account, WebSocket
+notification or aggregate quote to an executable trade.
+
+A one-day admitted/failed attempt cannot rearm by silently changing a
+date or rotating a ledger; this prevents repeated credits from appearing
+to be free. The streaming window remains exactly sixty minutes and
+paper-only.
