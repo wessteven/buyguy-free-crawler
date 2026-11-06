@@ -42,7 +42,7 @@ No slippage-adjusted order fills or statistical significance are claimed.
   coverage without a persisted continuous subscription segment.
 - All ten pools are reconciled independently by one bounded archival
   `getSignaturesForAddress(limit=100)` request each.
-- A page of 100 still inside the pilot interval, a missing block timestamp,
+- A page of 1,000 still inside the pilot interval, a missing block timestamp,
   a provider error, a disconnect, a worker restart, stream parse errors, or
   missing one-minute windows means **partial / unverified coverage**.
 - WebSocket events are de-duplicated by exact pool + signature in SQLite
