@@ -112,3 +112,37 @@ export function pairedResult(rows){
   scheduled:avg('scheduled_trigger'),unknown:rows.length-usable.length,
   caveat:'ACTIVITY_VS_M5_BUY_RATIO_PROXIES_NOT_EQUAL_TRADING_SIGNALS;SMALL_PILOT_NO_PROOF_OF_ALPHA'};
 }
+
+// Independent, receipt-timestamped public aggregate verification. These are
+// indicative quotes, NOT chain-time trade executions or scheduled observations.
+export function verifyTenExactPools(candidates,pairs,receiptMs){
+ if(!Array.isArray(candidates)||candidates.length>60||!Array.isArray(pairs)||
+   pairs.length>150||!Number.isSafeInteger(receiptMs)||receiptMs<=0)
+    throw Error('PILOT_DEX_ADMISSION_SHAPE');
+ const byPair=new Map();
+ for(const p of pairs){
+  if(!validAddr(p?.pairAddress)||p.chainId!=='solana'||!validAddr(p.baseToken?.address))
+    continue;
+  const price=Number(p.priceUsd),liq=Number(p.liquidity?.usd);
+  if(!(price>0)||!Number.isFinite(price)||!(liq>=1000)||!Number.isFinite(liq))continue;
+  byPair.set(p.pairAddress,{mint:p.baseToken.address,priceUsd:price,liquidityUsd:liq});
+ }
+ const out=[],seen=new Set();
+ for(const c of candidates){
+  if(!validAddr(c?.pool)||!validAddr(c?.mint)||typeof c.asset_key!=='string'||
+    !c.asset_key||seen.has(c.pool))continue;
+  const previous=Date.parse(c.quote_at||'');
+  if(!Number.isFinite(previous)||previous>receiptMs||
+    receiptMs-previous>120*60000)continue;
+  const pair=byPair.get(c.pool);
+  if(!pair||pair.mint!==c.mint)continue;
+  seen.add(c.pool);
+  out.push({pool:c.pool,mint:c.mint,assetKey:c.asset_key,
+    baselineObservationAt:c.quote_at,admissionReceiptAt:new Date(receiptMs).toISOString(),
+    admissionPriceUsd:pair.priceUsd,admissionLiquidityUsd:pair.liquidityUsd,
+    admissionProvider:'DEX_SCREENER_PUBLIC_AGGREGATE_RECEIPT_ONLY'});
+  if(out.length===PILOT.pools)break;
+ }
+ if(out.length!==PILOT.pools)throw Error('PILOT_TEN_FRESH_EXACT_POOLS_REQUIRED');
+ return out;
+}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PILOT,freezePoolRoster,subscribePayload,parseWsFrame,classifyActivity,
- classifyScheduled,rpcPageCoverage,reserveForwardGuard,pairedResult} from '../src/goget-event-pilot-core.mjs';
+ classifyScheduled,rpcPageCoverage,reserveForwardGuard,pairedResult,verifyTenExactPools} from '../src/goget-event-pilot-core.mjs';
 const pubkey=n=>String(n).repeat(32),sig=n=>String(n).repeat(88),now=Date.parse('2026-11-07T01:20:00.000Z');
 const roster=Array.from({length:10},(_,i)=>({
  pool:pubkey('123456789A'[i]),mint:pubkey('B'),asset_key:'solana:'+i,
@@ -71,4 +71,20 @@ test('paired one-hour evaluation excludes missing prices and stream gaps',()=>{
  assert.deepEqual(x.stream,{alerts:1,positives:1,hitRate:1});
  assert.deepEqual(x.scheduled,{alerts:1,positives:0,hitRate:0});
  assert.equal(x.unknown,2);
+});
+
+test('independent Dex receipt admits only ten exactly matched pool+mint pairs with liquidity',()=>{
+ const candidates=roster.map(x=>({...x,quote_at:new Date(now-30*60000).toISOString()}));
+ const pairs=candidates.map(x=>({chainId:'solana',pairAddress:x.pool,
+  baseToken:{address:x.mint},priceUsd:'0.00002',liquidity:{usd:5000}}));
+ const out=verifyTenExactPools(candidates,pairs,now);
+ assert.equal(out.length,10);
+ assert.equal(out[0].admissionProvider,'DEX_SCREENER_PUBLIC_AGGREGATE_RECEIPT_ONLY');
+ assert.throws(()=>verifyTenExactPools(candidates,pairs.slice(0,9),now),/TEN_FRESH/);
+ assert.throws(()=>verifyTenExactPools(candidates,pairs.map((x,i)=>i===0?
+  {...x,baseToken:{address:pubkey('F')}}:x),now),/TEN_FRESH/);
+ assert.throws(()=>verifyTenExactPools(candidates,pairs.map((x,i)=>i===1?
+  {...x,liquidity:{usd:999}}:x),now),/TEN_FRESH/);
+ assert.throws(()=>verifyTenExactPools(candidates.map(x=>({...x,
+  quote_at:new Date(now-121*60000).toISOString()})),pairs,now),/TEN_FRESH/);
 });

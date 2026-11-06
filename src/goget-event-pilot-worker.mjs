@@ -1,7 +1,7 @@
 // GOGET independent, one-hour, 10-pool stream experiment.
 // NO trades, wallet signing, production source cursor changes, or quote substitution.
 import {PILOT,validAddr,freezePoolRoster,subscribePayload,parseWsFrame,
-  classifyActivity,classifyScheduled,rpcPageCoverage,minuteStart,pairedResult}
+  classifyActivity,classifyScheduled,rpcPageCoverage,minuteStart,pairedResult,verifyTenExactPools}
  from './goget-event-pilot-core.mjs';
 
 export const EVENT_PILOT_BUILD='GOGET_EVENT_STREAM_PILOT_2026_11_07_V1';
@@ -41,7 +41,7 @@ const rosterSQL=`SELECT a.pool,a.address AS mint,a.asset_key,MAX(o.seen_at) AS q
  WHERE a.chain='solana' AND a.pool IS NOT NULL AND o.price>0
  AND o.seen_at>=? AND o.seen_at<=?
  GROUP BY a.asset_key,a.pool,a.address
- ORDER BY MAX(a.pinned) DESC,MAX(a.score) DESC,quote_at DESC LIMIT 60`;
+ ORDER BY quote_at DESC,MAX(a.score) DESC LIMIT 30`;
 export class GogetEventPilot {
  constructor(ctx,env){
   this.ctx=ctx;this.env=env;this.ws=null;this.subToPool=new Map();
@@ -88,10 +88,38 @@ export class GogetEventPilot {
   const previous=await this.ctx.storage.get('pilot_run');
   if(previous)throw Error('PILOT_ALREADY_STARTED_NO_REARM');
   const now=Date.now(),today=stamp(now).slice(0,10);
-  const candidates=await rows(this.env.DB,rosterSQL,stamp(now-10*60000),stamp(now));
-  const roster=freezePoolRoster(candidates,now);
   if((await rows(this.env.DB,'SELECT run_id FROM goget_event_pilot_runs WHERE utc_day=?',today)).length)
     throw Error('PILOT_UTC_DAY_ALREADY_RUN');
+  // Archived as-of observations select candidate IDENTITY only, not today's price.
+  const candidates=await rows(this.env.DB,rosterSQL,stamp(now-120*60000),stamp(now));
+  if(candidates.length<PILOT.pools)throw Error('PILOT_INSUFFICIENT_RECENT_CANDIDATES');
+  const [leases,providerStates]=await Promise.all([
+    rows(this.env.DB,"SELECT name,expires_at FROM leases WHERE name IN ('discovery-provider:dex','fast-radar:dex-quotes') LIMIT 2"),
+    rows(this.env.DB,"SELECT until_ms FROM goget_pre_signal_provider_state WHERE name='dex' LIMIT 1")
+  ]);
+  if(leases.some(x=>Number(x.expires_at)>Date.now())||
+     providerStates.some(x=>Number(x.until_ms)>Date.now()))
+    throw Error('PILOT_SHARED_DEX_COOLDOWN');
+  const selected=[...new Set(candidates.map(x=>x.pool).filter(validAddr))].slice(0,30);
+  if(selected.length<PILOT.pools)throw Error('PILOT_INSUFFICIENT_DISTINCT_POOL_IDS');
+  let answer=null;
+  try{
+   const response=await fetch('https://api.dexscreener.com/latest/dex/pairs/solana/'+selected.join(','),{
+    headers:{accept:'application/json','User-Agent':'GOGET-Event-Pilot/1.0'},
+    signal:AbortSignal.timeout(12000)});
+   if(response.status===429)throw Error('PILOT_DEX_RATE_LIMITED');
+   if(!response.ok)throw Error('PILOT_DEX_UNAVAILABLE');
+   if(Number(response.headers?.get('content-length'))>450000)
+     throw Error('PILOT_DEX_RESPONSE_OVERSIZE');
+   const raw=await response.text();
+   if(raw.length>450000)throw Error('PILOT_DEX_RESPONSE_OVERSIZE');
+   answer=JSON.parse(raw);
+  }catch(e){
+    if(/^PILOT_[A-Z_]+$/.test(e?.message||''))throw e;
+    throw Error('PILOT_DEX_PROVIDER_UNVERIFIED');
+  }
+  const checkedAt=Date.now();
+  const roster=verifyTenExactPools(candidates,answer?.pairs,checkedAt);
   // Atomically reserve Helius capacity in the ORIGINAL shared 9k RPC ledger.
   // Protect all outstanding five-minute 3-wallet source cycles AND the
   // independent decode research budget; never bypass the webhook ARMED latch.
@@ -108,8 +136,13 @@ export class GogetEventPilot {
   if(granted!==1)throw Error('PILOT_SHARED_BUDGET_PROTECTED');
   const id=crypto.randomUUID(),end=now+PILOT.durationMs;
   await write(this.env.DB,
-    'INSERT INTO goget_event_pilot_runs(run_id,utc_day,started_at,ends_at,status,requested_pools,armed_pools,reserved_credits) VALUES(?,?,?,?,?,?,?,?)',
-    id,today,stamp(now),stamp(end),'ARMING',PILOT.pools,roster.length,PILOT.reserveHeliusCredits);
+    'INSERT INTO goget_event_pilot_runs(run_id,utc_day,started_at,ends_at,status,requested_pools,armed_pools,reserved_credits,notes) VALUES(?,?,?,?,?,?,?,?,?)',
+    id,today,stamp(now),stamp(end),'ARMING',PILOT.pools,roster.length,PILOT.reserveHeliusCredits,
+    JSON.stringify({admissionKind:'INDEPENDENT_PUBLIC_DEX_AGGREGATE_RECEIPT_ONLY',
+      checkedAt:stamp(checkedAt),requested:30,selected:roster.map(x=>({
+       pool:x.pool,mint:x.mint,baselineObservationAt:x.baselineObservationAt,
+       admissionPriceUsd:x.admissionPriceUsd,admissionLiquidityUsd:x.admissionLiquidityUsd
+      })),tradeExecutionProof:false}));
   for(const p of roster)await write(this.env.DB,
     'INSERT INTO goget_event_pilot_roster(run_id,pool,mint,asset_key) VALUES(?,?,?,?)',
     id,p.pool,p.mint,p.assetKey);
@@ -121,7 +154,8 @@ export class GogetEventPilot {
   this.connect(run);
   return {status:'ARMED_STREAM_CONNECTING',runId:id,requestedPools:PILOT.pools,
     selectedPools:roster.length,endsAt:stamp(end),reservedHeliusCredits:PILOT.reserveHeliusCredits,
-    proof:'ACKS_AND_RPC_RECONCILIATION_PENDING',tradeCertified:false};
+    proof:'ACKS_AND_RPC_RECONCILIATION_PENDING',
+    admission:'TEN_EXACT_POOL_AND_MINT_PUBLIC_AGGREGATE_QUOTES_RECEIVED',tradeCertified:false};
  }
  connect(run){
   if(Date.now()>=run.end||run.status!=='ACTIVE')return;

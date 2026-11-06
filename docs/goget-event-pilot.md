@@ -124,3 +124,28 @@ outcome denominators, and both provider usage ledgers.
 
 Go only after the above checks. The original collector and project
 coverage must never be silently reduced to make room for this pilot.
+
+## Fresh exact-pool admission after 2026-11-07 audit
+
+The D1 readiness audit found **0** exact Solana pool `observations` fresher than
+30 minutes, but **47** with observations within two hours and **5** exact-pool
+native candle sources within 30 minutes. Treat the old `observations` age
+as a defect/availability limitation; do **not** backdate these snapshots.
+
+The pilot now draws candidate **identities only** from the preceding two-hour
+observation window, checks all shared Dex/presignal cooldowns, performs
+**at most one** bounded public DexScreener exact-pair lookup (30 pools), and
+requires precisely ten exact matching Solana pair + base mint identities
+with positive price and reported liquidity >= $1,000. This is one receipt-
+timestamped indicative quote, *not* a provider-supplied chain event time,
+a guarantee of executable liquidity or proof of a real trade. An unsupported
+pair, mismatch, provider 429, timeout, incomplete quote response or fewer
+than ten eligible matches **fails closed** without reserving Helius calls.
+
+Admission proof (the exact ten pools, mint, quote receipt and provider
+reported liquidity) is stored in the new pilot run's existing `notes` field;
+existing scheduled observations are not modified. `/status` and the
+one-hour outcome evaluation must still show absent scheduled baseline
+data as **unknown**, not infer an answer from this new admission quote.
+The user-requested fair stream versus scheduled comparison only exists if
+prospective as-of and later exact-pool prices both become available.
