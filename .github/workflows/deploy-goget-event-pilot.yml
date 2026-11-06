@@ -1,0 +1,168 @@
+name: GOGET independent event-stream pilot — test and gated deploy
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-goget-event-pilot.yml'
+      - 'src/goget-event-pilot-*.mjs'
+      - 'tests/goget-event-pilot.test.mjs'
+      - 'sql/goget-event-pilot.sql'
+      - 'wrangler.event-pilot.toml'
+      - 'docs/goget-event-pilot.md'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-goget-event-pilot.yml'
+      - 'src/goget-event-pilot-*.mjs'
+      - 'tests/goget-event-pilot.test.mjs'
+      - 'sql/goget-event-pilot.sql'
+      - 'wrangler.event-pilot.toml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-event-stream-pilot
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Static checks and complete existing JavaScript regression set
+        run: |
+          node --check src/goget-event-pilot-core.mjs
+          node --check src/goget-event-pilot-worker.mjs
+          node --test tests/*.test.mjs
+      - name: Existing Python tests
+        run: python -m unittest discover -s tests -v
+      - name: New additive SQLite schema remains valid and idempotent
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          s=Path('sql/goget-event-pilot.sql').read_text()
+          db=sqlite3.connect(':memory:')
+          db.executescript(s)
+          db.executescript(s)
+          tables={row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          expected={'goget_event_pilot_runs','goget_event_pilot_roster',
+            'goget_event_pilot_windows','goget_event_pilot_outcomes',
+            'goget_event_pilot_reconciliation','goget_event_pilot_gaps'}
+          assert expected<=tables,expected-tables
+          assert {x for x in tables if x.startswith('goget_event_pilot_')}==expected
+          print('GOGET_EVENT_PILOT_SIX_ADDITIVE_TABLES_IDEMPOTENT')
+          PY
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install declared Wrangler dependency
+        run: npm install --no-audit --no-fund
+      - name: Bind EXISTING D1; no new database and no old tables overwritten
+        env:
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          d=os.environ.get('CF_DATABASE_ID','')
+          if len(d)<16:raise SystemExit('PILOT_ORIGINAL_D1_UNAVAILABLE')
+          p=Path('wrangler.event-pilot.toml')
+          p.write_text(p.read_text().replace('REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID',d))
+          PY
+      - name: Create ONLY idempotent experiment D1 tables and indexes
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os,json,sqlite3
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          a,d,t=[os.environ[k] for k in ('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')]
+          url=f'https://api.cloudflare.com/client/v4/accounts/{a}/d1/database/{d}/query'
+          script=Path('sql/goget-event-pilot.sql').read_text()
+          statements=[];piece=''
+          for line in script.splitlines(keepends=True):
+            if line.lstrip().startswith('--'):continue
+            piece+=line
+            if sqlite3.complete_statement(piece):
+              statements.append(piece.strip());piece=''
+          if piece.strip() or len(statements)!=8:raise SystemExit('PILOT_SCHEMA_STATEMENT_COUNT_UNVERIFIED')
+          for stmt in statements:
+            if not stmt.upper().startswith(('CREATE TABLE IF NOT EXISTS','CREATE INDEX IF NOT EXISTS')):
+              raise SystemExit('PILOT_SCHEMA_NONADDITIVE')
+            if 'goget_event_pilot_' not in stmt:raise SystemExit('PILOT_SCHEMA_SCOPE_UNVERIFIED')
+            req=Request(url,data=json.dumps({'sql':stmt,'params':[]}).encode(),
+              method='POST',headers={'authorization':'Bearer '+t,'content-type':'application/json'})
+            with urlopen(req,timeout=20) as response: body=json.load(response)
+            if body.get('success') is not True or body.get('result',[{}])[0].get('success') is not True:
+              raise SystemExit('PILOT_SCHEMA_D1_UNVERIFIED')
+          print('GOGET_EVENT_PILOT_ONLY_NEW_D1_SCHEMA',len(statements))
+          PY
+      - name: Deploy isolated Worker + new SQLite Durable Object class
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: npx wrangler deploy --config wrangler.event-pilot.toml
+      - name: Install narrowly scoped Helius streaming credential
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node -e 'const k=process.env.HELIUS_API_KEY;if(!k||k.length<12)process.exit(1);process.stdout.write(k)' |
+            npx wrangler secret put HELIUS_API_KEY --config wrangler.event-pilot.toml
+      - name: Install isolated authenticated pilot control (never expose raw admin token)
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          node -e 'const {createHmac}=require("node:crypto");const s=process.env.ADMIN_TOKEN;if(!s||s.length<24)process.exit(1);process.stdout.write(createHmac("sha256",s).update("GOGET:EVENT_PILOT:READ_ONLY:v1").digest("base64url"))' |
+            npx wrangler secret put GOGET_EVENT_PILOT_CONTROL_TOKEN --config wrangler.event-pilot.toml
+      - name: Verify service version and exact read-only design before arming
+        run: |
+          python - <<'PY'
+          import json,urllib.request
+          url='https://goget-event-stream-pilot.wessteven.workers.dev/health'
+          with urllib.request.urlopen(url,timeout=20) as resp:
+            x=json.load(resp)
+          assert x['build']=='GOGET_EVENT_STREAM_PILOT_2026_11_07_V1',x
+          assert x['maxPools']==10 and x['trades']==0 and x['durationMinutes']==60,x
+          print('EVENT_PILOT_DEPLOYED_BUILD_VERIFIED')
+          PY
+      - name: Arm one hour ONLY when full ten-pool roster and original budget safeguards pass
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os,json,hmac,hashlib,urllib.request,urllib.error
+          raw=os.environ['ADMIN_TOKEN']
+          token=hmac.new(raw.encode(),b'GOGET:EVENT_PILOT:READ_ONLY:v1',hashlib.sha256).digest()
+          import base64
+          key=base64.urlsafe_b64encode(token).rstrip(b'=').decode()
+          req=urllib.request.Request('https://goget-event-stream-pilot.wessteven.workers.dev/start',
+            data=b'',method='POST',headers={'authorization':'Bearer '+key})
+          try:
+            with urllib.request.urlopen(req,timeout=30) as resp:result=json.load(resp)
+          except urllib.error.HTTPError as e:
+            result=json.loads(e.read())
+            print('PILOT_FAIL_CLOSED',result.get('code',result.get('error')))
+            raise SystemExit('PILOT_NOT_ARMED_OR_COVERAGE_UNVERIFIED')
+          assert result.get('requestedPools')==10 and result.get('selectedPools')==10,result
+          assert result.get('reservedHeliusCredits')==200,result
+          print('EVENT_PILOT_ONE_HOUR_ARMED',result['runId'])
+          PY
