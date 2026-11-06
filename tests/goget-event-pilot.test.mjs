@@ -110,7 +110,7 @@ test('confirmed on-chain ten-pool admission rejects false owners, layouts, mints
 test('one Helius admission RPC is ledgered and fully reserved before it can be sent',()=>{
  const src=readFileSync(new URL('../src/goget-event-pilot-worker.mjs',import.meta.url),'utf8');
  const attempt=src.indexOf("'ADMISSION_BUDGET_PENDING'");
- const reserve=src.indexOf("'UPDATE goget_rpc_source_budget SET reserved_credits=reserved_credits+?'");
+ const reserve=src.indexOf("'UPDATE goget_rpc_source_budget SET reserved_credits=reserved_credits+? WHERE day=?'");
  const ledger=src.indexOf("'ADMISSION_RUNNING',PILOT.reserveHeliusCredits,1,id");
  const call=src.indexOf("method:'getMultipleAccounts'");
  const ws=src.indexOf("this.connect(run)");
