@@ -1,0 +1,55 @@
+name: GOGET event pilot Cloudflare deployment-state diagnosis (read only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/goget-event-pilot-cloudflare-diagnose.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect ONLY pilot Worker API registration; do not deploy or modify anything
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DEPLOY_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os,json
+          from urllib.request import Request,urlopen
+          from urllib.error import HTTPError,URLError
+          account=os.environ.get('CF_ACCOUNT_ID','')
+          token=os.environ.get('CF_DEPLOY_API_TOKEN','')
+          if len(account)<16 or len(token)<16:
+            raise SystemExit('PILOT_DEPLOY_DIAG_CREDENTIALS_UNAVAILABLE')
+          name='goget-event-stream-pilot'
+          root=f'https://api.cloudflare.com/client/v4/accounts/{account}'
+          # All paths scoped to the same, explicit isolated pilot name.
+          checks={
+            'legacy_script_settings':f'/workers/scripts/{name}/settings',
+            'legacy_script_subdomain':f'/workers/scripts/{name}/subdomain',
+            'beta_worker_registry':f'/workers/workers/{name}',
+            'script_deployments':f'/workers/scripts/{name}/deployments',
+          }
+          for label,path in checks.items():
+            req=Request(root+path,headers={'Authorization':'Bearer '+token,'Accept':'application/json'},method='GET')
+            status=None;body={}
+            try:
+              with urlopen(req,timeout=15) as r:
+                status=r.status;raw=r.read(200000)
+              try:body=json.loads(raw)
+              except:body={}
+            except HTTPError as e:
+              status=e.code
+              try:body=json.loads(e.read(20000))
+              except:body={}
+            except URLError:
+              print(label,'NETWORK_UNAVAILABLE');continue
+            errors=body.get('errors',[])
+            codes=[int(x['code']) for x in errors if isinstance(x,dict) and str(x.get('code','')).isdigit()]
+            print(label,'http=',status,'success=',body.get('success'),'cf_error_codes=',codes)
+          print('READ_ONLY_DIAG_COMPLETE_NO_SOURCE_OR_WORKER_MUTATIONS')
+          PY
