@@ -72,7 +72,7 @@ export class GogetEventPilot {
     const r=await this.ctx.storage.get('pilot_run');
     return reply({run:r?{id:r.id,status:r.status,startedAt:stamp(r.start),endsAt:stamp(r.end),
       pools:r.pools.length,lastFlushed:r.nextMinute?stamp(r.nextMinute):null}:null,
-      metrics:totalStats(this.sql()),build:EVENT_PILOT_BUILD});
+      metrics:totalStats(this.sql()),activeAcknowledgements:this.subToPool.size,build:EVENT_PILOT_BUILD});
    }
    return reply({error:'NOT_FOUND'},404);
   }catch(e){
