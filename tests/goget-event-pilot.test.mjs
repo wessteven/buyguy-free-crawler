@@ -4,7 +4,7 @@ import {PILOT,freezePoolRoster,subscribePayload,parseWsFrame,classifyActivity,
  classifyScheduled,rpcPageCoverage,reserveForwardGuard,pairedResult} from '../src/goget-event-pilot-core.mjs';
 const pubkey=n=>String(n).repeat(32),sig=n=>String(n).repeat(88),now=Date.parse('2026-11-07T01:20:00.000Z');
 const roster=Array.from({length:10},(_,i)=>({
- pool:pubkey(String(i+1).replace('0','A')),mint:pubkey('B'),asset_key:'solana:'+i,
+ pool:pubkey('123456789A'[i]),mint:pubkey('B'),asset_key:'solana:'+i,
  quote_at:new Date(now-1000).toISOString()
 }));
 test('requires exactly ten distinct, recent, Solana-shaped pool identities',()=>{
