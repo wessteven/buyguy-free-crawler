@@ -3,7 +3,7 @@
 export const PILOT=Object.freeze({
  pools:10,durationMs:60*60000,minuteMs:60000,
  maxWsBytes:4_000_000,maxUniqueEvents:12000,maxEventBytes:80000,
- maxRpcCalls:10,maxRpcPage:100,maxRpcBytes:240000,
+ maxRpcCalls:10,maxRpcPage:1000,maxRpcBytes:500000,
  reserveHeliusCredits:200,maxWsEstimatedCredits:80,
  perSignatureRpcCreditEstimate:10,
  sharedRpcDailyCap:9000,localHeliusDailyCap:20000,
@@ -19,7 +19,7 @@ export function freezePoolRoster(rows,asOf){
  if(!Array.isArray(rows)||!Number.isSafeInteger(asOf))throw Error('PILOT_ROSTER_INVALID');
  const found=[],seen=new Set();
  for(const r of rows){
-  if(!validAddr(r.pool)||!validAddr(r.mint)||seen.has(r.pool))continue;
+  if(!validAddr(r.pool)||!validAddr(r.mint)||typeof r.asset_key!=='string'||!r.asset_key||seen.has(r.pool))continue;
   const quoteTime=Date.parse(r.quote_at||'');
   if(!Number.isFinite(quoteTime)||quoteTime>asOf||asOf-quoteTime>10*60000)continue;
   seen.add(r.pool);found.push({pool:r.pool,mint:r.mint,assetKey:r.asset_key});
