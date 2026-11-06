@@ -187,6 +187,14 @@ export class GogetEventPilot {
   if(!run)return {status:'NOT_STARTED'};
   if(run.status!=='ACTIVE')return {status:run.status};
   const now=Date.now(),end=Math.min(now,run.end);
+  const statsBefore=totalStats(this.sql());
+  if(now>=run.end||statsBefore.limit_breaches){
+   // Cease outbound streaming promptly, even when D1 windows still need draining.
+   if(this.ready)this.sql().exec('UPDATE event_pilot_segments SET end_ms=? WHERE end_ms IS NULL',end);
+   this.ready=false;
+   if(this.ws&&this.ws.readyState<2)try{this.ws.close(1000,'pilot-ended');}catch{}
+   this.ws=null;
+  }
   // The last partial minute is excluded; every pool receives a row, including zero activity.
   const last=minuteStart(end);
   let persisted=0;
