@@ -6,7 +6,7 @@ import {PILOT,validAddr,freezePoolRoster,subscribePayload,parseWsFrame,
 import {PUMPSWAP,decodePumpSwapPool} from './pumpswap.mjs';
 import {RAYDIUM_CPMM,decodeRaydiumCpmmPool} from './raydium-cpmm.mjs';
 
-export const EVENT_PILOT_BUILD='GOGET_EVENT_STREAM_PILOT_2026_11_07_V1';
+export const EVENT_PILOT_BUILD='GOGET_EVENT_STREAM_PILOT_2026_11_07_V2_HELIUS_ADMISSION';
 const stamp=n=>new Date(n).toISOString();
 const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,
  headers:{'content-type':'application/json','cache-control':'no-store'}});
@@ -386,11 +386,11 @@ export class GogetEventPilot {
   await write(this.env.DB,
    'UPDATE goget_event_pilot_runs SET status=?,completed_at=?,streamed_bytes=?,unique_events=?,duplicate_events=?,streamed_estimated_credits=?,rpc_attempts=?,ws_connections=?,stream_gap_count=?,stop_reason=?,notes=? WHERE run_id=?',
    run.status,stamp(Date.now()),stats.streamed_bytes||0,stats.unique_events||0,
-   stats.duplicate_events||0,estimatedWs,attempted,stats.ws_connections||0,
+   stats.duplicate_events||0,estimatedWs,attempted+1,stats.ws_connections||0,
    stats.disconnects||0,reason,'WS estimated credits not Helius invoice; raw logs not swap proof',run.id);
   return {status:run.status,runId:run.id,requestedPools:PILOT.pools,
    reconciledCompletePools:full,unverifiedPools:unknown,wsEstimatedCredits:estimatedWs,
-   rpcEstimatedCredits:attempted*10,reservedCredits:PILOT.reserveHeliusCredits,
+   rpcEstimatedCredits:(attempted+1)*10,reservedCredits:PILOT.reserveHeliusCredits,
    providerBilledCredits:null,cloudflareBilledUsd:null,tradeCertified:false};
  }
  async alarm(){try{await this.tick();}catch(e){console.error('GOGET_EVENT_PILOT_ALARM_FAILURE',String(e.message).slice(0,60));}}
