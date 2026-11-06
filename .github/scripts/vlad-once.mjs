@@ -26,7 +26,26 @@ class Query{
  async all(){const r=await request(this.sql,this.args);return {results:r.results||[]};}
  async run(){const r=await request(this.sql,this.args);return {success:true,meta:r.meta||{}};}
 }
-const DB={prepare(sql){return new Query(sql);},async batch(q){for(const stmt of q)await stmt.run();}};
+const DB={
+ prepare(sql){return new Query(sql);},
+ async batch(q){
+  // D1 REST accepts multi-row prepared INSERTs. Avoid one HTTPS request per event.
+  if(!q.length)return [];
+  const sql=q[0].sql;
+  if(!q.every(x=>x.sql===sql))throw new Error('MIXED_BATCH_SQL_REJECTED');
+  const parts=/^(.*?\bVALUES)\s*(\(.*\))\s*$/is.exec(sql);
+  if(!parts || !/^\s*INSERT OR IGNORE INTO vladwatch_events\b/i.test(sql))throw new Error('BATCH_INSERT_ONLY_GATE');
+  const results=[];
+  for(let i=0;i<q.length;i+=20){
+   const chunk=q.slice(i,i+20);
+   const multiSql=parts[1]+' '+chunk.map(()=>parts[2]).join(', ');
+   const params=chunk.flatMap(x=>x.args);
+   // 20 events x 19 parameters = 380 parameters, within conservative D1 limits.
+   results.push(await request(multiSql,params));
+  }
+  return results;
+ }
+};
 const result=await runCollector({DB},'github-one-shot-live-bootstrap');
 console.log('VLAD_BOOTSTRAP_UTC',new Date().toISOString());
 console.log('VLAD_BOOTSTRAP_RESULT',JSON.stringify(result));
