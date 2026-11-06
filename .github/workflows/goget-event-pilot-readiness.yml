@@ -1,0 +1,28 @@
+name: GOGET event-stream readiness and provider metering — read only
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/goget-event-pilot-readiness.mjs'
+      - '.github/workflows/goget-event-pilot-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Read-only exact-pool D1 freshness, stream receipts, and Cloudflare measured usage
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+          CF_DEPLOY_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          HELIUS_PROJECT_ID: ${{ secrets.HELIUS_PROJECT_ID }}
+        run: |
+          node --check scripts/goget-event-pilot-readiness.mjs
+          node scripts/goget-event-pilot-readiness.mjs
