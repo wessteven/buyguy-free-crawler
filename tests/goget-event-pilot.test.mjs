@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PILOT,freezePoolRoster,subscribePayload,parseWsFrame,classifyActivity,
- classifyScheduled,rpcPageCoverage,reserveForwardGuard,pairedResult,verifyTenExactPools} from '../src/goget-event-pilot-core.mjs';
+ classifyScheduled,rpcPageCoverage,reserveForwardGuard,pairedResult,verifyTenExactPools,verifyTenDecodedPoolIdentities} from '../src/goget-event-pilot-core.mjs';
 const pubkey=n=>String(n).repeat(32),sig=n=>String(n).repeat(88),now=Date.parse('2026-11-07T01:20:00.000Z');
 const roster=Array.from({length:10},(_,i)=>({
  pool:pubkey('123456789A'[i]),mint:pubkey('B'),asset_key:'solana:'+i,
@@ -87,4 +87,21 @@ test('independent Dex receipt admits only ten exactly matched pool+mint pairs wi
   {...x,liquidity:{usd:999}}:x),now),/TEN_FRESH/);
  assert.throws(()=>verifyTenExactPools(candidates.map(x=>({...x,
   quote_at:new Date(now-121*60000).toISOString()})),pairs,now),/TEN_FRESH/);
+});
+
+test('confirmed on-chain ten-pool admission rejects false owners, layouts, mints and stale IDs',()=>{
+ const sources=roster.map(x=>({...x,quote_at:new Date(now-30*60000).toISOString()}));
+ const proofs=sources.map(x=>({pool:x.pool,mint:x.mint,owner:'pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA',
+  protocol:'PUMPSWAP',slot:466140205,ownerVerified:true,layoutVerified:true,mintMatched:true}));
+ const good=verifyTenDecodedPoolIdentities(sources,proofs,now);
+ assert.equal(good.length,10);
+ assert.equal(good[0].admissionProvider,'SOLANA_PUBLIC_CONFIRMED_POOL_ACCOUNT');
+ assert.equal(good[0].priceVerified,false);
+ assert.equal(good[0].liquidityVerified,false);
+ const altered=(field,value)=>proofs.map((x,i)=>i===0?{...x,[field]:value}:x);
+ assert.throws(()=>verifyTenDecodedPoolIdentities(sources,altered('owner',pubkey('A')),now),/TEN_ONCHAIN/);
+ assert.throws(()=>verifyTenDecodedPoolIdentities(sources,altered('layoutVerified',false),now),/TEN_ONCHAIN/);
+ assert.throws(()=>verifyTenDecodedPoolIdentities(sources,altered('mintMatched',false),now),/TEN_ONCHAIN/);
+ assert.throws(()=>verifyTenDecodedPoolIdentities(sources.slice(0,9),proofs.slice(0,9),now),/TEN_ONCHAIN/);
+ assert.throws(()=>verifyTenDecodedPoolIdentities(sources.map(x=>({...x,quote_at:new Date(now-121*60000).toISOString()})),proofs,now),/TEN_ONCHAIN/);
 });

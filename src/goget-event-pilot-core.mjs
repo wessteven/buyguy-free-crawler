@@ -1,3 +1,5 @@
+import {PUMPSWAP} from './pumpswap.mjs';
+import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
 // Isolated GOGET event-stream research pilot; pool mentions are NOT verified trades.
 // Research-only, never sends a transaction and never changes production source cursors.
 export const PILOT=Object.freeze({
@@ -144,5 +146,35 @@ export function verifyTenExactPools(candidates,pairs,receiptMs){
   if(out.length===PILOT.pools)break;
  }
  if(out.length!==PILOT.pools)throw Error('PILOT_TEN_FRESH_EXACT_POOLS_REQUIRED');
+ return out;
+}
+
+// Admissible on-chain evidence must be decoded from CURRENT confirmed pool state.
+// No price, liquidity, swap execution or trade result is inferred from pool existence.
+export function verifyTenDecodedPoolIdentities(candidates,proofs,asOf){
+ if(!Array.isArray(candidates)||candidates.length>30||!Array.isArray(proofs)||
+  proofs.length!==candidates.length||!Number.isSafeInteger(asOf)||asOf<=0)
+  throw Error('PILOT_ONCHAIN_ADMISSION_SHAPE');
+ const out=[],seen=new Set();
+ for(let i=0;i<candidates.length;i++){
+  const c=candidates[i],p=proofs[i];
+  if(!validAddr(c?.pool)||!validAddr(c?.mint)||typeof c.asset_key!=='string'||
+    !c.asset_key||seen.has(c.pool))continue;
+  const t=Date.parse(c.quote_at||'');
+  if(!Number.isFinite(t)||t>asOf||asOf-t>120*60000)continue;
+  if(!p||p.pool!==c.pool||p.mint!==c.mint||!validAddr(p.owner)||
+   !Number.isSafeInteger(p.slot)||p.slot<=0||p.ownerVerified!==true||
+   p.layoutVerified!==true||p.mintMatched!==true||
+   !((p.protocol==='PUMPSWAP'&&p.owner===PUMPSWAP)||
+     (p.protocol==='RAYDIUM_CPMM'&&p.owner===RAYDIUM_CPMM)))continue;
+  seen.add(c.pool);
+  out.push({pool:c.pool,mint:c.mint,assetKey:c.asset_key,
+   baselineObservationAt:c.quote_at,admissionReceiptAt:new Date(asOf).toISOString(),
+   admissionSlot:p.slot,admissionOwner:p.owner,admissionProtocol:p.protocol,
+   admissionProvider:'SOLANA_PUBLIC_CONFIRMED_POOL_ACCOUNT',
+   liquidityVerified:false,priceVerified:false});
+  if(out.length===PILOT.pools)break;
+ }
+ if(out.length!==PILOT.pools)throw Error('PILOT_TEN_ONCHAIN_POOL_IDENTITIES_REQUIRED');
  return out;
 }

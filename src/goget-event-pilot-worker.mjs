@@ -1,8 +1,10 @@
 // GOGET independent, one-hour, 10-pool stream experiment.
 // NO trades, wallet signing, production source cursor changes, or quote substitution.
 import {PILOT,validAddr,freezePoolRoster,subscribePayload,parseWsFrame,
-  classifyActivity,classifyScheduled,rpcPageCoverage,minuteStart,pairedResult,verifyTenExactPools}
+  classifyActivity,classifyScheduled,rpcPageCoverage,minuteStart,pairedResult,verifyTenDecodedPoolIdentities}
  from './goget-event-pilot-core.mjs';
+import {PUMPSWAP,decodePumpSwapPool} from './pumpswap.mjs';
+import {RAYDIUM_CPMM,decodeRaydiumCpmmPool} from './raydium-cpmm.mjs';
 
 export const EVENT_PILOT_BUILD='GOGET_EVENT_STREAM_PILOT_2026_11_07_V1';
 const stamp=n=>new Date(n).toISOString();
@@ -93,33 +95,48 @@ export class GogetEventPilot {
   // Archived as-of observations select candidate IDENTITY only, not today's price.
   const candidates=await rows(this.env.DB,rosterSQL,stamp(now-120*60000),stamp(now));
   if(candidates.length<PILOT.pools)throw Error('PILOT_INSUFFICIENT_RECENT_CANDIDATES');
-  const [leases,providerStates]=await Promise.all([
-    rows(this.env.DB,"SELECT name,expires_at FROM leases WHERE name IN ('discovery-provider:dex','fast-radar:dex-quotes') LIMIT 2"),
-    rows(this.env.DB,"SELECT until_ms FROM goget_pre_signal_provider_state WHERE name='dex' LIMIT 1")
-  ]);
-  if(leases.some(x=>Number(x.expires_at)>Date.now())||
-     providerStates.some(x=>Number(x.until_ms)>Date.now()))
-    throw Error('PILOT_SHARED_DEX_COOLDOWN');
-  const selected=[...new Set(candidates.map(x=>x.pool).filter(validAddr))].slice(0,30);
-  if(selected.length<PILOT.pools)throw Error('PILOT_INSUFFICIENT_DISTINCT_POOL_IDS');
-  let answer=null;
+  // Existing Dex cooldown is untouched: authoritative Solana account state,
+  // not a substitute Dex query or an executable market quote.
+  const poolList=candidates.map(x=>x.pool);
+  if(poolList.length>30||poolList.some(x=>!validAddr(x)))
+    throw Error('PILOT_PUBLIC_RPC_ROSTER_INVALID');
+  let rpc;
   try{
-   const response=await fetch('https://api.dexscreener.com/latest/dex/pairs/solana/'+selected.join(','),{
-    headers:{accept:'application/json','User-Agent':'GOGET-Event-Pilot/1.0'},
-    signal:AbortSignal.timeout(12000)});
-   if(response.status===429)throw Error('PILOT_DEX_RATE_LIMITED');
-   if(!response.ok)throw Error('PILOT_DEX_UNAVAILABLE');
-   if(Number(response.headers?.get('content-length'))>450000)
-     throw Error('PILOT_DEX_RESPONSE_OVERSIZE');
-   const raw=await response.text();
-   if(raw.length>450000)throw Error('PILOT_DEX_RESPONSE_OVERSIZE');
-   answer=JSON.parse(raw);
+   const res=await fetch('https://api.mainnet-beta.solana.com',{
+    method:'POST',headers:{'content-type':'application/json','User-Agent':'GOGET-OnChain-Research/1.0'},
+    body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getMultipleAccounts',
+      params:[poolList,{encoding:'base64',commitment:'confirmed'}]}),
+    signal:AbortSignal.timeout(16000)});
+   if(!res.ok)throw Error('PILOT_PUBLIC_RPC_HTTP_UNVERIFIED');
+   if(Number(res.headers?.get('content-length'))>500000)
+    throw Error('PILOT_PUBLIC_RPC_RESPONSE_TOO_LARGE');
+   const text=await res.text();
+   if(text.length>500000)throw Error('PILOT_PUBLIC_RPC_RESPONSE_TOO_LARGE');
+   rpc=JSON.parse(text);
   }catch(e){
-    if(/^PILOT_[A-Z_]+$/.test(e?.message||''))throw e;
-    throw Error('PILOT_DEX_PROVIDER_UNVERIFIED');
+   if(/^PILOT_[A-Z0-9_]+$/.test(e?.message||''))throw e;
+   throw Error('PILOT_PUBLIC_RPC_UNAVAILABLE');
   }
   const checkedAt=Date.now();
-  const roster=verifyTenExactPools(candidates,answer?.pairs,checkedAt);
+  if(rpc?.error||!Number.isSafeInteger(rpc?.result?.context?.slot)||
+    !Array.isArray(rpc?.result?.value)||rpc.result.value.length!==poolList.length)
+    throw Error('PILOT_PUBLIC_RPC_SHAPE_UNVERIFIED');
+  const slot=rpc.result.context.slot;
+  const proofs=rpc.result.value.map((acc,i)=>{
+   const source=candidates[i];
+   if(!acc||acc.executable===true)return null;
+   const protocol=acc.owner===PUMPSWAP?'PUMPSWAP':acc.owner===RAYDIUM_CPMM?'RAYDIUM_CPMM':null;
+   if(!protocol)return null;
+   const parsed=protocol==='PUMPSWAP'?decodePumpSwapPool(source.pool,acc):
+     decodeRaydiumCpmmPool(source.pool,acc);
+   const layout=parsed.status===(protocol==='PUMPSWAP'?'PUMPSWAP_LAYOUT_VERIFIED':'CPMM_LAYOUT_VERIFIED');
+   const mintMatched=layout&&(protocol==='PUMPSWAP'?
+     [parsed.baseMint,parsed.quoteMint].includes(source.mint):
+     [parsed.token0Mint,parsed.token1Mint].includes(source.mint)&&parsed.swapsEnabled===true);
+   return {pool:source.pool,mint:source.mint,owner:acc.owner,slot,protocol,
+     ownerVerified:true,layoutVerified:layout,mintMatched};
+  });
+  const roster=verifyTenDecodedPoolIdentities(candidates,proofs,checkedAt);
   // Atomically reserve Helius capacity in the ORIGINAL shared 9k RPC ledger.
   // Protect all outstanding five-minute 3-wallet source cycles AND the
   // independent decode research budget; never bypass the webhook ARMED latch.
@@ -138,11 +155,12 @@ export class GogetEventPilot {
   await write(this.env.DB,
     'INSERT INTO goget_event_pilot_runs(run_id,utc_day,started_at,ends_at,status,requested_pools,armed_pools,reserved_credits,notes) VALUES(?,?,?,?,?,?,?,?,?)',
     id,today,stamp(now),stamp(end),'ARMING',PILOT.pools,roster.length,PILOT.reserveHeliusCredits,
-    JSON.stringify({admissionKind:'INDEPENDENT_PUBLIC_DEX_AGGREGATE_RECEIPT_ONLY',
-      checkedAt:stamp(checkedAt),requested:30,selected:roster.map(x=>({
-       pool:x.pool,mint:x.mint,baselineObservationAt:x.baselineObservationAt,
-       admissionPriceUsd:x.admissionPriceUsd,admissionLiquidityUsd:x.admissionLiquidityUsd
-      })),tradeExecutionProof:false}));
+    JSON.stringify({admissionKind:'SOLANA_PUBLIC_CONFIRMED_POOL_ACCOUNT_OWNER_LAYOUT_MINT',
+      checkedAt:stamp(checkedAt),queried:poolList.length,confirmedSlot:slot,
+      selected:roster.map(x=>({pool:x.pool,mint:x.mint,
+       owner:x.admissionOwner,protocol:x.admissionProtocol,
+       baselineObservationAt:x.baselineObservationAt})),
+      liquidityVerified:false,priceVerified:false,tradeExecutionProof:false}));
   for(const p of roster)await write(this.env.DB,
     'INSERT INTO goget_event_pilot_roster(run_id,pool,mint,asset_key) VALUES(?,?,?,?)',
     id,p.pool,p.mint,p.assetKey);
@@ -155,7 +173,7 @@ export class GogetEventPilot {
   return {status:'ARMED_STREAM_CONNECTING',runId:id,requestedPools:PILOT.pools,
     selectedPools:roster.length,endsAt:stamp(end),reservedHeliusCredits:PILOT.reserveHeliusCredits,
     proof:'ACKS_AND_RPC_RECONCILIATION_PENDING',
-    admission:'TEN_EXACT_POOL_AND_MINT_PUBLIC_AGGREGATE_QUOTES_RECEIVED',tradeCertified:false};
+    admission:'TEN_ONCHAIN_OWNER_LAYOUT_MINT_IDENTITIES_VERIFIED',tradeCertified:false};
  }
  connect(run){
   if(Date.now()>=run.end||run.status!=='ACTIVE')return;
