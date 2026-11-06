@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {PILOT,freezePoolRoster,subscribePayload,parseWsFrame,classifyActivity,
  classifyScheduled,rpcPageCoverage,reserveForwardGuard,pairedResult,verifyTenExactPools,verifyTenDecodedPoolIdentities} from '../src/goget-event-pilot-core.mjs';
@@ -104,4 +105,19 @@ test('confirmed on-chain ten-pool admission rejects false owners, layouts, mints
  assert.throws(()=>verifyTenDecodedPoolIdentities(sources,altered('mintMatched',false),now),/TEN_ONCHAIN/);
  assert.throws(()=>verifyTenDecodedPoolIdentities(sources.slice(0,9),proofs.slice(0,9),now),/TEN_ONCHAIN/);
  assert.throws(()=>verifyTenDecodedPoolIdentities(sources.map(x=>({...x,quote_at:new Date(now-121*60000).toISOString()})),proofs,now),/TEN_ONCHAIN/);
+});
+
+test('one Helius admission RPC is ledgered and fully reserved before it can be sent',()=>{
+ const src=readFileSync(new URL('../src/goget-event-pilot-worker.mjs',import.meta.url),'utf8');
+ const attempt=src.indexOf("'ADMISSION_BUDGET_PENDING'");
+ const reserve=src.indexOf("'UPDATE goget_rpc_source_budget SET reserved_credits=reserved_credits+?'");
+ const ledger=src.indexOf("'ADMISSION_RUNNING',PILOT.reserveHeliusCredits,1,id");
+ const call=src.indexOf("method:'getMultipleAccounts'");
+ const ws=src.indexOf("this.connect(run)");
+ assert.ok(attempt>=0&&attempt<reserve&&reserve<ledger&&ledger<call&&call<ws);
+ assert.ok(src.includes("PILOT_SHARED_BUDGET_PROTECTED"));
+ assert.ok(src.includes("smart_wallet_webhook_control"));
+ assert.ok(src.includes("stats.duplicate_events||0,estimatedWs,attempted+1,stats.ws_connections||0"));
+ assert.equal(src.includes('api.dexscreener.com'),false);
+ assert.equal(src.includes("method:'sendTransaction'"),false);
 });
