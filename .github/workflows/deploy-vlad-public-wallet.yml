@@ -1,0 +1,131 @@
+name: Vlad public wallet watch — isolated test and deploy
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'vladwatch/**'
+      - '.github/workflows/deploy-vlad-public-wallet.yml'
+  pull_request:
+    paths:
+      - 'vladwatch/**'
+      - '.github/workflows/deploy-vlad-public-wallet.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: vlad-public-wallet-deploy
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate all isolated JS files
+        run: |
+          node --check vladwatch/src/config.mjs
+          node --check vladwatch/src/providers.mjs
+          node --check vladwatch/src/collector.mjs
+          node --check vladwatch/src/worker.mjs
+      - name: Run provider failures and D1 integration tests
+        run: node --experimental-sqlite --test vladwatch/tests/*.test.mjs
+      - name: Validate idempotent D1 namespace and exact table count
+        run: python vladwatch/tests/sql_test.py
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned existing Wrangler version
+        run: npm install --no-audit --no-fund
+      - name: Inject authorised shared D1 database ID into ONLY Vlad worker configuration
+        env:
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          ident=os.environ.get('CF_DATABASE_ID','').strip()
+          if len(ident)<16:raise SystemExit('VLADWATCH_D1_ID_MISSING')
+          p=Path('vladwatch/wrangler.toml')
+          s=p.read_text()
+          placeholder='REPLACE_WITH_YOUR_OWN_D1_DATABASE_ID'
+          if s.count(placeholder)!=1:raise SystemExit('VLADWATCH_D1_PLACEHOLDER_MISSING_OR_DUPLICATE')
+          p.write_text(s.replace(placeholder,ident))
+          PY
+      - name: Apply ONLY additive Vlad D1 tables; reject cross-project SQL
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_DATABASE_ID: ${{ secrets.CF_DATABASE_ID }}
+          CF_D1_API_TOKEN: ${{ secrets.CF_D1_API_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          from urllib.request import Request,urlopen
+          acct,db,key=[os.environ.get(n,'').strip() for n in ('CF_ACCOUNT_ID','CF_DATABASE_ID','CF_D1_API_TOKEN')]
+          if not all((acct,db,key)):raise SystemExit('VLADWATCH_CLOUD_D1_CREDENTIALS_MISSING')
+          sql=Path('vladwatch/sql/001.sql').read_text()
+          statements=[x.strip() for x in '\n'.join(l for l in sql.splitlines() if not l.lstrip().startswith('--')).split(';') if x.strip()]
+          for statement in statements:
+            if not statement.upper().startswith(('CREATE TABLE IF NOT EXISTS VLADWATCH_','CREATE INDEX IF NOT EXISTS IX_VLADWATCH_')):
+              raise SystemExit('CROSS_PROJECT_SCHEMA_WRITE_BLOCKED')
+          url=f'https://api.cloudflare.com/client/v4/accounts/{acct}/d1/database/{db}/query'
+          for i,s in enumerate(statements):
+            req=Request(url,data=json.dumps({'sql':s,'params':[]}).encode(),headers={'authorization':'Bearer '+key,'content-type':'application/json'},method='POST')
+            with urlopen(req,timeout=25) as r:j=json.load(r)
+            if not j.get('success') or j.get('result',[{}])[0].get('success') is not True:
+              raise SystemExit(f'VLADWATCH_SCHEMA_CREATE_FAILED_STATEMENT_{i+1}')
+          print('VLADWATCH_ADDITIVE_D1_SCHEMA_APPLIED',len(statements))
+          PY
+      - name: Deploy ONLY vlad-public-wallet-collector
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing deployment token'; exit 1; }
+          npx wrangler deploy --config vladwatch/wrangler.toml
+      - name: Configure optional independent indexed-history source (only Vlad worker)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          VLAD_ETHERSCAN_API_KEY: ${{ secrets.VLAD_ETHERSCAN_API_KEY }}
+        run: |
+          if [ -n "$VLAD_ETHERSCAN_API_KEY" ]; then
+            printf '%s' "$VLAD_ETHERSCAN_API_KEY" | npx wrangler secret put ETHERSCAN_API_KEY --config vladwatch/wrangler.toml
+            echo 'VLADWATCH_INDEPENDENT_INDEXER_CONFIGURED'
+          else
+            echo 'VLADWATCH_INDEXER_FALLBACK_NOT_CONFIGURED — public Blockscout only; do not claim complete reliability'
+          fi
+      - name: Verify deployed Worker liveness, isolated roster, and D1 status endpoint
+        run: |
+          python - <<'PY'
+          import json,time,urllib.request
+          base='https://vlad-public-wallet-collector.wessteven.workers.dev'
+          for i in range(6):
+            try:
+              with urllib.request.urlopen(base+'/health',timeout=12) as r:h=json.load(r)
+              with urllib.request.urlopen(base+'/api/status',timeout=12) as r:s=json.load(r)
+              assert h.get('service')=='vlad-public-wallet-collector'
+              assert h.get('collectionVerified') is False
+              assert s.get('project')=='Vlad Public Wallet Watch'
+              assert s.get('requiredPairs')==5
+              assert len(s.get('watchlist',[]))==2
+              assert sorted((w['id'],len(w['chains'])) for w in s['watchlist'])==[('github-test',1),('rh-demo',4)]
+              print('VLADWATCH_DEPLOY_VERIFIED', 'last_run_state='+str((s.get('run') or {}).get('state')))
+              if not s.get('run'):print('VLADWATCH_COLLECTION_NOT_YET_PROVEN_FIRST_CRON_PENDING')
+              elif not s.get('coverageComplete'):print('VLADWATCH_SOURCE_OR_COVERAGE_NOT_VERIFIED',s.get('coverageCount'))
+              break
+            except Exception as e:
+              print('VLADWATCH_VERIFY_RETRY',i+1,type(e).__name__,str(e)[:100])
+              time.sleep(6)
+          else:raise SystemExit('VLADWATCH_PRODUCTION_ENDPOINT_NOT_VERIFIED')
+          PY

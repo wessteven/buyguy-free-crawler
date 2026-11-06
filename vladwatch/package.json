@@ -1,0 +1,1 @@
+{"name":"vlad-public-wallet-watch","version":"0.1.0","type":"module","private":true,"scripts":{"test":"node --test tests/*.test.mjs","check":"node --check src/config.mjs && node --check src/providers.mjs && node --check src/collector.mjs && node --check src/worker.mjs"},"devDependencies":{"wrangler":"^4.0.0"}}
