@@ -6,7 +6,7 @@ import {PILOT,validAddr,freezePoolRoster,subscribePayload,parseWsFrame,
 import {PUMPSWAP,decodePumpSwapPool} from './pumpswap.mjs';
 import {RAYDIUM_CPMM,decodeRaydiumCpmmPool} from './raydium-cpmm.mjs';
 
-export const EVENT_PILOT_BUILD='GOGET_EVENT_STREAM_PILOT_2026_11_07_V1';
+export const EVENT_PILOT_BUILD='GOGET_EVENT_STREAM_PILOT_2026_11_07_V2_HELIUS_ADMISSION';
 const stamp=n=>new Date(n).toISOString();
 const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,
  headers:{'content-type':'application/json','cache-control':'no-store'}});
@@ -95,51 +95,18 @@ export class GogetEventPilot {
   // Archived as-of observations select candidate IDENTITY only, not today's price.
   const candidates=await rows(this.env.DB,rosterSQL,stamp(now-120*60000),stamp(now));
   if(candidates.length<PILOT.pools)throw Error('PILOT_INSUFFICIENT_RECENT_CANDIDATES');
-  // Existing Dex cooldown is untouched: authoritative Solana account state,
-  // not a substitute Dex query or an executable market quote.
+  // No Dex API requests: the original shared provider cooldown remains intact.
   const poolList=candidates.map(x=>x.pool);
   if(poolList.length>30||poolList.some(x=>!validAddr(x)))
-    throw Error('PILOT_PUBLIC_RPC_ROSTER_INVALID');
-  let rpc;
-  try{
-   const res=await fetch('https://api.mainnet-beta.solana.com',{
-    method:'POST',headers:{'content-type':'application/json','User-Agent':'GOGET-OnChain-Research/1.0'},
-    body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getMultipleAccounts',
-      params:[poolList,{encoding:'base64',commitment:'confirmed'}]}),
-    signal:AbortSignal.timeout(16000)});
-   if(!res.ok)throw Error('PILOT_PUBLIC_RPC_HTTP_UNVERIFIED');
-   if(Number(res.headers?.get('content-length'))>500000)
-    throw Error('PILOT_PUBLIC_RPC_RESPONSE_TOO_LARGE');
-   const text=await res.text();
-   if(text.length>500000)throw Error('PILOT_PUBLIC_RPC_RESPONSE_TOO_LARGE');
-   rpc=JSON.parse(text);
-  }catch(e){
-   if(/^PILOT_[A-Z0-9_]+$/.test(e?.message||''))throw e;
-   throw Error('PILOT_PUBLIC_RPC_UNAVAILABLE');
-  }
-  const checkedAt=Date.now();
-  if(rpc?.error||!Number.isSafeInteger(rpc?.result?.context?.slot)||
-    !Array.isArray(rpc?.result?.value)||rpc.result.value.length!==poolList.length)
-    throw Error('PILOT_PUBLIC_RPC_SHAPE_UNVERIFIED');
-  const slot=rpc.result.context.slot;
-  const proofs=rpc.result.value.map((acc,i)=>{
-   const source=candidates[i];
-   if(!acc||acc.executable===true)return null;
-   const protocol=acc.owner===PUMPSWAP?'PUMPSWAP':acc.owner===RAYDIUM_CPMM?'RAYDIUM_CPMM':null;
-   if(!protocol)return null;
-   const parsed=protocol==='PUMPSWAP'?decodePumpSwapPool(source.pool,acc):
-     decodeRaydiumCpmmPool(source.pool,acc);
-   const layout=parsed.status===(protocol==='PUMPSWAP'?'PUMPSWAP_LAYOUT_VERIFIED':'CPMM_LAYOUT_VERIFIED');
-   const mintMatched=layout&&(protocol==='PUMPSWAP'?
-     [parsed.baseMint,parsed.quoteMint].includes(source.mint):
-     [parsed.token0Mint,parsed.token1Mint].includes(source.mint)&&parsed.swapsEnabled===true);
-   return {pool:source.pool,mint:source.mint,owner:acc.owner,slot,protocol,
-     ownerVerified:true,layoutVerified:layout,mintMatched};
-  });
-  const roster=verifyTenDecodedPoolIdentities(candidates,proofs,checkedAt);
-  // Atomically reserve Helius capacity in the ORIGINAL shared 9k RPC ledger.
-  // Protect all outstanding five-minute 3-wallet source cycles AND the
-  // independent decode research budget; never bypass the webhook ARMED latch.
+    throw Error('PILOT_ONCHAIN_ROSTER_INVALID');
+  const id=crypto.randomUUID(),end=now+PILOT.durationMs;
+  // Persist the one-per-UTC-day admission attempt BEFORE any billable Helius call.
+  await write(this.env.DB,
+    'INSERT INTO goget_event_pilot_runs(run_id,utc_day,started_at,ends_at,status,requested_pools,armed_pools,reserved_credits,notes) VALUES(?,?,?,?,?,?,?,?,?)',
+    id,today,stamp(now),stamp(end),'ADMISSION_BUDGET_PENDING',PILOT.pools,0,0,
+    JSON.stringify({admissionKind:'HELIUS_CONFIRMED_POOL_ACCOUNT',state:'UNVERIFIED',candidateCount:poolList.length}));
+  // Atomic shared source reserve BEFORE first Helius request. Protect every
+  // remaining original 3-wallet 5-minute cycle, decoder and webhook ARMED latch.
   const future=Math.ceil((Date.parse(today+'T00:00:00Z')+86400000-now)/300000)*30;
   await write(this.env.DB,
     'INSERT OR IGNORE INTO goget_rpc_source_budget(day,reserved_credits) VALUES(?,0)',today);
@@ -150,17 +117,70 @@ export class GogetEventPilot {
     " AND EXISTS(SELECT 1 FROM smart_wallet_webhook_control WHERE id='owned' AND state='ARMED')",
     PILOT.reserveHeliusCredits,today,PILOT.reserveHeliusCredits,future,today,
     PILOT.sharedRpcDailyCap,PILOT.reserveHeliusCredits,today,PILOT.localHeliusDailyCap);
-  if(granted!==1)throw Error('PILOT_SHARED_BUDGET_PROTECTED');
-  const id=crypto.randomUUID(),end=now+PILOT.durationMs;
+  if(granted!==1){
+   await write(this.env.DB,
+    'UPDATE goget_event_pilot_runs SET status=?,stop_reason=? WHERE run_id=?',
+    'BUDGET_DEFERRED','SHARED_OR_WEBHOOK_GUARD',id);
+   throw Error('PILOT_SHARED_BUDGET_PROTECTED');
+  }
+  // Count the upcoming request conservatively even if it fails on the wire.
   await write(this.env.DB,
-    'INSERT INTO goget_event_pilot_runs(run_id,utc_day,started_at,ends_at,status,requested_pools,armed_pools,reserved_credits,notes) VALUES(?,?,?,?,?,?,?,?,?)',
-    id,today,stamp(now),stamp(end),'ARMING',PILOT.pools,roster.length,PILOT.reserveHeliusCredits,
-    JSON.stringify({admissionKind:'SOLANA_PUBLIC_CONFIRMED_POOL_ACCOUNT_OWNER_LAYOUT_MINT',
-      checkedAt:stamp(checkedAt),queried:poolList.length,confirmedSlot:slot,
-      selected:roster.map(x=>({pool:x.pool,mint:x.mint,
-       owner:x.admissionOwner,protocol:x.admissionProtocol,
-       baselineObservationAt:x.baselineObservationAt})),
-      liquidityVerified:false,priceVerified:false,tradeExecutionProof:false}));
+    'UPDATE goget_event_pilot_runs SET status=?,reserved_credits=?,rpc_attempts=? WHERE run_id=?',
+    'ADMISSION_RUNNING',PILOT.reserveHeliusCredits,1,id);
+  let rpc;
+  try{
+   const res=await fetch('https://mainnet.helius-rpc.com/?api-key='+encodeURIComponent(this.env.HELIUS_API_KEY),{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({jsonrpc:'2.0',id:1,method:'getMultipleAccounts',
+      params:[poolList,{encoding:'base64',commitment:'confirmed'}]}),
+    signal:AbortSignal.timeout(16000)});
+   if(!res.ok)throw Error('PILOT_HELIUS_ADMISSION_HTTP_UNVERIFIED');
+   if(Number(res.headers?.get('content-length'))>500000)
+    throw Error('PILOT_HELIUS_ADMISSION_OVERSIZE');
+   const raw=await res.text();
+   if(raw.length>500000)throw Error('PILOT_HELIUS_ADMISSION_OVERSIZE');
+   rpc=JSON.parse(raw);
+   if(rpc?.error||!Number.isSafeInteger(rpc?.result?.context?.slot)||
+     !Array.isArray(rpc?.result?.value)||rpc.result.value.length!==poolList.length)
+    throw Error('PILOT_HELIUS_ADMISSION_SHAPE_UNVERIFIED');
+  }catch(error){
+   await write(this.env.DB,
+    'UPDATE goget_event_pilot_runs SET status=?,stop_reason=? WHERE run_id=?',
+    'ADMISSION_UNVERIFIED','HELIUS_POOL_RPC_UNVERIFIED',id);
+   if(/^PILOT_[A-Z0-9_]+$/.test(error?.message||''))throw error;
+   throw Error('PILOT_HELIUS_ADMISSION_UNAVAILABLE');
+  }
+  const checkedAt=Date.now(),slot=rpc.result.context.slot;
+  const proofs=rpc.result.value.map((acc,i)=>{
+   const source=candidates[i];
+   if(!acc||acc.executable===true)return null;
+   const protocol=acc.owner===PUMPSWAP?'PUMPSWAP':acc.owner===RAYDIUM_CPMM?'RAYDIUM_CPMM':null;
+   if(!protocol)return null;
+   const decoded=protocol==='PUMPSWAP'?decodePumpSwapPool(source.pool,acc):
+     decodeRaydiumCpmmPool(source.pool,acc);
+   const layout=decoded.status===(protocol==='PUMPSWAP'?'PUMPSWAP_LAYOUT_VERIFIED':'CPMM_LAYOUT_VERIFIED');
+   const mintMatched=layout&&(protocol==='PUMPSWAP'?
+     [decoded.baseMint,decoded.quoteMint].includes(source.mint):
+     [decoded.token0Mint,decoded.token1Mint].includes(source.mint)&&decoded.swapsEnabled===true);
+   return {pool:source.pool,mint:source.mint,owner:acc.owner,slot,protocol,
+     ownerVerified:true,layoutVerified:layout,mintMatched};
+  });
+  let roster;
+  try{roster=verifyTenDecodedPoolIdentities(candidates,proofs,checkedAt);}
+  catch(error){
+   await write(this.env.DB,
+    'UPDATE goget_event_pilot_runs SET status=?,stop_reason=? WHERE run_id=?',
+    'ADMISSION_UNVERIFIED','TEN_ONCHAIN_POOL_IDENTITIES_NOT_PROVED',id);
+   throw error;
+  }
+  const proof=JSON.stringify({admissionKind:'HELIUS_CONFIRMED_POOL_OWNER_LAYOUT_MINT',
+    checkedAt:stamp(checkedAt),queried:poolList.length,confirmedSlot:slot,
+    selected:roster.map(x=>({pool:x.pool,mint:x.mint,owner:x.admissionOwner,
+      protocol:x.admissionProtocol,baselineObservationAt:x.baselineObservationAt})),
+    liquidityVerified:false,priceVerified:false,tradeExecutionProof:false});
+  await write(this.env.DB,
+   'UPDATE goget_event_pilot_runs SET status=?,armed_pools=?,notes=? WHERE run_id=?',
+   'ARMING',roster.length,proof,id);
   for(const p of roster)await write(this.env.DB,
     'INSERT INTO goget_event_pilot_roster(run_id,pool,mint,asset_key) VALUES(?,?,?,?)',
     id,p.pool,p.mint,p.assetKey);
@@ -173,7 +193,7 @@ export class GogetEventPilot {
   return {status:'ARMED_STREAM_CONNECTING',runId:id,requestedPools:PILOT.pools,
     selectedPools:roster.length,endsAt:stamp(end),reservedHeliusCredits:PILOT.reserveHeliusCredits,
     proof:'ACKS_AND_RPC_RECONCILIATION_PENDING',
-    admission:'TEN_ONCHAIN_OWNER_LAYOUT_MINT_IDENTITIES_VERIFIED',tradeCertified:false};
+    admission:'TEN_HELIUS_CONFIRMED_OWNER_LAYOUT_MINT_IDENTITIES_VERIFIED',tradeCertified:false};
  }
  connect(run){
   if(Date.now()>=run.end||run.status!=='ACTIVE')return;
@@ -366,11 +386,11 @@ export class GogetEventPilot {
   await write(this.env.DB,
    'UPDATE goget_event_pilot_runs SET status=?,completed_at=?,streamed_bytes=?,unique_events=?,duplicate_events=?,streamed_estimated_credits=?,rpc_attempts=?,ws_connections=?,stream_gap_count=?,stop_reason=?,notes=? WHERE run_id=?',
    run.status,stamp(Date.now()),stats.streamed_bytes||0,stats.unique_events||0,
-   stats.duplicate_events||0,estimatedWs,attempted,stats.ws_connections||0,
+   stats.duplicate_events||0,estimatedWs,attempted+1,stats.ws_connections||0,
    stats.disconnects||0,reason,'WS estimated credits not Helius invoice; raw logs not swap proof',run.id);
   return {status:run.status,runId:run.id,requestedPools:PILOT.pools,
    reconciledCompletePools:full,unverifiedPools:unknown,wsEstimatedCredits:estimatedWs,
-   rpcEstimatedCredits:attempted*10,reservedCredits:PILOT.reserveHeliusCredits,
+   rpcEstimatedCredits:(attempted+1)*10,reservedCredits:PILOT.reserveHeliusCredits,
    providerBilledCredits:null,cloudflareBilledUsd:null,tradeCertified:false};
  }
  async alarm(){try{await this.tick();}catch(e){console.error('GOGET_EVENT_PILOT_ALARM_FAILURE',String(e.message).slice(0,60));}}
