@@ -1,3 +1,5 @@
+import {PUMPSWAP} from './pumpswap.mjs';
+import {RAYDIUM_CPMM} from './raydium-cpmm.mjs';
 // Isolated GOGET event-stream research pilot; pool mentions are NOT verified trades.
 // Research-only, never sends a transaction and never changes production source cursors.
 export const PILOT=Object.freeze({
@@ -163,7 +165,8 @@ export function verifyTenDecodedPoolIdentities(candidates,proofs,asOf){
   if(!p||p.pool!==c.pool||p.mint!==c.mint||!validAddr(p.owner)||
    !Number.isSafeInteger(p.slot)||p.slot<=0||p.ownerVerified!==true||
    p.layoutVerified!==true||p.mintMatched!==true||
-   !['PUMPSWAP','RAYDIUM_CPMM'].includes(p.protocol))continue;
+   !((p.protocol==='PUMPSWAP'&&p.owner===PUMPSWAP)||
+     (p.protocol==='RAYDIUM_CPMM'&&p.owner===RAYDIUM_CPMM)))continue;
   seen.add(c.pool);
   out.push({pool:c.pool,mint:c.mint,assetKey:c.asset_key,
    baselineObservationAt:c.quote_at,admissionReceiptAt:new Date(asOf).toISOString(),
