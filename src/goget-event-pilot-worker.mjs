@@ -148,8 +148,9 @@ export class GogetEventPilot {
      incr(this.sql(),'subscription_rejections');this.drop('SUBSCRIPTION_REJECTED');
     }else if(parsed.kind==='EVENT'){
      if(!this.ready)throw Error('PILOT_PRE_READY_EVENT');
-     const changed=this.sql().exec('INSERT OR IGNORE INTO event_pilot_events(pool,signature,slot,received_ms,failed) VALUES(?,?,?,?,?)',
-      parsed.pool,parsed.signature,parsed.slot,parsed.receivedMs,parsed.failed?1:0).rowsWritten;
+     this.sql().exec('INSERT OR IGNORE INTO event_pilot_events(pool,signature,slot,received_ms,failed) VALUES(?,?,?,?,?)',
+      parsed.pool,parsed.signature,parsed.slot,parsed.receivedMs,parsed.failed?1:0);
+     const changed=this.sql().exec('SELECT changes() AS n').one().n;
      incr(this.sql(),changed===1?'unique_events':'duplicate_events');
      if((totalStats(this.sql()).unique_events||0)>=PILOT.maxUniqueEvents){
       incr(this.sql(),'limit_breaches');this.drop('EVENT_CAP');
@@ -161,6 +162,7 @@ export class GogetEventPilot {
   ws.addEventListener('error',()=>this.drop('WEBSOCKET_ERROR',false));
  }
  drop(reason,close=true){
+  if(!this.ws&&!this.ready)return;
   const hadSegment=this.ready;
   this.ready=false;this.subToPool.clear();
   if(hadSegment)this.sql().exec('UPDATE event_pilot_segments SET end_ms=? WHERE end_ms IS NULL',Date.now());
@@ -271,7 +273,13 @@ export class GogetEventPilot {
     result?.websocketMatched??null,result?.missed??null,result?.recall??null,pageSize,error);
   }
   const stats=totalStats(this.sql()),estimatedWs=Math.ceil((stats.streamed_bytes||0)/100000)*2;
-  run.status=full===PILOT.pools&&(stats.disconnects||0)===0?
+  const audit=await rows(this.env.DB,
+   'SELECT COUNT(*) AS total,SUM(CASE WHEN coverage=? THEN 0 ELSE 1 END) AS incomplete FROM goget_event_pilot_windows WHERE run_id=?',
+   'CONTINUOUS_STREAM',run.id);
+  const fullWindows=Number(audit[0]?.total||0)>=PILOT.pools*58&&Number(audit[0]?.incomplete||0)===0;
+  run.status=reason==='TIMED_END'&&full===PILOT.pools&&fullWindows&&
+    (stats.disconnects||0)===0&&(stats.stream_parse_errors||0)===0&&
+    (stats.subscription_rejections||0)===0?
     'RECORDED_WITH_BOUNDED_RPC_COVERAGE':'PARTIAL_OR_UNVERIFIED_COVERAGE';
   await this.ctx.storage.put('pilot_run',run);
   await write(this.env.DB,
