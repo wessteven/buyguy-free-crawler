@@ -199,7 +199,7 @@ jobs:
           python - <<'PY'
           import json,urllib.request
           url='https://goget-event-stream-pilot.wessteven.workers.dev/health'
-          with urllib.request.urlopen(url,timeout=20) as resp:
+          with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'GOGET-Event-Pilot-Health/1.0'}),timeout=20) as resp:
             x=json.load(resp)
           assert x['build']=='GOGET_EVENT_STREAM_PILOT_2026_11_07_V1',x
           assert x['maxPools']==10 and x['trades']==0 and x['durationMinutes']==60,x
@@ -216,7 +216,7 @@ jobs:
           import base64
           key=base64.urlsafe_b64encode(token).rstrip(b'=').decode()
           req=urllib.request.Request('https://goget-event-stream-pilot.wessteven.workers.dev/start',
-            data=b'',method='POST',headers={'authorization':'Bearer '+key})
+            data=b'',method='POST',headers={'authorization':'Bearer '+key,'User-Agent':'GOGET-Event-Pilot-Control/1.0'})
           try:
             with urllib.request.urlopen(req,timeout=30) as resp:result=json.load(resp)
           except urllib.error.HTTPError as e:
