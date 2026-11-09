@@ -16,7 +16,7 @@ concurrency:
 jobs:
   replay:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,7 +26,7 @@ jobs:
         run: |
           node --check scripts/goget-helius-historical-replay.mjs
           node --test tests/goget-helius-historical-replay.test.mjs
-      - name: Reconstruct historical Solana transactions for three gap-flagged wallets
+      - name: Reconstruct historical Solana transactions for nine additional watched wallets
         env:
           HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

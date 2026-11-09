@@ -1,15 +1,16 @@
 #!/usr/bin/env node
-// Bounded Helius historical reconstruction for the 3 known incomplete polling cursors.
+// Bounded wave-2 Helius historical reconstruction for 9 remaining active watched wallets.
 // Preserves original chain timestamps. NEVER edits live webhook rows, cursors or price labels.
 import {readFile,writeFile} from 'node:fs/promises';
-const WATCHED=[
+const PREVIOUSLY_RECOVERED=new Set([
   '8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4',
   'whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx',
   '7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP'
-];
+]);
+const WATCHED=[]; // resolved from EXACT current selected live cohort; excludes proven prior wave
 const WINDOW=Object.freeze({
  from:'2026-11-01T05:20:00.000Z',to:'2026-11-03T08:55:00.000Z',
- maxPagesPerWallet:8,maxTotalHeliusCalls:24,maxD1Queries:520,
+ maxPagesPerWallet:8,maxTotalHeliusCalls:72,maxD1Queries:1700,
  maxResultsPerPage:100,maxSourceChars:18000
 });
 const required=k=>{const v=process.env[k];if(!v)throw Error('MISSING_'+k);return v;};
@@ -41,6 +42,13 @@ function evidence(tx,wallet){
 async function main(){
  const helius=required('HELIUS_API_KEY'),account=required('CF_ACCOUNT_ID'),
    database=required('CF_DATABASE_ID'),token=required('CF_D1_API_TOKEN');
+ const cohort=JSON.parse(await readFile('research/smart-wallet-webhook-cohort.json','utf8'));
+ const current=cohort.filter(x=>x.webhookEnabled===true).map(x=>x.wallet);
+ if(current.length!==12||new Set(current).size!==12||current.some(w=>!addr.test(w)))
+   throw Error('SELECTED_WATCHLIST_UNVERIFIED');
+ WATCHED.push(...current.filter(w=>!PREVIOUSLY_RECOVERED.has(w)));
+ if(WATCHED.length!==9||WATCHED.some(w=>!addr.test(w)))
+   throw Error('NINE_WALLET_REPLAY_SCOPE_UNVERIFIED');
  const endpoint='https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account)+
   '/d1/database/'+encodeURIComponent(database)+'/query';
  let calls=0,dbCalls=0,lastHelius=0;
@@ -59,9 +67,10 @@ async function main(){
  const sql=raw.split('\n').filter(l=>!l.trim().startsWith('--')).join('\n');
  for(const stmt of sql.split(';').map(x=>x.trim()).filter(Boolean))await d1(stmt);
  const report={at:new Date().toISOString(),mode:'HELIUS_HISTORICAL_SOURCE_ONLY',
-   originalWindow:WINDOW,heliusCalls:0,estimatedProviderCreditsUpperBound:2640,
+   originalWindow:WINDOW,heliusCalls:0,estimatedProviderCreditsUpperBound:WINDOW.maxTotalHeliusCalls*110,
    d1Writes:0,storedNew:0,sourceRowsExamined:0,
    replayWallets:[],failedWallets:[],windowCoverageComplete:false,
+   previouslyRecoveredWalletCount:PREVIOUSLY_RECOVERED.size,
    noLiveWebhookWrites:true,noLiveCursorChanges:true,trades:0,
    note:'Enhanced history queries can be incomplete due to bounded pagination, provider filtering and historical parse; replay uses original block time, not event receipt time.'};
  const seen=new Set();
