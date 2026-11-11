@@ -1,0 +1,39 @@
+name: GOGET one-shot LaunchLab live timing proof (nonproduction)
+on:
+  push:
+    branches:
+      - research/launchlab-early-birth-poc
+    paths:
+      - research/launchlab-live-sample-trigger-2026-10-29.txt
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: goget-live-launchlab-one-shot
+  cancel-in-progress: false
+jobs:
+  bounded-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate proof and mock transport before using secret
+        run: |
+          node --check src/launchlab-live-latency-research.mjs
+          node --check scripts/launchlab-live-latency-proof.mjs
+          node --test tests/launchlab-live-latency-research.test.mjs tests/launchlab-birth-research.test.mjs tests/launchlab-float-replay.test.mjs
+      - name: Live bounded research only - 60s standard Helius logs stream
+        env:
+          HELIUS_API_KEY: ${{ secrets.HELIUS_API_KEY }}
+        run: node scripts/launchlab-live-latency-proof.mjs
+      - name: Preserve outcome even if no launch occurs or subscription fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: GOGET-LAUNCHLAB-LIVE-LATENCY-PROOF
+          path: launchlab-live-latency-proof/report.json
+          retention-days: 7
+          if-no-files-found: warn

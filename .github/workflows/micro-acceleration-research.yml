@@ -1,0 +1,33 @@
+name: GOGET archived 30s acceleration evidence (offline)
+on:
+  pull_request:
+    paths:
+      - 'src/micro-acceleration-research.mjs'
+      - 'tests/micro-acceleration-research.test.mjs'
+      - 'scripts/replay-micro-acceleration-research.mjs'
+      - '.github/workflows/micro-acceleration-research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Pure evidence classifier regression
+        run: |
+          node --check src/micro-acceleration-research.mjs
+          node --test tests/micro-acceleration-research.test.mjs
+      - name: No provider calls - archived WISP/PIKA only
+        run: node scripts/replay-micro-acceleration-research.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: GOGET-30S-REPLAY-RESEARCH
+          path: micro-acceleration-proof/report.json
+          retention-days: 7
+          if-no-files-found: warn
