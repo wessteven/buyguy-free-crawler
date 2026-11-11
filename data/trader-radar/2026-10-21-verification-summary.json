@@ -1,0 +1,101 @@
+{
+  "journal": "GOGET Trader Radar 005",
+  "date": "2026-10-21",
+  "mode": "RESEARCH_ONLY",
+  "verifiedRawTransactions": [
+    {
+      "token": "PHP",
+      "event": "BUY_LIKE",
+      "signature": "2EtnvPtjXEikXyRftJxMdCuq32mEYPHzmurqfhDH1sSbKS4hBYQqWdzskkXXvLthyUESG8zvzhhNmyNCLEy7aM5",
+      "walletSigner": true,
+      "rawTokenBalanceDeltasMatched": true,
+      "feeLamports": 3327724
+    },
+    {
+      "token": "PHP",
+      "event": "SELL_LIKE",
+      "signature": "2ShoNPRFNwjtTGhuC29LyPqRZjRF16RurPVg5Adhw2VFZZ7d5dLX6nsJDuJDhT3AZDvkQzmbzPjnke3VyQWArvRL",
+      "walletSigner": true,
+      "rawTokenBalanceDeltasMatched": true,
+      "feeLamports": 2788602
+    },
+    {
+      "token": "XTV",
+      "event": "BUY_LIKE",
+      "signature": "2BqKYNqHnDpgzM4cmdtV6BpX5T6cgoCDegysrhvwYb7jNmbxsyVitj1eWQrqYmCVEQFYB6p7e2A9Bkeq7SbpiFPx",
+      "walletSigner": true,
+      "rawTokenBalanceDeltasMatched": true,
+      "feeLamports": 20826
+    }
+  ],
+  "php": {
+    "mint": "Cbkg5w7V7W2J2sUmecnyN825CbvwvXwasfhduVtNpump",
+    "pool": "YQ4NNeQxHAtdcB8ohx21eJ9U8eTzxNRvGNHkRaA4Pnw",
+    "wallet": "AH75Bn6QHSt5K2Ad4p1otns3JTwpSJWZTwiwKWNhmnKx",
+    "walletSocialIdentityVerified": false,
+    "latest100Transactions": {
+      "buyLike": 5,
+      "sellLike": 2,
+      "usdcDebits": 2133.630774,
+      "usdcCredits": 1922.833193,
+      "standaloneUsdcInboundOver25Observed": 0
+    },
+    "hypotheticalGrossFifoMatchedSpreadUsdc": 1600.238372,
+    "verifiedRealizedPnlUsd": null,
+    "completeTransferFundedBasisVerified": false,
+    "completeFeesUsdVerified": false
+  },
+  "historicalPrice": {
+    "source": "GeckoTerminal public Solana pool OHLCV",
+    "candlesValidated": 106,
+    "dataset": "data/trader-radar/php-pool-ohlcv-2026-10-21T0700Z.json",
+    "closeSamples": [
+      {
+        "closeAt": "2026-10-21T05:16:00Z",
+        "priceUsd": 0.00006760050037436843
+      },
+      {
+        "closeAt": "2026-10-21T05:24:00Z",
+        "priceUsd": 0.00007463180029111532
+      },
+      {
+        "closeAt": "2026-10-21T06:08:00Z",
+        "priceUsd": 0.00024690764144745135
+      },
+      {
+        "closeAt": "2026-10-21T06:17:00Z",
+        "priceUsd": 0.00025185696141951036
+      }
+    ],
+    "executableFillPricesVerified": false,
+    "historicalPoolLiquidityAtExecutionVerified": false
+  },
+  "funding": {
+    "phpWalletSampleSize": 100,
+    "xtvWalletSampleSize": 100,
+    "singleSidedUsdcReceiptsOver25Observed": 0,
+    "openingBalancesKnown": false,
+    "unknownEarlierTransfersRemainPossible": true
+  },
+  "matching": {
+    "independentlyVerifiedThreeWalletPositiveConvergences": 0,
+    "independentBeneficialControllersVerified": 0,
+    "matchedHistoricalControlPairs": 0,
+    "observedPredictiveAlpha": null,
+    "reason": "NO_EX_ANTE_CONTROL_UNIVERSE_OR_HISTORICAL_EXECUTABLE_DEPTH"
+  },
+  "warnings": "Third-party screens allege launch-wallet bundling and risky creator behavior for PHP; independently unverified and not attributed to audited wallet.",
+  "proofLinks": [
+    "https://github.com/wessteven/buyguy-free-crawler/actions/runs/39567529623",
+    "https://github.com/wessteven/buyguy-free-crawler/actions/runs/39567442019",
+    "https://github.com/wessteven/buyguy-free-crawler/actions/runs/39567529725"
+  ],
+  "githubTests": {
+    "traderRadar": 48,
+    "fullJs": 276,
+    "python": 7,
+    "failures": 0
+  },
+  "productionUnchanged": true,
+  "autoTradingEnabled": false
+}

@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-21",
+  "source": "Helius enhanced parsed Solana transactions through connected Helius Reader; four pages of 100 transactions",
+  "chain": "solana",
+  "wallet": "AH75Bn6QHSt5K2Ad4p1otns3JTwpSJWZTwiwKWNhmnKx",
+  "attributedFomoHandle": "bystevenr",
+  "identityVerified": false,
+  "pages": [
+    {
+      "page": 1,
+      "count": 100,
+      "latest": "2026-10-21T06:15:30Z",
+      "oldest": "2026-10-20T14:08:33Z"
+    },
+    {
+      "page": 2,
+      "count": 100,
+      "latest": "2026-10-20T13:58:24Z",
+      "oldest": "2026-10-18T21:20:36Z"
+    },
+    {
+      "page": 3,
+      "count": 100,
+      "latest": "2026-10-18T21:20:34Z",
+      "oldest": "2026-10-17T06:53:38Z"
+    },
+    {
+      "page": 4,
+      "count": 100,
+      "latest": "2026-10-17T06:52:04Z",
+      "oldest": "2026-10-17T02:15:04Z"
+    }
+  ],
+  "phpTokenMint": "Cbkg5w7V7W2J2sUmecnyN825CbvwvXwasfhduVtNpump",
+  "phpMovementObservation": {
+    "sevenEventsInPage1": true,
+    "acquisitionLike": 5,
+    "disposalLike": 2,
+    "additionalPhpMovementsInPages2Through4": 0,
+    "completeLifetimeProven": false,
+    "transferFundedBasisExcluded": false
+  },
+  "correctedFinding": "Numerous net USDC receipts above 25 tokens do appear in page 1 outside PHP movements. The previous claim of no sizeable USDC receipts in the first 100 was erroneous. Many coincide with outgoing OTHER tokens: they are disposal-like USDC proceeds, not independently verified external deposits.",
+  "demonstrativeExamples": [],
+  "pairedOtherAssetReceipts": [
+    {
+      "at": "2026-10-21T05:21:37Z",
+      "signature": "3vaVfVGqhHJfDqnFqmrjPg3vLsKcJmusmMwXYB2a4DxQAxKFgJXAXFEWfY9gxWg6pPpPq77KmdPDEDPtzyT64Fj3",
+      "usdcNetUnits": 4587.002583,
+      "otherMint": "DvdmEnztCmXwBnAbedD48XVGZJSxq31zNvnyftXdpump",
+      "otherMintNetUnits": -1795715.396062,
+      "classification": "USDC_RECEIPT_WITH_OTHER_TOKEN_DISPOSAL_LIKE"
+    },
+    {
+      "at": "2026-10-21T05:15:54Z",
+      "signature": "5poZLDz1MH52TK2RJuDf9Vaoi8pMuvdthT2rbyvJihr16H7eg9gsp6HdBHbnCHzgDVtTf3BtYBmZGWgKdPjZaJD6",
+      "usdcNetUnits": 522.546132,
+      "otherMint": "DvdmEnztCmXwBnAbedD48XVGZJSxq31zNvnyftXdpump",
+      "otherMintNetUnits": -199523.932895,
+      "classification": "USDC_RECEIPT_WITH_OTHER_TOKEN_DISPOSAL_LIKE"
+    },
+    {
+      "at": "2026-10-21T00:46:59Z",
+      "signature": "z1Qwd9ybiaQL2pwPjn8jBLKoHmBf98zLCaw2LggkeD2x8kheuNAte32NwQUy8jQioGxtrWNbRLeybgEZUp6SKhX",
+      "usdcNetUnits": 1145.937284,
+      "otherMint": "zi87E9xtFPRQ2o9qqerFxUDQLZgEkHrhpHDxxZhYi9a",
+      "otherMintNetUnits": -5992198.2856,
+      "classification": "USDC_RECEIPT_WITH_OTHER_TOKEN_DISPOSAL_LIKE"
+    }
+  ],
+  "unresolved": [
+    "Whether there were any separate transfers of PHP before the mint's verified creation slot",
+    "Solana token mint creation time and exact pool launch",
+    "USD-denominated fees and route effects",
+    "Beneficial ownership of attributed FOMO profile",
+    "Any offchain funding or hidden inventory"
+  ],
+  "conclusions": {
+    "verifiedExternalFunders": 0,
+    "transferBasedCostBasisResolved": false,
+    "profitableTraderQualified": false,
+    "confirmedMultiWalletBuyConvergence": false
+  }
+}

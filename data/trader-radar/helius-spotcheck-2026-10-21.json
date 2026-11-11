@@ -1,0 +1,112 @@
+{
+  "observedDate": "2026-10-21",
+  "source": "Connected Helius Solana enhanced-transaction reader",
+  "sampleMethod": "Twelve most recent returned transactions for each of four third-party-attributed FOMO candidate wallets. Signed transactions/parsed tokenTransfers netted by user account. These are NOT complete Solana token account balance snapshots.",
+  "scope": {
+    "wallets": 4,
+    "maxTransactionsPerWallet": 12
+  },
+  "attribution": "FOMO handles and wallet mappings are unofficial third-party claims, not verified control.",
+  "walletObservations": [
+    {
+      "claimedHandle": "bystevenr",
+      "wallet": "AH75Bn6QHSt5K2Ad4p1otns3JTwpSJWZTwiwKWNhmnKx",
+      "sampleSize": 12,
+      "examples": [
+        {
+          "at": "2026-10-21T05:22:48Z",
+          "signature": "3wrQhLnuUFE1DjLD5AEcX9sGVKN4dntG3iTmBzm5gbvkKNjxKYBS7UKdXQLbPeKWoyrSGfcLm3JGHGezP9iUroWE",
+          "quoteUsdcDelta": -100,
+          "baseMint": "Cbkg5w7V7W2J2sUmecnyN825CbvwvXwasfhduVtNpump",
+          "baseTokenDelta": 1064431.063751,
+          "interpretation": "BUY_LIKE_NET_TOKEN_TRANSFER"
+        },
+        {
+          "at": "2026-10-21T05:16:00Z",
+          "signature": "3Kvw5v3EpamLGuhmkFXk9uvos3wyKXznEdW2BJxvGpz1onkhiLaAGkGBGrcCyDi6nazj7UX3d1tZEnWeALmadXdw",
+          "quoteUsdcDelta": -500,
+          "baseMint": "Cbkg5w7V7W2J2sUmecnyN825CbvwvXwasfhduVtNpump",
+          "baseTokenDelta": 6292209.185032,
+          "interpretation": "BUY_LIKE_NET_TOKEN_TRANSFER"
+        },
+        {
+          "at": "2026-10-21T05:15:54Z",
+          "signature": "5poZLDz1MH52TK2RJuDf9Vaoi8pMuvdthT2rbyvJihr16H7eg9gsp6HdBHbnCHzgDVtTf3BtYBmZGWgKdPjZaJD6",
+          "quoteUsdcDelta": 522.546132,
+          "baseMint": "DvdmEnztCmXwBnAbedD48XVGZJSxq31zNvnyftXdpump",
+          "baseTokenDelta": -199523.932895,
+          "interpretation": "SELL_LIKE_NET_TOKEN_TRANSFER"
+        }
+      ]
+    },
+    {
+      "claimedHandle": "bigbabba",
+      "wallet": "mDR91ufq4S2uSHa9E2PYL7xg4LwcQXaQFP7YK864a1z",
+      "sampleSize": 12,
+      "examples": [
+        {
+          "at": "2026-10-21T02:16:41Z",
+          "signature": "4ktRybyojp1ofwVTxko5hdtXPUx4fVYVzWCv5AnKSUYpZ9N9iPCCregZ92vWzow4xn6t8Rf2TdBSvBcrLw8jPohH",
+          "quoteUsdcDelta": -332,
+          "baseMint": "B2GESkSErPjuCq6n4LcaJP5v2z1kJnw3xHVZnop2sZx",
+          "baseTokenDelta": 585339.231859,
+          "interpretation": "BUY_LIKE_NET_TOKEN_TRANSFER"
+        },
+        {
+          "at": "2026-10-21T02:03:39Z",
+          "signature": "2BqKYNqHnDpgzM4cmdtV6BpX5T6cgoCDegysrhvwYb7jNmbxsyVitj1eWQrqYmCVEQFYB6p7e2A9Bkeq7SbpiFPx",
+          "quoteUsdcDelta": -50,
+          "baseMint": "6MBf1XdZNSAaDKcxxbnCAngRUxBmwbHS5Ybe2rLRpump",
+          "baseTokenDelta": 157429.423304,
+          "interpretation": "BUY_LIKE_NET_TOKEN_TRANSFER"
+        },
+        {
+          "at": "2026-10-21T02:03:13Z",
+          "signature": "4BdS21qde6CKHKTvKGkAMff9Go4ximyf8LtWQkN6KA8j1E7MveRVRBiDBM4ArP6fnaNrZJDa9V27D36WEhdyTrMA",
+          "quoteUsdcDelta": -57,
+          "baseMint": "6MBf1XdZNSAaDKcxxbnCAngRUxBmwbHS5Ybe2rLRpump",
+          "baseTokenDelta": 183932.603359,
+          "interpretation": "BUY_LIKE_NET_TOKEN_TRANSFER"
+        }
+      ]
+    },
+    {
+      "claimedHandle": "end837",
+      "wallet": "5DBkonys2H4qHr5x9CCeXPLSWEFbnnLFP1RdfxjJgzvy",
+      "sampleSize": 12,
+      "examples": [
+        {
+          "at": "2026-10-21T01:24:43Z",
+          "signature": "4eau5pBDjnzQWympB1YvQvwbz6ozcDnLRTJjeHNoXgDhYBno9AAPZn81RMNDKwBqHoveF1zZVM8PSNoKK3FQhSjM",
+          "quoteUsdcDelta": -150660.867811,
+          "baseMint": null,
+          "baseTokenDelta": null,
+          "interpretation": "SINGLE_SIDED_USDC_FLOW_NOT_A_BUY"
+        }
+      ]
+    },
+    {
+      "claimedHandle": "ExactTallTakin",
+      "wallet": "AGdtsMmphhymH5wYW3dWKSkAxpLYRrNDCTFAfuq8ii9v",
+      "sampleSize": 12,
+      "examples": [
+        {
+          "at": "2026-10-21T05:38:33Z",
+          "signature": "2yVCx8NEt9isk52ZHibK1RGCBidtATmkFezCMpvsMQvFDAv5CgYqzUvL5RpPFkg5yq7phC6vBcrvjKAHZJ2c5LWN",
+          "quoteUsdcDelta": null,
+          "baseMint": "SPCXxcqXj6e5dJDVNovHN8744zkbhM2bYudU45BimGb",
+          "baseTokenDelta": 0.000145,
+          "interpretation": "SINGLE_SIDED_TOKEN_RECEIPT_NOT_A_BUY"
+        }
+      ]
+    }
+  ],
+  "conclusions": {
+    "historicalFullCostBasisRecovered": false,
+    "realizedPnlVerified": false,
+    "matchedIndependentAccumulationObserved": false,
+    "predictivePriceOutcomesMeasured": false,
+    "automaticTradesAuthorized": false
+  },
+  "caution": "Parsed tokenTransfers can omit lamport/WSOL movements and complex routes. None of the wallet PnL or trader identity claims has been independently verified. Exact on-chain wallet net token account deltas should be rechecked with manual historical JSON-RPC replay."
+}

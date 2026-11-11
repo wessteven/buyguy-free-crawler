@@ -1,0 +1,23 @@
+name: GOGET Trader Radar Public Historical Candles
+on:
+  pull_request:
+    paths:
+      - 'scripts/trader-radar-public-ohlcv.mjs'
+      - 'src/trader-radar-gecko-candles.mjs'
+      - 'tests/trader-radar-gecko-controls.test.mjs'
+      - '.github/workflows/trader-radar-public-ohlcv.yml'
+permissions:
+  contents: read
+jobs:
+  public_candles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test historical candle and control filters
+        run: node --test tests/trader-radar-gecko-controls.test.mjs
+      - name: Read PHP pool candles from free public GeckoTerminal API
+        run: node scripts/trader-radar-public-ohlcv.mjs
