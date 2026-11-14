@@ -1,17 +1,62 @@
 <resources>
     <style name="PocketRadarTheme" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">#0A100D</item>
-        <item name="android:navigationBarColor">#0A100D</item>
-        <item name="android:colorAccent">#77F7A4</item>
+        <item name="android:statusBarColor">#0B1511</item>
+        <item name="android:navigationBarColor">#0B1511</item>
+        <item name="android:colorAccent">#90FFB6</item>
+        <item name="android:windowBackground">#0B1511</item>
+        <item name="android:fontFamily">monospace</item>
+    </style>
+    <style name="RadarTerminal">
+        <item name="android:fontFamily">monospace</item>
+        <item name="android:includeFontPadding">false</item>
+        <item name="android:textColor">#E7FFF0</item>
+    </style>
+    <style name="RadarControl" parent="RadarTerminal">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:paddingStart">5dp</item>
+        <item name="android:paddingEnd">5dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">#90FFB6</item>
+        <item name="android:textSize">11sp</item>
     </style>
     <style name="RadarRow">
         <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">29dp</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+    <style name="RadarLogo">
+        <item name="android:layout_width">16dp</item>
+        <item name="android:layout_height">16dp</item>
+        <item name="android:layout_marginEnd">5dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:importantForAccessibility">no</item>
+        <item name="android:src">@drawable/token_placeholder</item>
+    </style>
+    <style name="RadarSymbol" parent="RadarTerminal">
+        <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">4dp</item>
-        <item name="android:textColor">#E8FFF0</item>
-        <item name="android:textSize">11sp</item>
-        <item name="android:maxLines">2</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:singleLine">true</item>
         <item name="android:ellipsize">end</item>
+        <item name="android:textColor">#90FFB6</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+    <style name="RadarPrice" parent="RadarTerminal">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:gravity">end</item>
+    </style>
+    <style name="RadarDetails" parent="RadarTerminal">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:textColor">#9FBEAB</item>
     </style>
 </resources>

@@ -116,6 +116,50 @@ public class RadarRepositoryTest {
                 .put("included",new JSONArray().put(included)));
         assertEquals("mint:"+MINT,found.get(0).identity);
     }
+    @Test public void geckoLogoFollowsExactMintThroughDeduplication() throws Exception {
+        String otherMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+        String logo = "https://assets.geckoterminal.com/fd8m1mcaviiszb6dgbq12ncuc7d5";
+        JSONObject relation = new JSONObject().put("base_token",
+            new JSONObject().put("data", new JSONObject().put("id", "solana_" + MINT)));
+        JSONObject first = geckoPool(PAIR,"SAME / SOL",65000,"0.002","8","12",null)
+            .put("relationships", relation);
+        JSONObject second = geckoPool(otherMint,"SAME / SOL",95000,"0.004","8","12",null)
+            .put("relationships", relation);
+        JSONObject unrelated = new JSONObject().put("type", "token").put("id", "solana_" + otherMint)
+            .put("attributes", new JSONObject().put("address", otherMint)
+                .put("image_url", "https://assets.geckoterminal.com/incorrect_image"));
+        JSONObject metadata = new JSONObject().put("type", "token").put("id", "solana_" + MINT)
+            .put("attributes", new JSONObject().put("address", MINT).put("image_url", logo));
+        List<RadarRepository.Coin> coins = RadarRepository.parseGecko(new JSONObject()
+            .put("data", new JSONArray().put(first).put(second))
+            .put("included", new JSONArray().put(unrelated).put(metadata)));
+        assertEquals(1, coins.size());
+        assertEquals(MINT, coins.get(0).mint());
+        assertEquals(logo, coins.get(0).logo);
+        assertTrue(coins.get(0).url.endsWith(otherMint));
+    }
+
+    @Test public void dexLogoIsUsedOnlyForExactSolanaBaseMint() throws Exception {
+        JSONObject pair = new JSONObject().put("chainId", "solana").put("pairAddress", PAIR)
+            .put("baseToken", new JSONObject().put("address", MINT).put("symbol", "COIN"))
+            .put("priceUsd", "0.012").put("liquidity", new JSONObject().put("usd", 78000))
+            .put("priceChange", new JSONObject().put("m5", 4))
+            .put("info", new JSONObject().put("imageUrl",
+                "https://cdn.dexscreener.com/cms/images/token_icon_abc?width=800"));
+        assertEquals("https://cdn.dexscreener.com/cms/images/token_icon_abc?width=64&height=64&quality=90&format=png",
+            RadarRepository.parseDex(new JSONArray().put(pair), Set.of(MINT)).get(0).logo);
+        pair.getJSONObject("info").put("imageUrl", "https://example.com/logo.png");
+        assertEquals("", RadarRepository.parseDex(new JSONArray().put(pair), Set.of(MINT)).get(0).logo);
+    }
+
+    @Test public void logoHostsRejectRedirectTricksAndAllowRealCoinGeckoPaths() {
+        assertNull(TokenLogoUrl.normalized("https://coin-images.coingecko.com@example.com/coins/images/42/large/x.png"));
+        assertNull(TokenLogoUrl.normalized("http://assets.geckoterminal.com/abcde12345"));
+        assertNull(TokenLogoUrl.normalized("https://cdn.dexscreener.com/cms/images/../bad_icon"));
+        String mihao = "https://coin-images.coingecko.com/coins/images/102180225/large/g1i6vgqt2s0oe4tclnb3j8zbg8jz.?1794394690";
+        assertEquals(mihao, TokenLogoUrl.normalized(mihao));
+    }
+
     @Test public void displayedPercentageZeroIsNotNegativeZero() {
         assertEquals("+0.0%",RadarRepository.formatMove(-0.01));
         assertEquals("—",RadarRepository.formatMove(Double.NaN));

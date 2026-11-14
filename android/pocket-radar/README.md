@@ -1,3 +1,28 @@
+# WHAT'S GOOD Pocket Radar
+
+## v0.9 — Live home-screen widget
+
+Tap **LIVE** on the widget or **START LIVE** in the app. Live mode updates the
+check age every 3 seconds and checks market data about every 30 seconds while
+the screen is on. Polling pauses when the screen turns off and resumes on wake.
+Slow requests and provider rate limits can extend the interval. **STOP** ends
+Live mode. Outside Live mode, **↻** requests a refresh and Android schedules
+periodic widget updates. Manual and automatic requests share the 30-second
+minimum between market checks.
+
+**POLL** identifies Live mode. **CHECK** shows the age of the last successful
+provider response. Providers can serve cached data. **STALE** flags an old
+or failed market check and retains the last successful rows. **DEX BOOSTS**
+identifies the fallback based on promoted listings. If Android 15 or later
+pauses the data-sync service, open the app and tap **START LIVE** to resume it.
+
+TREND and CHASE show up to five Solana pools. Tap a row for the original pool
+chart. Token logos use exact base-token mint metadata from GeckoTerminal or
+DEX Screener and are cached on the device. Missing or unavailable logos use a
+placeholder.
+
+Install the stable-signed v0.9.0 release over the signed v0.7 or v0.8 APK to keep
+the existing widget and settings.
 
 ## v0.8 — GOGET research pairing (feature branch; production API not deployed)
 
@@ -74,7 +99,7 @@ Android's normal **Update** path. Keep all of the following constant:
    both could impersonate the app publisher; losing them would break updates.
    Never commit, upload them to the repo, send them in chat or include in logs.
 4. The separate `Pocket Radar Signed Update APK` GitHub Actions workflow
-   produces `pocket-radar-v07-SIGNED-UPDATE` when the two secrets are present.
+   produces `pocket-radar-v09-SIGNED-UPDATE` when the two secrets are present.
    The workflow verifies APK signature and package ID. A run with missing
    secrets produces no signed-release artifact. The ordinary
    `Pocket Radar Android APK` debug artifact is **NOT** update compatible.
@@ -141,7 +166,7 @@ The app includes a user-triggered network self-test for INTERNET permission, act
 - **Valuation:** Shows market cap (MC) when supported; otherwise FDV is **separately labeled** instead of substituting it for market cap. Pool liquidity (LP) is not actual exit depth.
 - **Compact widget:** 3 rows on a small widget; 5 on a taller widget with automatic rerender after resizing (Samsung launcher behavior may vary). The full application still shows 5 rows.
 - **Health:** Previous provider fallback, error/stale state, no private keys, read-only permission profile and 60-second request floor remain.
-- **Release:** An APK passing JVM parser tests/CI is **not** proof of functional performance on Samsung. Compare the widget and full app on the same timestamp before calling it field-tested.
+- **Device checks:** Compare the widget and app check age, test chart taps and confirm a Live session pauses and resumes across screen lock.
 - **GOGET:** No production scans, schema, D1, cooldowns, paper trades or trading features changed. No fabricated OUR SCORE from market momentum.
 
 ## v0.6 TREND / CHASE (limited public-data screening)
@@ -152,6 +177,6 @@ The app includes a user-triggered network self-test for INTERNET permission, act
 - A pool qualifies for CHASE only when pool age is known and 0–72h, 5-minute buys at least 10 and 1.3x sells, +2% through +30% over 5 minutes, optional 1-hour return not below 0% or above 80%, and public reported liquidity >= $50,000.
 - Candidates are ordered by net buys minus sells over 5 minutes, tie-breaking on younger age and then pool liquidity. This is **NOT** a prediction score and is not GOGET OUR SCORE.
 - CHASE may legitimately show zero matches. Missing trade counts or unknown age NEVER qualify. Reported transactions are **not proven unique buyers**; wallets may wash trade. This is the provider's trending sample (at most the first page), **not** an exhaustive new-token search.
-- Up to 20 bounded deduplicated candidate observations are cached per successful public feed fetch, permitting immediate local mode switches while preserving the existing minimum 60-second request spacing.
-- Android widget continues to use its default OS periodic update policy, with manual refresh and immediate mode-toggle UI feedback. This is not continuous 30-second background market data.
+- Up to 20 bounded deduplicated candidate observations are cached per successful public feed fetch, permitting immediate local mode switches while preserving the existing minimum 30-second request spacing.
+- Live mode is optional. Mode changes are immediate and use the local snapshot.
 - Trading, wallet signing, notifications, private GOGET authentication, scanner/cron/DB schema, and production GOGET queries are untouched.

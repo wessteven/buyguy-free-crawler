@@ -2,131 +2,206 @@ package dev.whatsgood.pocketradar;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
-    private final Handler handler=new Handler(Looper.getMainLooper());
-    private final ExecutorService io=Executors.newSingleThreadExecutor();
-    private final TextView[] rows=new TextView[5];
-    private TextView status;
-    private Button modeButton;
-    private boolean active=false,loading=false;
-    private final Runnable timer=new Runnable(){@Override public void run(){
-        if(!active)return;
-        fetch();
-        handler.postDelayed(this,30_000);
-    }};
-    @Override protected void onCreate(Bundle b){
-        super.onCreate(b);
-        ScrollView scroll=new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(Color.rgb(10,16,13));
-        LinearLayout body=new LinearLayout(this);
-        body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(dp(18),dp(24),dp(18),dp(24));
-        scroll.addView(body);setContentView(scroll);
-        add(body,"◉ WHAT'S GOOD",27,0xFF7CF7A1,true);
-        add(body,"POCKET RADAR · SOLANA",12,0xFFB0CBB7,false);
-        status=add(body,"Fetching public market data…",13,0xFFB0CBB7,false);
-        modeButton=new Button(this);
-        modeButton.setOnClickListener(v->{
-            RadarRepository.Snapshot updated=RadarRepository.toggleMode(getApplicationContext());
-            show(updated);
-            RadarWidget.renderAll(getApplicationContext(),updated);
-        });
-        body.addView(modeButton);
-        Button refresh=new Button(this);refresh.setText("↻ REFRESH NOW");
-        refresh.setOnClickListener(v->fetch());body.addView(refresh);
-        for(int i=0;i<rows.length;i++){
-            rows[i]=add(body,"—",16,0xFFECFFF1,true);
-            rows[i].setPadding(dp(8),dp(14),dp(8),dp(14));
-            rows[i].setBackgroundColor(0xFF14261A);
-            LinearLayout.LayoutParams lp=(LinearLayout.LayoutParams)rows[i].getLayoutParams();
-            lp.bottomMargin=dp(5);rows[i].setLayoutParams(lp);
+    private static final int GREEN = 0xFF90FFB6;
+    private static final int MUTED = 0xFF9FBEAB;
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final ExecutorService io = Executors.newSingleThreadExecutor();
+    private final LinearLayout[] rows = new LinearLayout[5];
+    private final ImageView[] logos = new ImageView[5];
+    private final TextView[] values = new TextView[5];
+    private final TextView[] details = new TextView[5];
+    private final Runnable repaint = this::show;
+    private final Runnable timer = new Runnable() {
+        @Override public void run() {
+            if (!LiveRadarService.isRunning()) {
+                RadarUpdates.request(MainActivity.this, null);
+                showStatus();
+            }
+            handler.postDelayed(this, LiveRadarService.TICK_MS);
         }
-        Button dashboard=new Button(this);dashboard.setText("OPEN GOGET / WHAT'S GOOD");
-        dashboard.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
-            Uri.parse(RadarRepository.DASHBOARD))));body.addView(dashboard);
-        Button goget=new Button(this);goget.setText("★ GOGET RESEARCH · OUR SCORE");
-        goget.setOnClickListener(v->startActivity(new Intent(this,GogetActivity.class)));
-        body.addView(goget);
-        Button doctor=new Button(this);doctor.setText("TEST INTERNET / DNS");
-        TextView diagnostic=add(body,"Connection test available. Tap TEST INTERNET / DNS to compare providers with an ordinary public domain.",13,0xFFB0CBB7,false);
-        doctor.setOnClickListener(v->{
+    };
+    private TextView status;
+    private TextView diagnostic;
+    private TextView empty;
+    private Button mode;
+    private Button live;
+
+    @Override protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setBackgroundColor(0xFF0B1511);
+        LinearLayout body = new LinearLayout(this);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(18), dp(28), dp(18), dp(24));
+        scroll.addView(body);
+        setContentView(scroll);
+
+        add(body, "> WHAT'S GOOD", 25, GREEN, true);
+        add(body, "POCKET RADAR / SOLANA", 12, MUTED, false);
+        status = add(body, "", 12, MUTED, false);
+        LinearLayout controls = new LinearLayout(this);
+        body.addView(controls);
+        mode = button(controls, "TREND", () -> {
+            RadarRepository.toggleMode(this);
+            RadarUpdates.updated(this, true);
+        });
+        live = button(controls, "LIVE", () -> LiveRadarService.toggle(this));
+        button(controls, "↻", () -> RadarUpdates.request(this, null))
+                .setContentDescription("Refresh radar");
+
+        empty = add(body, "", 12, MUTED, false);
+        for (int i = 0; i < rows.length; i++) {
+            LinearLayout row = new LinearLayout(this);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setMinimumHeight(dp(54));
+            row.setPadding(dp(10), dp(5), dp(10), dp(5));
+            row.setBackgroundResource(R.drawable.widget_bg);
+            LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(-1, -2);
+            rowParams.setMargins(0, 0, 0, dp(5));
+            body.addView(row, rowParams);
+            ImageView logo = new ImageView(this);
+            logo.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(dp(24), dp(24));
+            logoParams.setMarginEnd(dp(9));
+            row.addView(logo, logoParams);
+            LinearLayout text = new LinearLayout(this);
+            text.setOrientation(LinearLayout.VERTICAL);
+            row.addView(text, new LinearLayout.LayoutParams(0, -2, 1));
+            values[i] = add(text, "", 13, GREEN, true);
+            details[i] = add(text, "", 11, MUTED, false);
+            rows[i] = row;
+            logos[i] = logo;
+        }
+
+        button(body, "OPEN GOGET / WHAT'S GOOD", () -> open(RadarRepository.DASHBOARD));
+        button(body, "GOGET RESEARCH · OUR SCORE", () -> startActivity(new Intent(this, GogetActivity.class)));
+        Button doctor = button(body, "TEST INTERNET / DNS", () -> {});
+        TextView report = add(body, "", 11, MUTED, false);
+        report.setVisibility(View.GONE);
+        doctor.setOnClickListener(v -> {
             doctor.setEnabled(false);
-            diagnostic.setText("Checking network and DNS...");
-            io.execute(()->{
-                String report=ConnectionDoctor.diagnose(getApplicationContext());
-                runOnUiThread(()->{
-                    if(!isFinishing()&&!isDestroyed()){
-                        diagnostic.setText(report);
+            report.setVisibility(View.VISIBLE);
+            report.setText("Checking network and DNS…");
+            io.execute(() -> {
+                String result = ConnectionDoctor.diagnose(getApplicationContext());
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        report.setText(result);
                         doctor.setEnabled(true);
                     }
                 });
             });
         });
-        body.addView(doctor);
-        Button chrome=new Button(this);chrome.setText("TEST GECKO URL IN BROWSER");
-        chrome.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,
-            Uri.parse("https://api.geckoterminal.com/api/v2/networks/solana/trending_pools"))));
-        body.addView(chrome);
+        button(body, "TEST GECKO URL IN BROWSER", () ->
+                open("https://api.geckoterminal.com/api/v2/networks/solana/trending_pools"));
+        diagnostic = add(body, "", 11, MUTED, false);
+        add(body, "LIVE checks the market about every 30s and updates the check age every 3s "
+                + "while the screen is on. CHECK is the time since the last successful provider read.",
+                11, MUTED, false);
+        show();
+    }
 
-        add(body,"5m/1h are provider price changes; MC is market cap when available (otherwise FDV is clearly labeled). L/LP is pool liquidity, NOT guaranteed sell depth. Distinct token identities are deduplicated. CHASE filters for 5m positive but not parabolic momentum, a recent pool and buy/sell activity (transactions, NOT verified unique buyers). The sample is only trending pools, not all launches. Gecko first, Dex promoted fallback. No trading.",13,0xFFABB8AC,false);
-        add(body,"Foreground display checks every 30s; network fetch no more than once/minute. Home widget shows 3 coins when small, up to 5 if enlarged; resize then refresh. Android schedules background updates. Fetch time is NOT provider quote time.",12,0xFF829B88,false);
-        show(RadarRepository.cached(this));
+    @Override protected void onResume() {
+        super.onResume();
+        RadarUpdates.observe(repaint);
+        TokenLogos.observe(repaint);
+        show();
+        handler.post(timer);
     }
-    @Override protected void onResume(){super.onResume();active=true;handler.post(timer);}
-    @Override protected void onPause(){active=false;handler.removeCallbacks(timer);super.onPause();}
-    @Override protected void onDestroy(){io.shutdown();super.onDestroy();}
-    private void fetch(){
-        if(loading)return;
-        loading=true;
-        io.execute(()->{
-            RadarRepository.Snapshot snap=RadarRepository.refresh(getApplicationContext());
-            runOnUiThread(()->{
-                loading=false;
-                if(!isFinishing()&&!isDestroyed())show(snap);
-            });
-            RadarWidget.renderAll(getApplicationContext(),snap);
-        });
+
+    @Override protected void onPause() {
+        handler.removeCallbacks(timer);
+        RadarUpdates.remove(repaint);
+        TokenLogos.removeObserver(repaint);
+        super.onPause();
     }
-    private void show(RadarRepository.Snapshot snap){
-        modeButton.setText(RadarRepository.CHASE.equals(snap.mode)?
-            "⚡ CHASE (tap for TREND)":"≡ TREND (tap for CHASE)");
-        status.setText(snap.status()+"\n"+snap.details());
-        for(int i=0;i<rows.length;i++){
-            TextView row=rows[i];
-            if(i>=snap.coins.size()){
-                row.setText(i==0?(snap.fetchedAt==0&&snap.error!=null?
-                    "Feed unavailable: "+snap.details():
-                    (RadarRepository.CHASE.equals(snap.mode)?
-                        "No early-momentum matches in current trending sample. Choose TREND to see all.":"No pools currently meet $50k minimum")):"");
-                row.setTextColor(0xFF92AA98);
-                row.setOnClickListener(null);
-                continue;
-            }
-            RadarRepository.Coin coin=snap.coins.get(i);
-            row.setText(RadarRepository.CHASE.equals(snap.mode)?coin.chaseLine():coin.line());
-            row.setTextColor(coin.m5>=0?0xFF7CF7A1:0xFFFFA99D);
-            row.setOnClickListener(v->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(coin.url))));
+
+    @Override protected void onDestroy() {
+        io.shutdown();
+        super.onDestroy();
+    }
+
+    private void showStatus() {
+        showStatus(RadarRepository.cached(this));
+    }
+
+    private void showStatus(RadarRepository.Snapshot snapshot) {
+        status.setText(RadarWidget.status(this, snapshot));
+        status.setTextColor(snapshot.stale() || LiveRadarService.wasPaused(this) ? 0xFFE9BD76 : MUTED);
+    }
+
+    private void show() {
+        RadarRepository.Snapshot snapshot = RadarRepository.cached(this);
+        showStatus(snapshot);
+        diagnostic.setText(snapshot.details());
+        mode.setText(snapshot.mode);
+        live.setText(LiveRadarService.isRunning() ? "STOP LIVE" : "START LIVE");
+        empty.setVisibility(snapshot.coins.isEmpty() ? View.VISIBLE : View.GONE);
+        empty.setText(RadarWidget.emptyMessage(snapshot));
+        for (int i = 0; i < rows.length; i++) {
+            boolean visible = i < snapshot.coins.size();
+            rows[i].setVisibility(visible ? View.VISIBLE : View.GONE);
+            if (!visible) continue;
+            RadarRepository.Coin coin = snapshot.coins.get(i);
+            values[i].setText(coin.name + "  " + RadarRepository.formatPrice(coin.usd)
+                    + "  5m " + RadarRepository.formatMove(coin.m5) + "  1h " + RadarRepository.formatMove(coin.h1));
+            values[i].setTextColor(coin.m5 >= 0 ? GREEN : 0xFFFFA99D);
+            details[i].setText(coin.widgetDetails(snapshot.mode));
+            Bitmap logo = TokenLogos.get(this, coin);
+            if (logo == null) logos[i].setImageResource(R.drawable.token_placeholder);
+            else logos[i].setImageBitmap(logo);
+            rows[i].setOnClickListener(v -> open(coin.url));
         }
     }
-    private TextView add(LinearLayout layout,String text,int sp,int color,boolean bold){
-        TextView t=new TextView(this);t.setText(text);t.setTextSize(sp);t.setTextColor(color);
-        t.setPadding(0,dp(6),0,dp(6));
-        if(bold)t.setTypeface(null,android.graphics.Typeface.BOLD);
-        layout.addView(t);return t;
+
+    private void open(String url) {
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
     }
-    private int dp(int n){return(int)(n*getResources().getDisplayMetrics().density+0.5f);}
+
+    private Button button(LinearLayout layout, String label, Runnable action) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setTypeface(Typeface.MONOSPACE);
+        button.setTextColor(GREEN);
+        button.setTextSize(12);
+        button.setOnClickListener(v -> action.run());
+        layout.addView(button);
+        return button;
+    }
+
+    private TextView add(LinearLayout layout, String text, int sp, int color, boolean bold) {
+        TextView view = new TextView(this);
+        view.setText(text);
+        view.setTextSize(sp);
+        view.setTextColor(color);
+        view.setTypeface(Typeface.MONOSPACE, bold ? Typeface.BOLD : Typeface.NORMAL);
+        view.setPadding(0, dp(2), 0, dp(2));
+        layout.addView(view);
+        return view;
+    }
+
+    private int dp(int size) {
+        return Math.round(size * getResources().getDisplayMetrics().density);
+    }
 }

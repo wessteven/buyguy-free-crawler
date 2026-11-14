@@ -6,6 +6,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.IOException;
+import android.os.SystemClock;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -28,7 +30,10 @@ final class RadarRepository {
     private static final String BOOSTS="https://api.dexscreener.com/token-boosts/top/v1";
     private static final String DEX_TOKENS="https://api.dexscreener.com/tokens/v1/solana/";
     private static final String PREFS="pocket-radar-v06";
-    private static final long FETCH_FLOOR_MS=60_000L, STALE_MS=5*60_000L;
+    static final long LIVE_CHECK_MS=30_000L;
+    private static final long STALE_MS=5*60_000L;
+    private static final long RATE_LIMIT_MS=60_000L;
+    private static long geckoRetryAt, dexRetryAt;
     private static final double RESERVE_FLOOR=50_000;
     private static final int MAX_BYTES=950_000;
     private static final int MAX_COINS=5;
@@ -36,7 +41,7 @@ final class RadarRepository {
     static final String TREND="TREND", CHASE="CHASE";
 
     static final class Coin {
-        final String name, identity, url;
+        final String name, identity, url, logo;
         final double usd,m5,h1,reserve,marketCap,fdv;
         final int buys5,sells5;
         final long createdAt;
@@ -46,7 +51,12 @@ final class RadarRepository {
         }
         Coin(String name,String identity,double usd,double m5,double h1,double reserve,
             double marketCap,double fdv,String url,int buys5,int sells5,long createdAt){
+            this(name,identity,usd,m5,h1,reserve,marketCap,fdv,url,buys5,sells5,createdAt,"");
+        }
+        Coin(String name,String identity,double usd,double m5,double h1,double reserve,
+            double marketCap,double fdv,String url,int buys5,int sells5,long createdAt,String logo){
             this.name=name;this.identity=identity;this.usd=usd;this.m5=m5;this.h1=h1;
+            this.logo=logo;
             this.reserve=reserve;this.marketCap=marketCap;this.fdv=fdv;this.url=url;
             this.buys5=buys5;this.sells5=sells5;this.createdAt=createdAt;
         }
@@ -54,14 +64,19 @@ final class RadarRepository {
             return name+"  "+formatPrice(usd)+"   5m "+formatMove(m5)+"  1h "+formatMove(h1)+
                 "\n"+capLabel(marketCap,fdv)+"   · LP "+compact(reserve);
         }
-        String widgetLine(String mode){
+        String mint(){
+            return identity.startsWith("mint:")?identity.substring(5):"";
+        }
+        String widgetDetails(String mode){
             if(CHASE.equals(mode)){
-                return name+" "+formatPrice(usd)+"  "+formatMove(m5)+"/"+formatMove(h1)+
-                    "\n5m buys/sells "+buys5+"/"+sells5+" · "+ageLabel(createdAt,System.currentTimeMillis())+
+                return "5m buys/sells "+buys5+"/"+sells5+" · "+ageLabel(createdAt,System.currentTimeMillis())+
                     " · LP "+compact(reserve);
             }
+            return capLabel(marketCap,fdv)+" · LP "+compact(reserve);
+        }
+        String widgetLine(String mode){
             return name+" "+formatPrice(usd)+"  "+formatMove(m5)+"/"+formatMove(h1)+
-                "\n"+capLabel(marketCap,fdv)+" · LP "+compact(reserve);
+                "\n"+widgetDetails(mode);
         }
         String chaseLine(){
             return line()+"\n5m buys/sells "+(buys5<0?"—":buys5)+"/"+
@@ -76,12 +91,15 @@ final class RadarRepository {
             this.coins=coins;this.fetchedAt=fetchedAt;this.source=source;this.diagnostic=diagnostic;
             this.error=error;this.mode=mode;
         }
+        boolean stale(){
+            return error!=null || (fetchedAt>0 && System.currentTimeMillis()-fetchedAt>STALE_MS);
+        }
         String status(){
-            if(fetchedAt==0)return error!=null?"FEED ERROR · never loaded":"Awaiting first market update";
+            if(fetchedAt==0)return error!=null?"FEED ERROR":"WAITING FOR DATA";
             long age=Math.max(0,System.currentTimeMillis()-fetchedAt)/1000;
-            String provider="DEX".equals(source)?"DEX boosts (promoted)":"Gecko trending";
-            return (System.currentTimeMillis()-fetchedAt>STALE_MS?"STALE ":"")+provider+
-                " · fetched "+age+"s ago"+(error!=null?" · last fetch failed":"");
+            String provider="DEX".equals(source)?"DEX BOOSTS":"GECKO";
+            String elapsed=age<60?age+"s":age<3600?age/60+"m":age/3600+"h";
+            return (stale()?"STALE · ":"")+provider+" · CHECK "+elapsed;
         }
         String details(){return diagnostic==null||diagnostic.isEmpty()?"No diagnostic recorded":diagnostic;}
     }
@@ -96,7 +114,7 @@ final class RadarRepository {
                 out.add(new Coin(j.getString("name"),j.getString("identity"),j.getDouble("usd"),
                     j.getDouble("m5"),number(j.opt("h1")),j.getDouble("reserve"),
                     number(j.opt("marketCap")),number(j.opt("fdv")),j.getString("url"),
-                    j.optInt("buys5",-1),j.optInt("sells5",-1),j.optLong("createdAt",0)));
+                    j.optInt("buys5",-1),j.optInt("sells5",-1),j.optLong("createdAt",0),j.optString("logo","")));
             }
         }catch(Exception ignored){out.clear();}
         String mode=getMode(p);
@@ -117,33 +135,43 @@ final class RadarRepository {
         return new ArrayList<>(candidates.subList(0,Math.min(MAX_COINS,candidates.size())));
     }
 
-    static synchronized Snapshot refresh(Context c){
-        SharedPreferences p=c.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
-        long now=System.currentTimeMillis();
-        if(now-p.getLong("attempt",0)<FETCH_FLOOR_MS)return cached(c);
-        p.edit().putLong("attempt",now).apply();
-        String geckoProblem="not tried";
-        try{
-            List<Coin> coins=parseGecko(new JSONObject(getJson(GECKO,true)));
-            if(!coins.isEmpty())return save(p,coins,"GECKO","Gecko HTTP 200; "+coins.size()+" unique candidates");
-            geckoProblem="Gecko HTTP 200; no qualifying candidates";
-        }catch(Exception ex){geckoProblem="Gecko "+problem(ex);}
-        try{
-            List<String> tokens=boostedSolanaAddresses(new JSONArray(getJson(BOOSTS,false)));
-            if(tokens.isEmpty())throw new IllegalStateException("No Solana boost addresses");
-            List<Coin> coins=parseDex(new JSONArray(getJson(DEX_TOKENS+join(tokens),false)),new HashSet<>(tokens));
-            if(!coins.isEmpty())return save(p,coins,"DEX",geckoProblem+"; DEX 200; "+
-                coins.size()+" unique boosted candidates");
-            p.edit().putString("error","No eligible pools").putString("diag",
-                geckoProblem+"; DEX 200; no qualifying boosted candidates").apply();
-        }catch(Exception ex){
-            p.edit().putString("error","Feed unavailable")
-                .putString("diag",geckoProblem+"; DEX "+problem(ex)).apply();
+    static void refresh(Context context){
+        SharedPreferences p=context.getSharedPreferences(PREFS,Context.MODE_PRIVATE);
+        String geckoProblem="Gecko cooling down";
+        long now=SystemClock.elapsedRealtime();
+        if(now>=geckoRetryAt){
+            try{
+                List<Coin> coins=parseGecko(new JSONObject(getJson(GECKO,true)));
+                if(!coins.isEmpty()){
+                    save(p,coins,"GECKO","Gecko HTTP 200; "+coins.size()+" unique candidates");
+                    return;
+                }
+                geckoProblem="Gecko HTTP 200; no qualifying candidates";
+            }catch(Exception ex){
+                if(ex instanceof RateLimited)geckoRetryAt=SystemClock.elapsedRealtime()+((RateLimited)ex).delay;
+                geckoProblem="Gecko "+problem(ex);
+            }
         }
-        return cached(c);
+        String dexProblem="DEX cooling down";
+        if(now>=dexRetryAt){
+            try{
+                List<String> tokens=boostedSolanaAddresses(new JSONArray(getJson(BOOSTS,false)));
+                if(tokens.isEmpty())throw new IllegalStateException("No Solana boost addresses");
+                List<Coin> coins=parseDex(new JSONArray(getJson(DEX_TOKENS+join(tokens),false)),new HashSet<>(tokens));
+                if(!coins.isEmpty()){
+                    save(p,coins,"DEX",geckoProblem+"; DEX 200; "+coins.size()+" unique boosted candidates");
+                    return;
+                }
+                dexProblem="DEX HTTP 200; no qualifying boosted candidates";
+            }catch(Exception ex){
+                if(ex instanceof RateLimited)dexRetryAt=SystemClock.elapsedRealtime()+((RateLimited)ex).delay;
+                dexProblem="DEX "+problem(ex);
+            }
+        }
+        p.edit().putString("error","No fresh snapshot").putString("diag",geckoProblem+"; "+dexProblem).apply();
     }
 
-    private static Snapshot save(SharedPreferences p,List<Coin> coins,String source,String diagnostic) throws Exception{
+    private static void save(SharedPreferences p,List<Coin> coins,String source,String diagnostic) throws Exception{
         JSONArray rows=new JSONArray();
         for(Coin coin:coins){
             JSONObject j=new JSONObject();
@@ -151,17 +179,28 @@ final class RadarRepository {
                 .put("m5",coin.m5).put("h1",finiteOrNull(coin.h1))
                 .put("reserve",coin.reserve).put("marketCap",finiteOrNull(coin.marketCap))
                 .put("fdv",finiteOrNull(coin.fdv)).put("url",coin.url)
-                .put("buys5",coin.buys5).put("sells5",coin.sells5).put("createdAt",coin.createdAt);
+                .put("buys5",coin.buys5).put("sells5",coin.sells5).put("createdAt",coin.createdAt)
+                .put("logo",coin.logo);
             rows.put(j);
         }
         long at=System.currentTimeMillis();
         p.edit().putString("rows",rows.toString()).putLong("at",at)
             .putString("source",source).putString("diag",diagnostic).remove("error").apply();
-        String mode=getMode(p);
-        return new Snapshot(select(coins,mode,System.currentTimeMillis()),at,source,diagnostic,null,mode);
     }
 
     private static Object finiteOrNull(double x){return Double.isFinite(x)?x:JSONObject.NULL;}
+
+    private static final class RateLimited extends IOException {
+        private static final long serialVersionUID=1L;
+        final long delay;
+        RateLimited(String retryAfter){
+            super("HTTP 429");
+            long wait=0;
+            try{wait=Math.max(0,Math.min(3600,Long.parseLong(retryAfter)))*1000;}
+            catch(NumberFormatException ignored){}
+            delay=Math.max(RATE_LIMIT_MS,wait);
+        }
+    }
 
     private static String getJson(String address,boolean gecko)throws Exception{
         HttpURLConnection conn=null;
@@ -169,8 +208,9 @@ final class RadarRepository {
             conn=(HttpURLConnection)new URL(address).openConnection();
             conn.setConnectTimeout(3000);conn.setReadTimeout(3000);
             conn.setRequestProperty("Accept",gecko?"application/json;version=20230203":"application/json");
-            conn.setRequestProperty("User-Agent","PocketRadar/0.6 (Android; read-only)");
+            conn.setRequestProperty("User-Agent","PocketRadar/0.9 (Android; read-only)");
             int status=conn.getResponseCode();
+            if(status==429)throw new RateLimited(conn.getHeaderField("Retry-After"));
             if(status!=200)throw new IllegalStateException("HTTP "+status);
             ByteArrayOutputStream b=new ByteArrayOutputStream();
             try(InputStream in=conn.getInputStream()){
@@ -188,6 +228,7 @@ final class RadarRepository {
         JSONArray pools=json.optJSONArray("data");
         if(pools==null)throw new IllegalArgumentException("Missing pool data array");
         Map<String,String> mintById=new HashMap<>();
+        Map<String,String> logosByMint=new HashMap<>();
         JSONArray included=json.optJSONArray("included");
         if(included!=null){
             for(int i=0;i<included.length();i++){
@@ -195,7 +236,11 @@ final class RadarRepository {
                 if(item==null||!"token".equals(item.optString("type")))continue;
                 JSONObject attrs=item.optJSONObject("attributes");
                 String address=attrs==null?"":attrs.optString("address","");
-                if(isSolanaAddress(address))mintById.put(item.optString("id",""),address);
+                if(isSolanaAddress(address)){
+                    mintById.put(item.optString("id",""),address);
+                    String logo=TokenLogoUrl.normalized(attrs.optString("image_url",""));
+                    if(logo!=null)logosByMint.put(address,logo);
+                }
             }
         }
         // Preserve provider trend order; if the same token appears in several pools,
@@ -221,7 +266,8 @@ final class RadarRepository {
                 number(a.opt("market_cap_usd")),number(a.opt("fdv_usd")),
                 "https://www.geckoterminal.com/solana/pools/"+pool,
                 five==null?-1:five.optInt("buys",-1),five==null?-1:five.optInt("sells",-1),
-                parsePoolCreatedAt(a.optString("pool_created_at","")));
+                parsePoolCreatedAt(a.optString("pool_created_at","")),
+                identity.startsWith("mint:")?logosByMint.getOrDefault(identity.substring(5),""):"");
             Coin previous=best.get(identity);
             if(previous==null||liquidity>previous.reserve)best.put(identity,c);
         }
@@ -279,11 +325,13 @@ final class RadarRepository {
             double h1=change==null?Double.NaN:number(change.opt("h1"));
             JSONObject tx=pair.optJSONObject("txns");
             JSONObject five=tx==null?null:tx.optJSONObject("m5");
+            JSONObject info=pair.optJSONObject("info");
+            String logo=info==null?null:TokenLogoUrl.normalized(info.optString("imageUrl",""));
             Coin c=new Coin(safeName(token.optString("symbol",token.optString("name","Unknown"))),
                 "mint:"+mint,usd,m5,h1,liquidity,number(pair.opt("marketCap")),
                 number(pair.opt("fdv")),"https://dexscreener.com/solana/"+pool,
                 five==null?-1:five.optInt("buys",-1),five==null?-1:five.optInt("sells",-1),
-                pair.optLong("pairCreatedAt",0));
+                pair.optLong("pairCreatedAt",0),logo==null?"":logo);
             Coin previous=best.get(mint);
             if(previous==null||c.reserve>previous.reserve)best.put(mint,c);
         }
@@ -307,7 +355,7 @@ final class RadarRepository {
                 display=c.name+"·"+suffix;
             }
             out.add(new Coin(display,c.identity,c.usd,c.m5,c.h1,c.reserve,c.marketCap,c.fdv,c.url,
-                c.buys5,c.sells5,c.createdAt));
+                c.buys5,c.sells5,c.createdAt,c.logo));
         }
         return out;
     }
