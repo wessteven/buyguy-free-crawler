@@ -18,6 +18,8 @@
             android:foregroundServiceType="dataSync" />
         <service android:name=".RadarRefreshJob" android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+        <service android:name=".RadarRows" android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
         <receiver android:name=".RadarWidget" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

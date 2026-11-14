@@ -1,6 +1,6 @@
 # WHAT'S GOOD Pocket Radar
 
-## v0.9 — Live home-screen widget
+## v0.11 — Live home-screen widget
 
 Tap **LIVE** on the widget or **START LIVE** in the app. Live mode updates the
 check age every 3 seconds and checks market data about every 15 seconds while
@@ -16,12 +16,12 @@ or failed market check and retains the last successful rows. **DEX BOOSTS**
 identifies the fallback based on promoted listings. If Android 15 or later
 pauses the data-sync service, open the app and tap **START LIVE** to resume it.
 
-TREND and CHASE show up to five Solana pools. Tap a row for the original pool
+TREND and CHASE show up to ten Solana pools. Swipe the home-screen list to see more rows. Tap a row for the original pool
 chart. Token logos use exact base-token mint metadata from GeckoTerminal or
 DEX Screener and are cached on the device. Missing or unavailable logos use a
 placeholder.
 
-Install the stable-signed v0.9.0 release over the signed v0.7 or v0.8 APK to keep
+Install the stable-signed v0.11.0 release over your existing signed Pocket Radar APK to keep
 the existing widget and settings.
 
 ## v0.8 — GOGET research pairing (feature branch; production API not deployed)
@@ -99,7 +99,7 @@ Android's normal **Update** path. Keep all of the following constant:
    both could impersonate the app publisher; losing them would break updates.
    Never commit, upload them to the repo, send them in chat or include in logs.
 4. The separate `Pocket Radar Signed Update APK` GitHub Actions workflow
-   produces `pocket-radar-v010-SIGNED-UPDATE` when the two secrets are present.
+   produces `pocket-radar-v011-SIGNED-UPDATE` when the two secrets are present.
    The workflow verifies APK signature and package ID. A run with missing
    secrets produces no signed-release artifact. The ordinary
    `Pocket Radar Android APK` debug artifact is **NOT** update compatible.
@@ -133,7 +133,7 @@ then long-press home screen > Widgets > WHAT'S GOOD Pocket Radar.
 
 ## Data and limitations
 
-- Public HTTPS GeckoTerminal Solana trending pools with DexScreener paid-boost fallback; up to five unique qualified token identities
+- Public HTTPS GeckoTerminal Solana trending pools with DexScreener paid-boost fallback; up to ten unique qualified token identities
   (preferred higher-liquidity pool when duplicate) (estimated reserve >= USD 50,000, valid pool address, price and 5m change).
 - Prices are **provider-derived**, not audited trade fills; pool reserves aren't
   independent sell-depth evidence, and a trending label isn't a safe-buy rating.
@@ -171,7 +171,7 @@ The app includes a user-triggered network self-test for INTERNET permission, act
 
 ## v0.6 TREND / CHASE (limited public-data screening)
 
-- **TREND** remains the provider's deduplicated ranked sample, limited to five visible tokens. A tap on a token still opens the same exact GeckoTerminal pool chart (DEX fallback charts open at DEX Screener).
+- **TREND** remains the provider's deduplicated ranked sample, limited to ten tokens. A tap on a token still opens the same exact GeckoTerminal pool chart (DEX fallback charts open at DEX Screener).
 - **CHASE** is a second display mode, switchable in the Android app and directly on the home widget. Switching modes reads local cache only; it does not call providers or affect Cloudflare D1.
 - New feed attributes: reported Gecko `transactions.m5.buys/sells`, `pool_created_at`; fallback DEX `txns.m5.buys/sells` and `pairCreatedAt`.
 - A pool qualifies for CHASE only when pool age is known and 0–72h, 5-minute buys at least 10 and 1.3x sells, +2% through +30% over 5 minutes, optional 1-hour return not below 0% or above 80%, and public reported liquidity >= $50,000.

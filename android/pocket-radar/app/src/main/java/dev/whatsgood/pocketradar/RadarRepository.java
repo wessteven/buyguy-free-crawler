@@ -36,7 +36,7 @@ final class RadarRepository {
     private static long geckoRetryAt, dexRetryAt;
     private static final double RESERVE_FLOOR=50_000;
     private static final int MAX_BYTES=950_000;
-    private static final int MAX_COINS=5;
+    static final int MAX_COINS=10;
     private static final int MAX_CANDIDATES=20;
     static final String TREND="TREND", CHASE="CHASE";
 

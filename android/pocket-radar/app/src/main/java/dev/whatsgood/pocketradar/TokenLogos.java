@@ -46,10 +46,9 @@ final class TokenLogos {
     }
 
     static Bitmap get(Context context, RadarRepository.Coin coin) {
-        String mint = coin.mint();
         String url = TokenLogoUrl.normalized(coin.logo);
-        if (url == null || !mint.matches("[1-9A-HJ-NP-Za-km-z]{32,44}")) return null;
-        String key = mint + "-" + UUID.nameUUIDFromBytes(url.getBytes(StandardCharsets.UTF_8));
+        String key = cacheKey(coin, url);
+        if (key == null) return null;
         Bitmap bitmap = ICONS.get(key);
         if (bitmap != null) return bitmap;
         Long retryAt = RETRY.get(key);
@@ -76,6 +75,17 @@ final class TokenLogos {
             });
         });
         return null;
+    }
+
+    static Bitmap cached(RadarRepository.Coin coin) {
+        String key = cacheKey(coin, TokenLogoUrl.normalized(coin.logo));
+        return key == null ? null : ICONS.get(key);
+    }
+
+    private static String cacheKey(RadarRepository.Coin coin, String url) {
+        String mint = coin.mint();
+        if (url == null || !mint.matches("[1-9A-HJ-NP-Za-km-z]{32,44}")) return null;
+        return mint + "-" + UUID.nameUUIDFromBytes(url.getBytes(StandardCharsets.UTF_8));
     }
 
     private static Bitmap load(Context context, String key, String url) {

@@ -20,15 +20,18 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
+    static final String ACTION_OPEN_POOL = "dev.whatsgood.pocketradar.OPEN_POOL";
+    static final String EXTRA_POOL_URL = "pool_url";
+
     private static final int GREEN = 0xFF90FFB6;
     private static final int MUTED = 0xFF9FBEAB;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
-    private final LinearLayout[] rows = new LinearLayout[5];
-    private final ImageView[] logos = new ImageView[5];
-    private final TextView[] values = new TextView[5];
-    private final TextView[] details = new TextView[5];
+    private final LinearLayout[] rows = new LinearLayout[RadarRepository.MAX_COINS];
+    private final ImageView[] logos = new ImageView[RadarRepository.MAX_COINS];
+    private final TextView[] values = new TextView[RadarRepository.MAX_COINS];
+    private final TextView[] details = new TextView[RadarRepository.MAX_COINS];
     private final Runnable repaint = this::show;
     private final Runnable timer = new Runnable() {
         @Override public void run() {
@@ -47,6 +50,10 @@ public final class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        if (state == null && opensWidgetPool(getIntent())) {
+            finish();
+            return;
+        }
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(0xFF0B1511);
@@ -124,6 +131,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (isFinishing()) return;
         RadarUpdates.observe(repaint);
         TokenLogos.observe(repaint);
         show();
@@ -173,6 +181,21 @@ public final class MainActivity extends Activity {
             else logos[i].setImageBitmap(logo);
             rows[i].setOnClickListener(v -> open(coin.url));
         }
+    }
+
+    private boolean opensWidgetPool(Intent intent) {
+        if (!ACTION_OPEN_POOL.equals(intent.getAction())) return false;
+        String url = intent.getStringExtra(EXTRA_POOL_URL);
+        if (url == null) return false;
+        Uri uri = Uri.parse(url);
+        String path = uri.getPath();
+        if (!"https".equals(uri.getScheme()) || path == null) return false;
+        boolean gecko = "www.geckoterminal.com".equals(uri.getHost())
+                && path.matches("/solana/pools/[1-9A-HJ-NP-Za-km-z]{32,44}");
+        boolean dex = "dexscreener.com".equals(uri.getHost())
+                && path.matches("/solana/[1-9A-HJ-NP-Za-km-z]{32,44}");
+        if (gecko || dex) open(url);
+        return gecko || dex;
     }
 
     private void open(String url) {

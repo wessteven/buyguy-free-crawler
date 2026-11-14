@@ -6,9 +6,6 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.net.Uri;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -18,19 +15,9 @@ public final class RadarWidget extends AppWidgetProvider {
     private static final String TOGGLE_LIVE = "dev.whatsgood.pocketradar.TOGGLE_LIVE";
     static final String STOP_LIVE = "dev.whatsgood.pocketradar.STOP_LIVE";
 
-    private static final int[] ROWS = {R.id.row0, R.id.row1, R.id.row2, R.id.row3, R.id.row4};
-    private static final int[] LOGOS = {R.id.logo0, R.id.logo1, R.id.logo2, R.id.logo3, R.id.logo4};
-    private static final int[] SYMBOLS = {R.id.symbol0, R.id.symbol1, R.id.symbol2, R.id.symbol3, R.id.symbol4};
-    private static final int[] PRICES = {R.id.price0, R.id.price1, R.id.price2, R.id.price3, R.id.price4};
-    private static final int[] DETAILS = {R.id.details0, R.id.details1, R.id.details2, R.id.details3, R.id.details4};
-
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         renderAll(context);
         RadarRefreshJob.enqueue(context, false);
-    }
-
-    @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) {
-        renderAll(context);
     }
 
     @Override public void onReceive(Context context, Intent intent) {
@@ -89,41 +76,28 @@ public final class RadarWidget extends AppWidgetProvider {
         boolean live = LiveRadarService.isRunning();
         PendingIntent home = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class),
                 PendingIntent.FLAG_IMMUTABLE);
-        for (int id : ids) {
-            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.radar_widget);
-            setStatus(context, views, snapshot);
-            views.setOnClickPendingIntent(R.id.header, home);
-            views.setTextViewText(R.id.mode, snapshot.mode);
-            views.setContentDescription(R.id.mode, snapshot.mode + " mode. Switch mode.");
-            views.setOnClickPendingIntent(R.id.mode, control(context, 0, ACTION_MODE));
-            views.setTextViewText(R.id.live, live ? "STOP" : "LIVE");
-            views.setContentDescription(R.id.live, live ? "Stop live updates" : "Start live updates");
-            views.setOnClickPendingIntent(R.id.live, control(context, 1, TOGGLE_LIVE));
-            views.setOnClickPendingIntent(R.id.refresh, control(context, 2, ACTION_REFRESH));
-            views.setOnClickPendingIntent(R.id.empty, home);
-            views.setViewVisibility(R.id.empty, snapshot.coins.isEmpty() ? View.VISIBLE : View.GONE);
-            views.setTextViewText(R.id.empty, emptyMessage(snapshot));
+        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.radar_widget);
+        setStatus(context, views, snapshot);
+        views.setOnClickPendingIntent(R.id.header, home);
+        views.setTextViewText(R.id.mode, snapshot.mode);
+        views.setContentDescription(R.id.mode, snapshot.mode + " mode. Switch mode.");
+        views.setOnClickPendingIntent(R.id.mode, control(context, 0, ACTION_MODE));
+        views.setTextViewText(R.id.live, live ? "STOP" : "LIVE");
+        views.setContentDescription(R.id.live, live ? "Stop live updates" : "Start live updates");
+        views.setOnClickPendingIntent(R.id.live, control(context, 1, TOGGLE_LIVE));
+        views.setOnClickPendingIntent(R.id.refresh, control(context, 2, ACTION_REFRESH));
+        views.setOnClickPendingIntent(R.id.empty, home);
+        views.setViewVisibility(R.id.empty, snapshot.coins.isEmpty() ? View.VISIBLE : View.GONE);
+        views.setViewVisibility(R.id.tokens, snapshot.coins.isEmpty() ? View.GONE : View.VISIBLE);
+        views.setTextViewText(R.id.empty, emptyMessage(snapshot));
 
-            int height = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0);
-            int visible = Math.min(height >= 220 ? 5 : 3, snapshot.coins.size());
-            for (int i = 0; i < ROWS.length; i++) {
-                views.setViewVisibility(ROWS[i], i < visible ? View.VISIBLE : View.GONE);
-                if (i >= visible) continue;
-                RadarRepository.Coin coin = snapshot.coins.get(i);
-                Bitmap logo = TokenLogos.get(context, coin);
-                if (logo == null) views.setImageViewResource(LOGOS[i], R.drawable.token_placeholder);
-                else views.setImageViewBitmap(LOGOS[i], logo);
-                views.setTextViewText(SYMBOLS[i], coin.name);
-                views.setTextViewText(PRICES[i], RadarRepository.formatPrice(coin.usd) + "  "
-                        + RadarRepository.formatMove(coin.m5) + "/" + RadarRepository.formatMove(coin.h1));
-                views.setTextColor(PRICES[i], coin.m5 >= 0 ? 0xFF90FFB6 : 0xFFFFA99D);
-                views.setTextViewText(DETAILS[i], coin.widgetDetails(snapshot.mode));
-                Intent chart = new Intent(Intent.ACTION_VIEW, Uri.parse(coin.url));
-                views.setOnClickPendingIntent(ROWS[i], PendingIntent.getActivity(context, 100 + i, chart,
-                        PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
-            }
-            manager.updateAppWidget(id, views);
-        }
+        for (RadarRepository.Coin coin : snapshot.coins) TokenLogos.get(context, coin);
+        views.setRemoteAdapter(R.id.tokens, new Intent(context, RadarRows.class));
+        Intent chart = new Intent(context, MainActivity.class).setAction(MainActivity.ACTION_OPEN_POOL);
+        views.setPendingIntentTemplate(R.id.tokens, PendingIntent.getActivity(context, 3, chart,
+                PendingIntent.FLAG_MUTABLE));
+        manager.updateAppWidget(ids, views);
+        manager.notifyAppWidgetViewDataChanged(ids, R.id.tokens);
     }
 
     private static PendingIntent control(Context context, int code, String action) {

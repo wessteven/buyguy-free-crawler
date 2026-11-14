@@ -193,6 +193,20 @@ public class RadarRepositoryTest {
         assertEquals("SECOND",RadarRepository.select(
             java.util.Arrays.asList(less,good),RadarRepository.TREND,now).get(0).name);
     }
+    @Test public void bothModesShowAtMostTenQualifyingTokens() {
+        long now=1_800_000_000_000L;
+        List<RadarRepository.Coin> coins=new java.util.ArrayList<>();
+        for(int i=0;i<12;i++){
+            coins.add(new RadarRepository.Coin("TOKEN "+i,"mint:"+i,0.01,5,9,
+                80000,200000,200000,"https://www.geckoterminal.com/solana/pools/"+PAIR,
+                30-i,6,now-3600_000L));
+        }
+        for(String mode:List.of(RadarRepository.TREND,RadarRepository.CHASE)){
+            assertEquals(coins.subList(0,10),RadarRepository.select(coins,mode,now));
+            assertEquals(coins.subList(0,3),RadarRepository.select(coins.subList(0,3),mode,now));
+        }
+    }
+
     @Test public void chaseRejectsUnknownTradeDataOldPoolsAndParabolicMoves(){
         long now=1_800_000_000_000L;
         RadarRepository.Coin missing=new RadarRepository.Coin("NO TX","mint:tx",

@@ -21,59 +21,7 @@
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:paddingTop="8dp" android:textSize="11sp" android:textColor="#9FBEAB"
         android:text="Waiting for Solana market data" />
-    <LinearLayout android:id="@+id/row0" style="@style/RadarRow" android:visibility="gone">
-        <ImageView android:id="@+id/logo0" style="@style/RadarLogo" />
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:orientation="vertical">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:id="@+id/symbol0" style="@style/RadarSymbol" />
-                <TextView android:id="@+id/price0" style="@style/RadarPrice" />
-            </LinearLayout>
-            <TextView android:id="@+id/details0" style="@style/RadarDetails" />
-        </LinearLayout>
-    </LinearLayout>
-    <LinearLayout android:id="@+id/row1" style="@style/RadarRow" android:visibility="gone">
-        <ImageView android:id="@+id/logo1" style="@style/RadarLogo" />
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:orientation="vertical">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:id="@+id/symbol1" style="@style/RadarSymbol" />
-                <TextView android:id="@+id/price1" style="@style/RadarPrice" />
-            </LinearLayout>
-            <TextView android:id="@+id/details1" style="@style/RadarDetails" />
-        </LinearLayout>
-    </LinearLayout>
-    <LinearLayout android:id="@+id/row2" style="@style/RadarRow" android:visibility="gone">
-        <ImageView android:id="@+id/logo2" style="@style/RadarLogo" />
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:orientation="vertical">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:id="@+id/symbol2" style="@style/RadarSymbol" />
-                <TextView android:id="@+id/price2" style="@style/RadarPrice" />
-            </LinearLayout>
-            <TextView android:id="@+id/details2" style="@style/RadarDetails" />
-        </LinearLayout>
-    </LinearLayout>
-    <LinearLayout android:id="@+id/row3" style="@style/RadarRow" android:visibility="gone">
-        <ImageView android:id="@+id/logo3" style="@style/RadarLogo" />
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:orientation="vertical">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:id="@+id/symbol3" style="@style/RadarSymbol" />
-                <TextView android:id="@+id/price3" style="@style/RadarPrice" />
-            </LinearLayout>
-            <TextView android:id="@+id/details3" style="@style/RadarDetails" />
-        </LinearLayout>
-    </LinearLayout>
-    <LinearLayout android:id="@+id/row4" style="@style/RadarRow" android:visibility="gone">
-        <ImageView android:id="@+id/logo4" style="@style/RadarLogo" />
-        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:orientation="vertical">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content">
-                <TextView android:id="@+id/symbol4" style="@style/RadarSymbol" />
-                <TextView android:id="@+id/price4" style="@style/RadarPrice" />
-            </LinearLayout>
-            <TextView android:id="@+id/details4" style="@style/RadarDetails" />
-        </LinearLayout>
-    </LinearLayout>
+    <ListView android:id="@+id/tokens" android:layout_width="match_parent"
+        android:layout_height="0dp" android:layout_weight="1"
+        android:divider="#243B2E" android:dividerHeight="1dp" android:scrollbars="vertical" />
 </LinearLayout>
