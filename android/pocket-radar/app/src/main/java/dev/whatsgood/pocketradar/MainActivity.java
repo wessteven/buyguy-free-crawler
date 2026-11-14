@@ -116,7 +116,7 @@ public final class MainActivity extends Activity {
         button(body, "TEST GECKO URL IN BROWSER", () ->
                 open("https://api.geckoterminal.com/api/v2/networks/solana/trending_pools"));
         diagnostic = add(body, "", 11, MUTED, false);
-        add(body, "LIVE checks the market about every 30s and updates the check age every 3s "
+        add(body, "LIVE checks the market about every 15s and updates the check age every 3s "
                 + "while the screen is on. CHECK is the time since the last successful provider read.",
                 11, MUTED, false);
         show();

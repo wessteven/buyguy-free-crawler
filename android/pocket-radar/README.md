@@ -3,11 +3,11 @@
 ## v0.9 — Live home-screen widget
 
 Tap **LIVE** on the widget or **START LIVE** in the app. Live mode updates the
-check age every 3 seconds and checks market data about every 30 seconds while
+check age every 3 seconds and checks market data about every 15 seconds while
 the screen is on. Polling pauses when the screen turns off and resumes on wake.
 Slow requests and provider rate limits can extend the interval. **STOP** ends
 Live mode. Outside Live mode, **↻** requests a refresh and Android schedules
-periodic widget updates. Manual and automatic requests share the 30-second
+periodic widget updates. Manual and automatic requests share the 15-second
 minimum between market checks.
 
 **POLL** identifies Live mode. **CHECK** shows the age of the last successful
@@ -99,7 +99,7 @@ Android's normal **Update** path. Keep all of the following constant:
    both could impersonate the app publisher; losing them would break updates.
    Never commit, upload them to the repo, send them in chat or include in logs.
 4. The separate `Pocket Radar Signed Update APK` GitHub Actions workflow
-   produces `pocket-radar-v09-SIGNED-UPDATE` when the two secrets are present.
+   produces `pocket-radar-v010-SIGNED-UPDATE` when the two secrets are present.
    The workflow verifies APK signature and package ID. A run with missing
    secrets produces no signed-release artifact. The ordinary
    `Pocket Radar Android APK` debug artifact is **NOT** update compatible.
@@ -137,7 +137,7 @@ then long-press home screen > Widgets > WHAT'S GOOD Pocket Radar.
   (preferred higher-liquidity pool when duplicate) (estimated reserve >= USD 50,000, valid pool address, price and 5m change).
 - Prices are **provider-derived**, not audited trade fills; pool reserves aren't
   independent sell-depth evidence, and a trending label isn't a safe-buy rating.
-- App foreground refresh trigger 30 seconds, and transparent per-provider error details; provider request throttle 60 seconds
+- App foreground checks every 15 seconds, with per-provider error details and rate-limit backoff
   to match approximate API cache freshness. Widget on tap and OS periodic
   ~30 minutes (Android can defer background work). Snapshot age and errors shown.
 - Each coin opens its specific GeckoTerminal pool; GOGET button opens the
@@ -177,6 +177,6 @@ The app includes a user-triggered network self-test for INTERNET permission, act
 - A pool qualifies for CHASE only when pool age is known and 0–72h, 5-minute buys at least 10 and 1.3x sells, +2% through +30% over 5 minutes, optional 1-hour return not below 0% or above 80%, and public reported liquidity >= $50,000.
 - Candidates are ordered by net buys minus sells over 5 minutes, tie-breaking on younger age and then pool liquidity. This is **NOT** a prediction score and is not GOGET OUR SCORE.
 - CHASE may legitimately show zero matches. Missing trade counts or unknown age NEVER qualify. Reported transactions are **not proven unique buyers**; wallets may wash trade. This is the provider's trending sample (at most the first page), **not** an exhaustive new-token search.
-- Up to 20 bounded deduplicated candidate observations are cached per successful public feed fetch, permitting immediate local mode switches while preserving the existing minimum 30-second request spacing.
+- Up to 20 bounded deduplicated candidate observations are cached per successful public feed fetch, permitting immediate local mode switches while preserving the existing minimum 15-second request spacing.
 - Live mode is optional. Mode changes are immediate and use the local snapshot.
 - Trading, wallet signing, notifications, private GOGET authentication, scanner/cron/DB schema, and production GOGET queries are untouched.

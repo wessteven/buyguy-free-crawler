@@ -30,7 +30,7 @@ final class RadarRepository {
     private static final String BOOSTS="https://api.dexscreener.com/token-boosts/top/v1";
     private static final String DEX_TOKENS="https://api.dexscreener.com/tokens/v1/solana/";
     private static final String PREFS="pocket-radar-v06";
-    static final long LIVE_CHECK_MS=30_000L;
+    static final long LIVE_CHECK_MS=15_000L;
     private static final long STALE_MS=5*60_000L;
     private static final long RATE_LIMIT_MS=60_000L;
     private static long geckoRetryAt, dexRetryAt;
