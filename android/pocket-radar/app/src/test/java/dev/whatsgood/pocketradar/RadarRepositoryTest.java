@@ -264,7 +264,7 @@ public class RadarRepositoryTest {
         assertTrue(details.contains("MC —  FDV $90k"));
         assertTrue(details.contains("V5 —"));
         assertTrue(details.contains("B/S —"));
-        assertTrue(details.contains("AGE age ?"));
+        assertTrue(details.contains("AGE ?"));
     }
 
     @Test public void unknownPoolAgeOrMalformedDateIsNotInvented(){
