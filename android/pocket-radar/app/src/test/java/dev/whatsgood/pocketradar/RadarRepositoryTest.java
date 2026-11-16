@@ -189,20 +189,20 @@ public class RadarRepositoryTest {
             java.util.Arrays.asList(less,good),RadarRepository.CHASE,now);
         assertEquals(2,selected.size());
         assertEquals("EARLY",selected.get(0).name);
-        assertTrue(selected.get(0).widgetLine(RadarRepository.CHASE).contains("buys/sells 24/10"));
+        assertTrue(selected.get(0).widgetLine(RadarRepository.CHASE).contains("B/S 24/10"));
         assertEquals("SECOND",RadarRepository.select(
             java.util.Arrays.asList(less,good),RadarRepository.TREND,now).get(0).name);
     }
-    @Test public void bothModesShowAtMostTenQualifyingTokens() {
+    @Test public void bothModesShowAtMostTwentyQualifyingTokens() {
         long now=1_800_000_000_000L;
         List<RadarRepository.Coin> coins=new java.util.ArrayList<>();
-        for(int i=0;i<12;i++){
+        for(int i=0;i<25;i++){
             coins.add(new RadarRepository.Coin("TOKEN "+i,"mint:"+i,0.01,5,9,
                 80000,200000,200000,"https://www.geckoterminal.com/solana/pools/"+PAIR,
-                30-i,6,now-3600_000L));
+                50-i,6,now-3600_000L));
         }
         for(String mode:List.of(RadarRepository.TREND,RadarRepository.CHASE)){
-            assertEquals(coins.subList(0,10),RadarRepository.select(coins,mode,now));
+            assertEquals(coins.subList(0,20),RadarRepository.select(coins,mode,now));
             assertEquals(coins.subList(0,3),RadarRepository.select(coins.subList(0,3),mode,now));
         }
     }
@@ -227,15 +227,46 @@ public class RadarRepositoryTest {
         JSONObject p=geckoPool(PAIR,"EARLY / SOL",80000,"0.002","5.0","12.0","180000");
         p.getJSONObject("attributes")
             .put("pool_created_at","2026-10-25T10:30:00Z")
+            .put("volume_usd",new JSONObject().put("m5","12950"))
             .put("transactions",new JSONObject().put("m5",new JSONObject()
                 .put("buys",44).put("sells",12)));
         List<RadarRepository.Coin> parsed=RadarRepository.parseGecko(
             new JSONObject().put("data",new JSONArray().put(p)));
         assertEquals(44,parsed.get(0).buys5);
+        assertEquals(12950,parsed.get(0).volume5,0.000001);
+        assertTrue(parsed.get(0).widgetDetails(RadarRepository.TREND).contains("V5 $13k"));
+        assertTrue(parsed.get(0).widgetDetails(RadarRepository.TREND).contains("B/S 44/12"));
         assertEquals(12,parsed.get(0).sells5);
         assertEquals(java.time.Instant.parse("2026-10-25T10:30:00Z").toEpochMilli(),
             parsed.get(0).createdAt);
     }
+    @Test public void deeperPagesKeepFirstPageOrderAndBetterPoolValues(){
+        RadarRepository.Coin a=new RadarRepository.Coin("A","mint:a",0.01,5,10,
+            60000,200000,200000,"https://example.com/a",10,5,10,"",1000);
+        RadarRepository.Coin b=new RadarRepository.Coin("B","mint:b",0.02,5,10,
+            80000,200000,200000,"https://example.com/b",14,7,10,"",2000);
+        RadarRepository.Coin deeper=new RadarRepository.Coin("A","mint:a",0.03,6,11,
+            90000,200000,200000,"https://example.com/a2",20,8,10,"",3000);
+        List<RadarRepository.Coin> merged=RadarRepository.mergeGeckoPages(
+            java.util.List.of(a),java.util.List.of(b,deeper));
+        assertEquals(2,merged.size());
+        assertEquals("mint:a",merged.get(0).identity);
+        assertEquals(90000,merged.get(0).reserve,0.001);
+        assertEquals(3000,merged.get(0).volume5,0.001);
+        assertEquals("mint:b",merged.get(1).identity);
+    }
+
+    @Test public void missingProviderActivityDisplaysUnknownRatherThanFakeZeros(){
+        RadarRepository.Coin unknown=new RadarRepository.Coin(
+            "UNKNOWN","mint:unknown",0.01,2,4,60000,Double.NaN,90000,
+            "https://example.com", -1,-1,0);
+        String details=unknown.widgetDetails(RadarRepository.TREND);
+        assertTrue(details.contains("MC —  FDV $90k"));
+        assertTrue(details.contains("V5 —"));
+        assertTrue(details.contains("B/S —"));
+        assertTrue(details.contains("AGE age ?"));
+    }
+
     @Test public void unknownPoolAgeOrMalformedDateIsNotInvented(){
         assertEquals(0,RadarRepository.parsePoolCreatedAt("not a date"));
         assertEquals("age ?",RadarRepository.ageLabel(0,1_800_000_000_000L));
