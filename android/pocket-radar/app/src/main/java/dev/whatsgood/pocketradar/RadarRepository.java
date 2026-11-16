@@ -77,7 +77,8 @@ final class RadarRepository {
             String activity="B/S "+(buys5>=0&&sells5>=0?buys5+"/"+sells5:"—");
             String volume="V5 "+(Double.isFinite(volume5)&&volume5>=0
                 ?(volume5==0?"$0":compact(volume5)):"—");
-            String age="AGE "+ageLabel(createdAt,System.currentTimeMillis());
+            String reportedAge=ageLabel(createdAt,System.currentTimeMillis());
+            String age="AGE "+("age ?".equals(reportedAge)?"?":reportedAge);
             if(CHASE.equals(mode)){
                 return activity+" · "+age+" · "+volume+" · LP "+compact(reserve)+
                     " · "+capLabel(marketCap,fdv);
