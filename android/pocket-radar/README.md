@@ -1,5 +1,31 @@
 # WHAT'S GOOD Pocket Radar
 
+## v0.12 — Expanded qualifying token list and activity rows
+
+The resizable terminal-style home widget and app now show **up to 20 qualifying
+tokens** (instead of ten), retaining exact-mint deduplication, the $50,000
+minimum reported pool liquidity, and the original CHASE eligibility criteria.
+Taller widgets show more rows immediately; short widgets scroll. Unqualified
+tokens are not inserted just to fill space.
+
+The compact row preserves price, 5-minute/1-hour returns, market cap (or
+separately labeled FDV) and LP, and adds **V5** (provider-reported 5-minute USD
+volume), **B/S** (provider-reported 5-minute buy/sell *transactions*, not unique
+wallets), and **AGE** (reported pool age). Unknown metrics remain unknown.
+
+The feed can read up to three Gecko trending pages (up to 60 raw pools),
+stopping when enough eligible tokens are found. CHASE may examine deeper pages
+because its filter is stricter. At the 15-second polling floor the maximum
+three Gecko requests per check is 12 calls per minute on this device, under the
+provider's published free 30-call/minute ceiling before considering shared-IP
+traffic or other clients. The source may update its cache less frequently than
+our checks. A secondary-page failure retains valid first-page candidates,
+records diagnostics and respects 429 cooldowns. DEX fallback is unchanged.
+Cloudflare Workers, D1, GOGET production scanning, wallet and trades are untouched.
+
+Install the **stable-signed v0.12.0** release over the previous stable-signed
+Pocket Radar installation. Never replace it with a debug/throwaway-signed APK.
+
 ## v0.11 — Live home-screen widget
 
 Tap **LIVE** on the widget or **START LIVE** in the app. Live mode updates the
@@ -16,7 +42,7 @@ or failed market check and retains the last successful rows. **DEX BOOSTS**
 identifies the fallback based on promoted listings. If Android 15 or later
 pauses the data-sync service, open the app and tap **START LIVE** to resume it.
 
-TREND and CHASE show up to ten Solana pools. Swipe the home-screen list to see more rows. Tap a row for the original pool
+In v0.11, TREND and CHASE showed at most ten Solana pools. Swipe the home-screen list to see more rows. Tap a row for the original pool
 chart. Token logos use exact base-token mint metadata from GeckoTerminal or
 DEX Screener and are cached on the device. Missing or unavailable logos use a
 placeholder.
@@ -99,7 +125,7 @@ Android's normal **Update** path. Keep all of the following constant:
    both could impersonate the app publisher; losing them would break updates.
    Never commit, upload them to the repo, send them in chat or include in logs.
 4. The separate `Pocket Radar Signed Update APK` GitHub Actions workflow
-   produces `pocket-radar-v011-SIGNED-UPDATE` when the two secrets are present.
+   produces `pocket-radar-v012-SIGNED-UPDATE` when the two secrets are present.
    The workflow verifies APK signature and package ID. A run with missing
    secrets produces no signed-release artifact. The ordinary
    `Pocket Radar Android APK` debug artifact is **NOT** update compatible.
