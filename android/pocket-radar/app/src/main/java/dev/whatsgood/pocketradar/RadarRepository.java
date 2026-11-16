@@ -36,13 +36,14 @@ final class RadarRepository {
     private static long geckoRetryAt, dexRetryAt;
     private static final double RESERVE_FLOOR=50_000;
     private static final int MAX_BYTES=950_000;
-    static final int MAX_COINS=10;
-    private static final int MAX_CANDIDATES=20;
+    static final int MAX_COINS=20;
+    private static final int MAX_CANDIDATES=60;
+    private static final int MAX_GECKO_PAGES=3;
     static final String TREND="TREND", CHASE="CHASE";
 
     static final class Coin {
         final String name, identity, url, logo;
-        final double usd,m5,h1,reserve,marketCap,fdv;
+        final double usd,m5,h1,reserve,marketCap,fdv,volume5;
         final int buys5,sells5;
         final long createdAt;
         Coin(String name,String identity,double usd,double m5,double h1,double reserve,
@@ -55,8 +56,13 @@ final class RadarRepository {
         }
         Coin(String name,String identity,double usd,double m5,double h1,double reserve,
             double marketCap,double fdv,String url,int buys5,int sells5,long createdAt,String logo){
+            this(name,identity,usd,m5,h1,reserve,marketCap,fdv,url,buys5,sells5,createdAt,logo,Double.NaN);
+        }
+        Coin(String name,String identity,double usd,double m5,double h1,double reserve,
+            double marketCap,double fdv,String url,int buys5,int sells5,long createdAt,
+            String logo,double volume5){
             this.name=name;this.identity=identity;this.usd=usd;this.m5=m5;this.h1=h1;
-            this.logo=logo;
+            this.logo=logo;this.volume5=volume5;
             this.reserve=reserve;this.marketCap=marketCap;this.fdv=fdv;this.url=url;
             this.buys5=buys5;this.sells5=sells5;this.createdAt=createdAt;
         }
@@ -68,11 +74,16 @@ final class RadarRepository {
             return identity.startsWith("mint:")?identity.substring(5):"";
         }
         String widgetDetails(String mode){
+            String activity="B/S "+(buys5>=0&&sells5>=0?buys5+"/"+sells5:"—");
+            String volume="V5 "+(Double.isFinite(volume5)&&volume5>=0
+                ?(volume5==0?"$0":compact(volume5)):"—");
+            String age="AGE "+ageLabel(createdAt,System.currentTimeMillis());
             if(CHASE.equals(mode)){
-                return "5m buys/sells "+buys5+"/"+sells5+" · "+ageLabel(createdAt,System.currentTimeMillis())+
-                    " · LP "+compact(reserve);
+                return activity+" · "+age+" · "+volume+" · LP "+compact(reserve)+
+                    " · "+capLabel(marketCap,fdv);
             }
-            return capLabel(marketCap,fdv)+" · LP "+compact(reserve);
+            return capLabel(marketCap,fdv)+" · LP "+compact(reserve)+
+                " · "+volume+" · "+activity+" · "+age;
         }
         String widgetLine(String mode){
             return name+" "+formatPrice(usd)+"  "+formatMove(m5)+"/"+formatMove(h1)+
@@ -99,7 +110,7 @@ final class RadarRepository {
             long age=Math.max(0,System.currentTimeMillis()-fetchedAt)/1000;
             String provider="DEX".equals(source)?"DEX BOOSTS":"GECKO";
             String elapsed=age<60?age+"s":age<3600?age/60+"m":age/3600+"h";
-            return (stale()?"STALE · ":"")+provider+" · CHECK "+elapsed;
+            return (stale()?"STALE · ":"")+provider+" · "+coins.size()+"/"+MAX_COINS+" · CHECK "+elapsed;
         }
         String details(){return diagnostic==null||diagnostic.isEmpty()?"No diagnostic recorded":diagnostic;}
     }
@@ -114,7 +125,8 @@ final class RadarRepository {
                 out.add(new Coin(j.getString("name"),j.getString("identity"),j.getDouble("usd"),
                     j.getDouble("m5"),number(j.opt("h1")),j.getDouble("reserve"),
                     number(j.opt("marketCap")),number(j.opt("fdv")),j.getString("url"),
-                    j.optInt("buys5",-1),j.optInt("sells5",-1),j.optLong("createdAt",0),j.optString("logo","")));
+                    j.optInt("buys5",-1),j.optInt("sells5",-1),j.optLong("createdAt",0),
+                    j.optString("logo",""),number(j.opt("volume5"))));
             }
         }catch(Exception ignored){out.clear();}
         String mode=getMode(p);
@@ -141,9 +153,32 @@ final class RadarRepository {
         long now=SystemClock.elapsedRealtime();
         if(now>=geckoRetryAt){
             try{
-                List<Coin> coins=parseGecko(new JSONObject(getJson(GECKO,true)));
+                List<Coin> candidates=parseGeckoCandidates(new JSONObject(getJson(GECKO,true)));
+                int pages=1;
+                String pageNote="";
+                // Fetch more ranked candidates only if fewer than 20 qualify.
+                // CHASE may need deeper pages due to its stricter eligibility.
+                for(int page=2;page<=MAX_GECKO_PAGES;page++){
+                    List<Coin> ranked=uniqueLabelsAndLimit(candidates);
+                    if(ranked.size()>=MAX_COINS && (!CHASE.equals(getMode(p)) ||
+                        select(ranked,CHASE,System.currentTimeMillis()).size()>=MAX_COINS))break;
+                    try{
+                        List<Coin> next=parseGeckoCandidates(new JSONObject(
+                            getJson(GECKO+"&page="+page,true)));
+                        if(next.isEmpty())break;
+                        candidates=mergeGeckoPages(candidates,next);
+                        pages=page;
+                    }catch(Exception secondary){
+                        if(secondary instanceof RateLimited)
+                            geckoRetryAt=SystemClock.elapsedRealtime()+((RateLimited)secondary).delay;
+                        pageNote="; page "+page+" "+problem(secondary);
+                        break;
+                    }
+                }
+                List<Coin> coins=uniqueLabelsAndLimit(candidates);
                 if(!coins.isEmpty()){
-                    save(p,coins,"GECKO","Gecko HTTP 200; "+coins.size()+" unique candidates");
+                    save(p,coins,"GECKO","Gecko HTTP 200; "+coins.size()+
+                        " unique qualified candidates across "+pages+" page(s)"+pageNote);
                     return;
                 }
                 geckoProblem="Gecko HTTP 200; no qualifying candidates";
@@ -180,7 +215,7 @@ final class RadarRepository {
                 .put("reserve",coin.reserve).put("marketCap",finiteOrNull(coin.marketCap))
                 .put("fdv",finiteOrNull(coin.fdv)).put("url",coin.url)
                 .put("buys5",coin.buys5).put("sells5",coin.sells5).put("createdAt",coin.createdAt)
-                .put("logo",coin.logo);
+                .put("logo",coin.logo).put("volume5",finiteOrNull(coin.volume5));
             rows.put(j);
         }
         long at=System.currentTimeMillis();
@@ -225,6 +260,10 @@ final class RadarRepository {
     }
 
     static List<Coin> parseGecko(JSONObject json){
+        return uniqueLabelsAndLimit(parseGeckoCandidates(json));
+    }
+
+    static List<Coin> parseGeckoCandidates(JSONObject json){
         JSONArray pools=json.optJSONArray("data");
         if(pools==null)throw new IllegalArgumentException("Missing pool data array");
         Map<String,String> mintById=new HashMap<>();
@@ -267,11 +306,25 @@ final class RadarRepository {
                 "https://www.geckoterminal.com/solana/pools/"+pool,
                 five==null?-1:five.optInt("buys",-1),five==null?-1:five.optInt("sells",-1),
                 parsePoolCreatedAt(a.optString("pool_created_at","")),
-                identity.startsWith("mint:")?logosByMint.getOrDefault(identity.substring(5),""):"");
+                identity.startsWith("mint:")?logosByMint.getOrDefault(identity.substring(5),""):"",
+                number(a.optJSONObject("volume_usd")==null?null:
+                    a.optJSONObject("volume_usd").opt("m5")));
             Coin previous=best.get(identity);
             if(previous==null||liquidity>previous.reserve)best.put(identity,c);
         }
-        return uniqueLabelsAndLimit(new ArrayList<>(best.values()));
+        return new ArrayList<>(best.values());
+    }
+
+    /** Merge ranked pages by provider identity, retaining first-page order. */
+    static List<Coin> mergeGeckoPages(List<Coin> first,List<Coin> next){
+        LinkedHashMap<String,Coin> merged=new LinkedHashMap<>();
+        for(Coin coin:first)merged.put(coin.identity,coin);
+        for(Coin coin:next){
+            Coin existing=merged.get(coin.identity);
+            if(existing==null||coin.reserve>existing.reserve)
+                merged.put(coin.identity,coin);
+        }
+        return new ArrayList<>(merged.values());
     }
 
     /** Base-token relation is immutable provider identity; suffix is extracted only if valid Solana mint. */
@@ -331,7 +384,9 @@ final class RadarRepository {
                 "mint:"+mint,usd,m5,h1,liquidity,number(pair.opt("marketCap")),
                 number(pair.opt("fdv")),"https://dexscreener.com/solana/"+pool,
                 five==null?-1:five.optInt("buys",-1),five==null?-1:five.optInt("sells",-1),
-                pair.optLong("pairCreatedAt",0),logo==null?"":logo);
+                pair.optLong("pairCreatedAt",0),logo==null?"":logo,
+                number(pair.optJSONObject("volume")==null?null:
+                    pair.optJSONObject("volume").opt("m5")));
             Coin previous=best.get(mint);
             if(previous==null||c.reserve>previous.reserve)best.put(mint,c);
         }
@@ -355,7 +410,7 @@ final class RadarRepository {
                 display=c.name+"·"+suffix;
             }
             out.add(new Coin(display,c.identity,c.usd,c.m5,c.h1,c.reserve,c.marketCap,c.fdv,c.url,
-                c.buys5,c.sells5,c.createdAt,c.logo));
+                c.buys5,c.sells5,c.createdAt,c.logo,c.volume5));
         }
         return out;
     }
