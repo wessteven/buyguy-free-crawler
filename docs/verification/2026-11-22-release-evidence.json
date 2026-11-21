@@ -1,0 +1,495 @@
+{
+  "date": "2026-11-22",
+  "status": "PARTIAL",
+  "efficacy": "UNVERIFIED",
+  "releaseCommit": "dc700e0f682510f894c8dc2ea08123f19420c302",
+  "pr": "https://github.com/wessteven/buyguy-free-crawler/pull/128",
+  "ciRuns": [
+    44948403461,
+    44948403466
+  ],
+  "postReleaseRun": 44948460753,
+  "artifactId": 14725090175,
+  "fixStatus": "DEPLOYED_AND_LIVE_VERIFIED",
+  "observedAt": "2026-11-21T20:51:30.133Z",
+  "records": {
+    "GOGET_LIVE_SOURCE_COVERAGE": {
+      "status": "ROSTER_MATCHED_DELIVERY_STALE_OR_UNKNOWN",
+      "asOf": "2026-11-21T20:51:29.471Z",
+      "walletsExpected": 12,
+      "walletsWithObservedEvents24h": 0,
+      "wallets": [
+        {
+          "wallet": "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "27HFmP7ccLadGswvQfvea4o3juLw75cPF4V6jWpHM3MX",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "UVa1idQFMxA6JRLyhLVTVFi9pTtCjyTpe7ePaTDVqwY",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "GQw6yekXzuEMM7iGEnMnFmJwW9PJ94iMSomMw6PUC8zG",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "HNtZMYtK8gLmKoT1ZmErLRKMCuAGifcU2fgpLFmKevUJ",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "HoNCppnH2aojxiosdcfa4nHhcBp2UUBUpDHNKckMUGXS",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "qz9SXgx1tK3aadcReFeXYbVMyCi3DZBWgKwuhMNrD2K",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "3uCdwANhJQs7GhEa6Xi23X1hhJ5r2Z6dgR64SAoLfy6a",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "AUb3e3ggTscttXBdkSRXxLkmoA28zAhpTwwvhGqZqSd4",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        },
+        {
+          "wallet": "77Ed1Zk2xEkUHdTgUkqMQvGjnM79LtZJYpbBxB92kBtz",
+          "observedWebhookRows24h": 0,
+          "lastNormalizedAt": null,
+          "coverage": "NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN"
+        }
+      ],
+      "walletRowsUnexpected": [],
+      "sourceProviderListingCheckedSeparately": true,
+      "providerDelivery": {
+        "lastAt": "2026-11-07T23:59:56.342Z",
+        "ageMinutes": 19972,
+        "freshness": "STALE_OR_IDLE_NOT_PROOF_OF_OUTAGE"
+      },
+      "persistentWebhookControl": {
+        "state": "ARMED"
+      },
+      "rpcPilot": {
+        "expected": 3,
+        "found": 3,
+        "pollers": [
+          {
+            "wallet": "7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP",
+            "status": "SOURCE_GAP_UNRESOLVED",
+            "historicalGapCount": 22,
+            "lastPolledAt": "2026-11-07T21:59:24.175Z",
+            "liveContinuityCertified": false
+          },
+          {
+            "wallet": "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4",
+            "status": "SOURCE_GAP_UNRESOLVED",
+            "historicalGapCount": 40,
+            "lastPolledAt": "2026-11-07T21:59:24.175Z",
+            "liveContinuityCertified": false
+          },
+          {
+            "wallet": "whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx",
+            "status": "SOURCE_GAP_UNRESOLVED",
+            "historicalGapCount": 23,
+            "lastPolledAt": "2026-11-07T21:59:24.175Z",
+            "liveContinuityCertified": false
+          }
+        ]
+      },
+      "dailyAttemptedReservations": [
+        {
+          "day": "2026-11-07",
+          "reserved": 1816
+        },
+        {
+          "day": "2026-11-06",
+          "reserved": 1785
+        }
+      ],
+      "deliveredWebhookCreditEstimates": [
+        {
+          "day": "2026-11-07",
+          "observed_deliveries": 1891,
+          "last_at": "2026-11-07T23:59:56.342Z"
+        },
+        {
+          "day": "2026-11-06",
+          "observed_deliveries": 1893,
+          "last_at": "2026-11-06T23:59:17.066Z"
+        }
+      ],
+      "rawArchiveHealth": [
+        {
+          "day": "2026-11-04",
+          "degraded_requests": 0,
+          "attempted_records": 232,
+          "recovered_records": 0,
+          "still_failed_records": 0,
+          "last_at": "2026-11-04T07:05:07.401Z"
+        },
+        {
+          "day": "2026-11-03",
+          "degraded_requests": 1,
+          "attempted_records": 390,
+          "recovered_records": 0,
+          "still_failed_records": 0,
+          "last_at": "2026-11-03T23:57:58.781Z"
+        }
+      ],
+      "limitations": [
+        "Zero events does not prove a missing webhook subscription or inactive wallet.",
+        "Provider subscription configuration must be checked separately through Helius read-only verification.",
+        "D1 received events do not prove exhaustive original-chain activity, low latency, valid buys or trades.",
+        "Historical restored data cannot be relabeled as live-forward evidence.",
+        "GitHub cron is best effort and must not be assumed to run each five-minute slot."
+      ],
+      "d1QueryCount": 6,
+      "heliusCalls": 0,
+      "d1Writes": 0,
+      "trades": 0
+    },
+    "GOGET_HISTORICAL_PILOT_EVIDENCE": {
+      "asOf": "2026-11-21T20:51:30.133Z",
+      "runId": "aed7d373-39ab-4872-9856-426bc7dc5459",
+      "status": "HISTORICAL_RECORDS_ONLY_EFFICACY_UNVERIFIED",
+      "expectedPools": 10,
+      "queriesAttempted": 6,
+      "queriesVerified": 6,
+      "records": {
+        "run": [
+          {
+            "run_id": "aed7d373-39ab-4872-9856-426bc7dc5459",
+            "utc_day": "2026-11-06",
+            "started_at": "2026-11-06T14:35:36.219Z",
+            "ends_at": "2026-11-06T15:35:36.219Z",
+            "completed_at": "2026-11-06T14:45:49.559Z",
+            "status": "PARTIAL_OR_UNVERIFIED_COVERAGE",
+            "requested_pools": 10,
+            "armed_pools": 10,
+            "reserved_credits": 200,
+            "streamed_bytes": 4002456,
+            "unique_events": 740,
+            "duplicate_events": 0,
+            "streamed_estimated_credits": 82,
+            "rpc_attempts": 11,
+            "provider_billed_credits": null,
+            "cloudflare_billed_usd": null,
+            "ws_connections": 1,
+            "stream_gap_count": 1,
+            "stop_reason": "LIMIT_REACHED",
+            "notes": "WS estimated credits not Helius invoice; raw logs not swap proof"
+          }
+        ],
+        "roster": [
+          {
+            "pool": "2zPfdGd48k7B2U9yqZ4hJSPAPtoVU9uiEbFQYXEoeXkv",
+            "mint": "6FhVPctYg363pQbs4iSvqyHe2cJzfsvFD96gePy6pump",
+            "asset_key": "solana:6FhVPctYg363pQbs4iSvqyHe2cJzfsvFD96gePy6pump"
+          },
+          {
+            "pool": "3k5sSodRuZ8qgzNfHmpckaPuE472JWngeXrMeMGsmYYE",
+            "mint": "5wSQpQfbdSKs7amvyxa2XTzWXNyionERZWdDWykYm1At",
+            "asset_key": "solana:5wSQpQfbdSKs7amvyxa2XTzWXNyionERZWdDWykYm1At"
+          },
+          {
+            "pool": "64aRecs97ffq2AgpYN5fmMe7B3WyDD1yDmyWTQWz3hj5",
+            "mint": "5MVP56Cys6D2SmC7iXXWj9U3sxMWU9Sqquz2XY8JLosL",
+            "asset_key": "solana:5MVP56Cys6D2SmC7iXXWj9U3sxMWU9Sqquz2XY8JLosL"
+          },
+          {
+            "pool": "6hYFMyE2BYYScTErqUeCKhihQ5X9j2WD2z9waTdwy38N",
+            "mint": "5wsjHxT5nW5jQuVupXUNnYszF3WoWCfGGk9LMcsCJzY8",
+            "asset_key": "solana:5wsjHxT5nW5jQuVupXUNnYszF3WoWCfGGk9LMcsCJzY8"
+          },
+          {
+            "pool": "76dpWgLDW4gh4N8bTC7HGooUzeMwUpkZuvRExjBteazG",
+            "mint": "6a81PfhejwCM3bB4F3Rnbzk9ALNmg4YGeyjKd5Nxpump",
+            "asset_key": "solana:6a81PfhejwCM3bB4F3Rnbzk9ALNmg4YGeyjKd5Nxpump"
+          },
+          {
+            "pool": "9VjkGqSgKcPG3rYgMAt9GrC6EotvdMmUCD4oeArJVogd",
+            "mint": "6gnB2H2hbTVvKUWCzNuqjWY8Rod6EVBmfHi7YxZpTWa7",
+            "asset_key": "solana:6gnB2H2hbTVvKUWCzNuqjWY8Rod6EVBmfHi7YxZpTWa7"
+          },
+          {
+            "pool": "A5FpVH5c4Zya6EwbBWGzLsFDoUGCX5BjSXK4FXKUwHMW",
+            "mint": "6QUHcqYuiPRHxhnYZoygewXtNQr9kUrhc9Tmwgtbpump",
+            "asset_key": "solana:6QUHcqYuiPRHxhnYZoygewXtNQr9kUrhc9Tmwgtbpump"
+          },
+          {
+            "pool": "APKy43xkxRZ4iJQB7aQAr6u82cRpk8tCg13TKsmUKcAD",
+            "mint": "5JbRYEz844bwnKbGx4dRHhrJ6zjrJ194CKdDXtzwgaXo",
+            "asset_key": "solana:5JbRYEz844bwnKbGx4dRHhrJ6zjrJ194CKdDXtzwgaXo"
+          },
+          {
+            "pool": "EygtRprRwHgtCDDk6GUFnKzCk6U5su7NAekCProatiFc",
+            "mint": "5BWHo2duxhkRR4ftnZWErnB8GoXpFgZ4ZR9UN8LDpump",
+            "asset_key": "solana:5BWHo2duxhkRR4ftnZWErnB8GoXpFgZ4ZR9UN8LDpump"
+          },
+          {
+            "pool": "GhFSaPdvu75KCpsUVk7CZ8A1tdjYeo6YvZx1QiBgwfSJ",
+            "mint": "5VCEFq1aATjga39QtDunYjJqYBx67w8V8TXwHrqopump",
+            "asset_key": "solana:5VCEFq1aATjga39QtDunYjJqYBx67w8V8TXwHrqopump"
+          }
+        ],
+        "windows": [
+          {
+            "coverage": "CONTINUOUS_STREAM",
+            "scheduled_status": "NO_FRESH_SCHEDULED_COMPARATOR",
+            "n": 30,
+            "pools": 10
+          },
+          {
+            "coverage": "CONTINUOUS_STREAM",
+            "scheduled_status": "SCHEDULED_M5_BUY_RATIO_PROXY",
+            "n": 40,
+            "pools": 10
+          },
+          {
+            "coverage": "STREAM_COVERAGE_UNVERIFIED",
+            "scheduled_status": "NO_FRESH_SCHEDULED_COMPARATOR",
+            "n": 20,
+            "pools": 10
+          }
+        ],
+        "reconciliation": [
+          {
+            "pool": "2zPfdGd48k7B2U9yqZ4hJSPAPtoVU9uiEbFQYXEoeXkv",
+            "checked_at": "2026-11-06T14:45:48.710Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 15,
+            "websocket_matched": 11,
+            "missing": 4,
+            "recall": 0.7333333333333333,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "3k5sSodRuZ8qgzNfHmpckaPuE472JWngeXrMeMGsmYYE",
+            "checked_at": "2026-11-06T14:45:49.398Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 1,
+            "websocket_matched": 1,
+            "missing": 0,
+            "recall": 1,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "64aRecs97ffq2AgpYN5fmMe7B3WyDD1yDmyWTQWz3hj5",
+            "checked_at": "2026-11-06T14:45:49.086Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 36,
+            "websocket_matched": 32,
+            "missing": 4,
+            "recall": 0.8888888888888888,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "6hYFMyE2BYYScTErqUeCKhihQ5X9j2WD2z9waTdwy38N",
+            "checked_at": "2026-11-06T14:45:48.563Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 23,
+            "websocket_matched": 12,
+            "missing": 11,
+            "recall": 0.5217391304347826,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "76dpWgLDW4gh4N8bTC7HGooUzeMwUpkZuvRExjBteazG",
+            "checked_at": "2026-11-06T14:45:48.433Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 0,
+            "websocket_matched": 0,
+            "missing": 0,
+            "recall": null,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "9VjkGqSgKcPG3rYgMAt9GrC6EotvdMmUCD4oeArJVogd",
+            "checked_at": "2026-11-06T14:45:49.271Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 7,
+            "websocket_matched": 6,
+            "missing": 1,
+            "recall": 0.8571428571428571,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "A5FpVH5c4Zya6EwbBWGzLsFDoUGCX5BjSXK4FXKUwHMW",
+            "checked_at": "2026-11-06T14:45:48.833Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 9,
+            "websocket_matched": 6,
+            "missing": 3,
+            "recall": 0.6666666666666666,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "APKy43xkxRZ4iJQB7aQAr6u82cRpk8tCg13TKsmUKcAD",
+            "checked_at": "2026-11-06T14:45:48.957Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 0,
+            "websocket_matched": 0,
+            "missing": 0,
+            "recall": null,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "EygtRprRwHgtCDDk6GUFnKzCk6U5su7NAekCProatiFc",
+            "checked_at": "2026-11-06T14:45:48.176Z",
+            "status": "BOUNDED_RPC_PAGE_COVERS_WINDOW",
+            "rpc_in_window": 101,
+            "websocket_matched": 73,
+            "missing": 28,
+            "recall": 0.7227722772277227,
+            "page_size": 1000,
+            "provider_error": null
+          },
+          {
+            "pool": "GhFSaPdvu75KCpsUVk7CZ8A1tdjYeo6YvZx1QiBgwfSJ",
+            "checked_at": "2026-11-06T14:45:48.301Z",
+            "status": "RPC_PAGE_TRUNCATED_OR_BLOCKTIME_UNKNOWN",
+            "rpc_in_window": 1000,
+            "websocket_matched": 0,
+            "missing": 1000,
+            "recall": null,
+            "page_size": 1000,
+            "provider_error": null
+          }
+        ],
+        "outcomes": [
+          {
+            "horizon_min": 5,
+            "status": "MISSING_FUTURE_PRICE_COVERAGE",
+            "n": 40,
+            "first_due_at": "2026-11-06T14:42:00.000Z",
+            "last_due_at": "2026-11-06T14:45:00.000Z"
+          },
+          {
+            "horizon_min": 60,
+            "status": "MISSING_FUTURE_PRICE_COVERAGE",
+            "n": 12,
+            "first_due_at": "2026-11-06T15:37:00.000Z",
+            "last_due_at": "2026-11-06T15:40:00.000Z"
+          },
+          {
+            "horizon_min": 60,
+            "status": "OBSERVED_EXACT_POOL",
+            "n": 28,
+            "first_due_at": "2026-11-06T15:37:00.000Z",
+            "last_due_at": "2026-11-06T15:40:00.000Z"
+          },
+          {
+            "horizon_min": 1440,
+            "status": "MISSING_FUTURE_PRICE_COVERAGE",
+            "n": 40,
+            "first_due_at": "2026-11-07T14:37:00.000Z",
+            "last_due_at": "2026-11-07T14:40:00.000Z"
+          }
+        ],
+        "gaps": []
+      },
+      "errors": [],
+      "heliusCalls": 0,
+      "d1Writes": 0,
+      "trades": 0,
+      "limitations": [
+        "Persisted rows do not independently prove ACKs, on-chain recall, executable returns or a predictive edge.",
+        "Empty or failed reads remain unknown; the expired pilot is never resumed."
+      ],
+      "rosterVerified": true
+    }
+  },
+  "boundedReconciliationSummary": {
+    "rpc": 192,
+    "matched": 141,
+    "missing": 51,
+    "pools": 9,
+    "recallPct": 73.4375,
+    "caveat": "Historical bounded signature match rate only. Excludes one truncated pool; not whole-pilot recall or swap/prediction accuracy."
+  },
+  "changesToRequirementRegisterV1": [
+    {
+      "id": 1,
+      "status": "COMPLETE",
+      "qualification": "Exact configured 14/12 webhook, 3 RPC and 10 original pilot pool/mint identities recovered. Does not certify live coverage."
+    },
+    {
+      "id": 8,
+      "status": "PARTIAL",
+      "qualification": "Stored 10 reconciliation records; 9 bounded windows, 1 truncated unknown; raw chain not re-queried."
+    },
+    {
+      "id": 12,
+      "status": "PARTIAL",
+      "qualification": "10 exact pools, 90 recorded windows of 600 planned pool-minutes; 20 windows unverified; ended early."
+    },
+    {
+      "id": 13,
+      "status": "PARTIAL",
+      "qualification": "40 windows have scheduled proxy, 50 lack fresh comparator. No executable comparative outcome proof."
+    },
+    {
+      "id": 14,
+      "status": "PARTIAL",
+      "qualification": "Original pilot5m0/40,1h28/40,24h0/40 observed exact-pool price labels; remaining missing."
+    },
+    {
+      "id": 20,
+      "status": "COMPLETE",
+      "qualification": "Scoped test/observability repairs passed PR CI, merged, both downstream reads executed and artifact persisted while provider failure remained. No scoring improvement claimed."
+    },
+    {
+      "id": 21,
+      "status": "COMPLETE",
+      "qualification": "Dated ledger, register and evidence persisted in repository; this append-only receipt adds final release evidence."
+    }
+  ],
+  "remainingGaps": [
+    "Expired source pilots remain stopped; missing provider registration remains explicit.",
+    "No fresh 12-wallet receipts or source continuity; all 3 legacy cursors unresolved.",
+    "One original pilot pool reconciliation truncated; all 5m/24h outcome labels missing.",
+    "No held-out matched execution-adjusted outcome cohort or proven prediction benefit.",
+    "Exact 24h Worker counts, dynamic watchlist/mint completeness, actual bills and storage write failure cause not verified."
+  ]
+}
