@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {auditSourceControl,GOGET_RECEIVER} from '../src/goget-source-control.mjs';
 const key='fake-test-key-do-not-log',wallets=['wallet-a','wallet-b'];
-const audit=(fetcher,extra={})=>auditSourceControl({apiKey:key,expectedWallets:wallets,fetcher,...extra});
+const audit=(fetcher,extra={})=>auditSourceControl({apiKey:key,expectedWallets:wallets,fetcher,now:Date.parse('2026-11-07T12:00:00Z'),...extra});
 test('a missing subscription cannot masquerade as a healthy MONITOR action',async()=>{
   const r=await audit(async(_,o)=>{assert.equal(o.method,'GET');return new Response('[]');});
   assert.equal(r.subscription,'MISSING_OWN_SUBSCRIPTION');
@@ -39,4 +39,16 @@ test('pilot expiry prevents all provider management requests',async()=>{
   const r=await audit(async()=>assert.fail('expired pilot must not call provider'),{
     now:Date.parse('2026-11-08T00:00:00Z')});
   assert.equal(r.subscription,'SOURCE_PILOT_EXPIRED');assert.equal(r.managementCalls,0);
+});
+
+test('expiry boundary and later dates retain the no-request guard',async()=>{
+  for(const at of ['2026-11-08T00:00:00Z','2026-11-22T00:00:00Z','2030-01-01T00:00:00Z']){
+    let calls=0;
+    const r=await audit(async()=>{calls++;assert.fail('no expired provider request');},
+      {now:Date.parse(at),projectId:'project-test-123'});
+    assert.equal(calls,0);assert.equal(r.managementCalls,0);
+    assert.equal(r.subscription,'SOURCE_PILOT_EXPIRED');assert.equal(r.creditUsage.status,'PROJECT_ID_UNAVAILABLE');
+  }
+  const before=await audit(async()=>new Response('[]'),{now:Date.parse('2026-11-07T23:59:59.999Z')});
+  assert.equal(before.subscription,'MISSING_OWN_SUBSCRIPTION');assert.equal(before.managementCalls,1);
 });

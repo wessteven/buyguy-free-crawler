@@ -1,0 +1,298 @@
+{
+  "version": 1,
+  "effectiveBaseline": "1cab59571ee59c2359d47a9b115b500191b64668",
+  "createdAt": "2026-11-21T20:48:53.220213+00:00",
+  "scope": "GOGET only; source configuration, not chain coverage certification",
+  "rosters": {
+    "solanaWebhook": [
+      {
+        "wallet": "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4",
+        "source": "Prior pilot, fee-payer activity",
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx",
+        "source": "Prior pilot, deployer research",
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP",
+        "source": "Prior pilot, deployer research",
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 3,
+        "poolCount": 2,
+        "vetted": false,
+        "webhookEnabled": false,
+        "webhookExclusion": "2026-11-03: bounded credit restart, extreme observed traffic (~95% of recent webhook receipts); retained for historic research; NOT certified trader"
+      },
+      {
+        "wallet": "27HFmP7ccLadGswvQfvea4o3juLw75cPF4V6jWpHM3MX",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 3,
+        "poolCount": 2,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "3wySUKHiD15kUD7sunNe1FQpogv2FK7Tw7TzSJyC9Ft8",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 2,
+        "poolCount": 2,
+        "vetted": false,
+        "webhookEnabled": false,
+        "webhookExclusion": "2026-11-03: bounded credit restart, extreme observed traffic (~95% of recent webhook receipts); retained for historic research; NOT certified trader"
+      },
+      {
+        "wallet": "UVa1idQFMxA6JRLyhLVTVFi9pTtCjyTpe7ePaTDVqwY",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 2,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "GQw6yekXzuEMM7iGEnMnFmJwW9PJ94iMSomMw6PUC8zG",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 2,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "HNtZMYtK8gLmKoT1ZmErLRKMCuAGifcU2fgpLFmKevUJ",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "HoNCppnH2aojxiosdcfa4nHhcBp2UUBUpDHNKckMUGXS",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "qz9SXgx1tK3aadcReFeXYbVMyCi3DZBWgKwuhMNrD2K",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "3uCdwANhJQs7GhEa6Xi23X1hhJ5r2Z6dgR64SAoLfy6a",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "AUb3e3ggTscttXBdkSRXxLkmoA28zAhpTwwvhGqZqSd4",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "77Ed1Zk2xEkUHdTgUkqMQvGjnM79LtZJYpbBxB92kBtz",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      }
+    ],
+    "solanaRpc": [
+      {
+        "wallet": "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4",
+        "vetted": false,
+        "source": "recent confirmed PumpSwap fee-payer activity; independent wallet profit not established"
+      },
+      {
+        "wallet": "whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx",
+        "vetted": false,
+        "source": "prior Deployer Lab watch; evidence of recent transfer activity, not a copy-trading recommendation"
+      },
+      {
+        "wallet": "7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP",
+        "vetted": false,
+        "source": "Deployer Lab entity; transactions may reference this wallet without it signing"
+      }
+    ],
+    "originalTenPoolPilot": {
+      "runId": "aed7d373-39ab-4872-9856-426bc7dc5459",
+      "status": "UNVERIFIED_PENDING_INDEPENDENT_D1_READ",
+      "expected": 10
+    }
+  },
+  "history": {
+    "originalResearchWallets": 14,
+    "webhookEnabled": 12,
+    "exclusionCommit": "7a481a4a422cdc9603c91b228a7d4d0b1df49e21",
+    "excludedRetainedForResearch": [
+      "kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ",
+      "3wySUKHiD15kUD7sunNe1FQpogv2FK7Tw7TzSJyC9Ft8"
+    ]
+  },
+  "requirements": [
+    {
+      "id": 1,
+      "requirement": "Exact rosters and approved scope history",
+      "status": "PARTIAL",
+      "evidenceOrGap": "14 research, 12 enabled webhook and 3 overlapping RPC identities recovered; ten pilot pools pending D1",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 2,
+      "requirement": "Webhook registration and all-wallet coverage",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "pilot expired 2026-11-08; source control verify NOT_REGISTERED; no fresh receipts",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 3,
+      "requirement": "RPC forward collection per wallet",
+      "status": "PARTIAL",
+      "evidenceOrGap": "3 stored identities; zero current-day cycles in source audit; last checked Nov 7; expired",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 4,
+      "requirement": "Historical bridges and original anchors",
+      "status": "PARTIAL",
+      "evidenceOrGap": "dashboard audit reports 3 complete bridges; legacy cursors separately unresolved",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 5,
+      "requirement": "Three legacy cursor gaps and bounded backfill",
+      "status": "PARTIAL",
+      "evidenceOrGap": "legacy statuses unresolved, counts 22/40/23; recovery blocked by clock-dependent tests",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 6,
+      "requirement": "Launch discovery and canonical swap decoding",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "discovery expired; 0 exact RPC decoded matches; no new signed executable swap proofs",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 7,
+      "requirement": "Independent buyers/funding and attribution",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "no fresh receipts and no verified buys; fee payer/provider labels insufficient",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 8,
+      "requirement": "Reconnect continuity and signature reconciliation",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "no fresh source population; pilot ten-pool reconciliation pending",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 9,
+      "requirement": "USD one-minute OHLCV and enrichment",
+      "status": "PARTIAL",
+      "evidenceOrGap": "256/300 sampled future USD labels missing; 0 exact historical candle matches; no continuity proof",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 10,
+      "requirement": "Signal delivery and alert latency",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "no current fresh signal-to-delivery receipts; historical latency not current SLA",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 11,
+      "requirement": "Dashboard source freshness",
+      "status": "PARTIAL",
+      "evidenceOrGap": "live evidence query works but stored last cron Nov 7; 0 decoded matches",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 12,
+      "requirement": "Ten-pool pilot roster ACKs and minute windows",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "historical original run retained; independent D1 query pending",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 13,
+      "requirement": "Ten-pool pilot matched scheduled baseline",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "exact comparison rows not yet retrieved",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 14,
+      "requirement": "Mature 5m/1h/24h outcomes",
+      "status": "PARTIAL",
+      "evidenceOrGap": "market outcomes 30/251,25/251,40/251 observed price labels; not executable returns",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 15,
+      "requirement": "Precommitted target and cohort baseline",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "original early 50k-150k objective exists; no recovered frozen executable success threshold/control definition",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 16,
+      "requirement": "Precision recall and missed opportunities",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "independent eligible universe and labels incomplete",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 17,
+      "requirement": "Executable paper returns drawdown calibration",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "fees/slippage/sell-depth matched fills absent; do not count missing quotes as losses",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 18,
+      "requirement": "Provider credits and Cloudflare actual costs",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "local reservation ceilings 9000/20000 retained; project billing unavailable, plan not verified",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 19,
+      "requirement": "D1 capacity and durable evidence writes",
+      "status": "PARTIAL",
+      "evidenceOrGap": "capacity audit databaseBytes=9999998976; operational limit/causal write failures not yet independently established",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 20,
+      "requirement": "Daily fix regression and deployment verification",
+      "status": "PARTIAL",
+      "evidenceOrGap": "504 JS and 16 Python pass locally; remote release and live evidence pending",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    },
+    {
+      "id": 21,
+      "requirement": "Durable ledger and carry-forward comparison",
+      "status": "PARTIAL",
+      "evidenceOrGap": "first daily ledger; no earlier daily register found in repo; setup checkpoint only",
+      "priorStatus": "UNVERIFIED_UNLESS_SETUP_CHECKPOINT_STATES_OTHERWISE"
+    }
+  ]
+}
