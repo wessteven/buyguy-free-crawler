@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import {assessCapacityAnalytics} from '../src/goget-capacity-analytics.mjs';
 // Read-only Cloudflare capacity audit. No billing changes, writes, private keys, raw payloads or API tokens logged.
 const required = name => {const v=process.env[name];if(!v)throw Error('MISSING_'+name);return v;};
 const numbers = x => typeof x==='number'&&Number.isFinite(x)?x:null;
@@ -71,12 +72,7 @@ async function main(){
   try{
     const g=await call('https://api.cloudflare.com/client/v4/graphql',graphqlToken,
       {method:'POST',body:{query:q,variables:{accountTag:account,start,end:date,databaseId:database}}});
-    const groups=g?.data?.viewer?.accounts?.[0]?.d1AnalyticsAdaptiveGroups||[];
-    answer.graphqlUsage30d=Array.isArray(groups)?{
-      status:'AVAILABLE',daysQueried:30,
-      totals:groups.reduce((a,x)=>{for(const k of ['rowsRead','rowsWritten','readQueries','writeQueries'])
-        a[k]=(a[k]||0)+(numbers(x?.sum?.[k])||0);return a;},{}),
-      groupCount:groups.length}: {status:'NO_ANALYTICS_RESPONSE'};
+    answer.graphqlUsage30d=assessCapacityAnalytics(g);
   }catch{answer.graphqlUsage30d={status:'PERMISSION_OR_API_UNAVAILABLE'};}
   const info=answer.tableCounts.webhook?.[0];
   if(info && typeof info==='object')answer.rowEvidenceBytes=numbers(info.evidence_bytes);
