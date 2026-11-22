@@ -1,0 +1,1697 @@
+{
+  "window": {
+    "from": "2026-11-21T20:24:33Z",
+    "to": "2026-11-22T20:24:33Z",
+    "timezone": "Pacific/Norfolk",
+    "localFrom": "2026-11-22T08:24:33+12:00",
+    "localTo": "2026-11-23T08:24:33+12:00"
+  },
+  "runs": [
+    {
+      "id": 45063777302,
+      "name": "GOGET Dashboard Wallet Source — evidence audit (no Helius)",
+      "path": ".github/workflows/goget-wallet-source-dashboard-audit.yml",
+      "created_at": "2026-11-22T19:58:49Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45063777302"
+    },
+    {
+      "id": 45063563601,
+      "name": "GOGET Wallet Quality Audit (D1 read only)",
+      "path": ".github/workflows/goget-wallet-quality-audit.yml",
+      "created_at": "2026-11-22T19:56:25Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45063563601"
+    },
+    {
+      "id": 45062178469,
+      "name": "trackBIGBUX independent D1 evidence audit",
+      "path": ".github/workflows/trackbigbux-audit.yml",
+      "created_at": "2026-11-22T19:41:27Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45062178469"
+    },
+    {
+      "id": 45062157346,
+      "name": "Independent Quality Ledger — audit execution evidence",
+      "path": ".github/workflows/quality-ledger.yml",
+      "created_at": "2026-11-22T19:41:14Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45062157346"
+    },
+    {
+      "id": 45061173276,
+      "name": "GOGET Candidate Wallet Discovery (read-only)",
+      "path": ".github/workflows/goget-wallet-candidate-discovery.yml",
+      "created_at": "2026-11-22T19:30:53Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45061173276"
+    },
+    {
+      "id": 45060960505,
+      "name": "BuyGuy Free Crawler",
+      "path": ".github/workflows/crawler.yml",
+      "created_at": "2026-11-22T19:28:41Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45060960505"
+    },
+    {
+      "id": 45049039293,
+      "name": "GOGET Exact One-Minute Historical USD OHLCV — resumable free-provider repair",
+      "path": ".github/workflows/goget-exact-minute-replay.yml",
+      "created_at": "2026-11-22T17:22:02Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45049039293"
+    },
+    {
+      "id": 45048879014,
+      "name": "GOGET Unattended Collection Watch (read only)",
+      "path": ".github/workflows/goget-unattended-watch.yml",
+      "created_at": "2026-11-22T17:20:25Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45048879014"
+    },
+    {
+      "id": 45045199340,
+      "name": "GOGET Smart Wallet Live Watch (paper-only research)",
+      "path": ".github/workflows/smart-wallet-live.yml",
+      "created_at": "2026-11-22T16:41:02Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45045199340"
+    },
+    {
+      "id": 45044776831,
+      "name": "GOGET Three Legacy Live Cursor Gaps — bounded Helius replay",
+      "path": ".github/workflows/goget-legacy-live-gap-repair.yml",
+      "created_at": "2026-11-22T16:36:20Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45044776831"
+    },
+    {
+      "id": 45043956990,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-22T16:27:39Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45043956990"
+    },
+    {
+      "id": 45043510048,
+      "name": "Vlad watch independent D1 coverage audit",
+      "path": ".github/workflows/audit-vlad-wallet.yml",
+      "created_at": "2026-11-22T16:22:49Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45043510048"
+    },
+    {
+      "id": 45038165996,
+      "name": "GOGET RPC Source Quality — verify persisted 3-wallet coverage",
+      "path": ".github/workflows/goget-rpc-source-quality.yml",
+      "created_at": "2026-11-22T15:24:45Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45038165996"
+    },
+    {
+      "id": 45038163844,
+      "name": "GOGET Helius Three-Wallet RPC Decode — forward-safe retrospective enrichment",
+      "path": ".github/workflows/goget-rpc-source-decode.yml",
+      "created_at": "2026-11-22T15:24:44Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45038163844"
+    },
+    {
+      "id": 45020048028,
+      "name": "GOGET Dashboard Wallet Source — evidence audit (no Helius)",
+      "path": ".github/workflows/goget-wallet-source-dashboard-audit.yml",
+      "created_at": "2026-11-22T12:00:20Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45020048028"
+    },
+    {
+      "id": 45018373120,
+      "name": "trackBIGBUX independent D1 evidence audit",
+      "path": ".github/workflows/trackbigbux-audit.yml",
+      "created_at": "2026-11-22T11:39:13Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45018373120"
+    },
+    {
+      "id": 45017244578,
+      "name": "Independent Quality Ledger — audit execution evidence",
+      "path": ".github/workflows/quality-ledger.yml",
+      "created_at": "2026-11-22T11:25:24Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45017244578"
+    },
+    {
+      "id": 45015877241,
+      "name": "BuyGuy Free Crawler",
+      "path": ".github/workflows/crawler.yml",
+      "created_at": "2026-11-22T11:08:59Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45015877241"
+    },
+    {
+      "id": 45004324653,
+      "name": "GOGET Exact One-Minute Historical USD OHLCV — resumable free-provider repair",
+      "path": ".github/workflows/goget-exact-minute-replay.yml",
+      "created_at": "2026-11-22T08:45:54Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45004324653"
+    },
+    {
+      "id": 45004106928,
+      "name": "GOGET Unattended Collection Watch (read only)",
+      "path": ".github/workflows/goget-unattended-watch.yml",
+      "created_at": "2026-11-22T08:43:07Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45004106928"
+    },
+    {
+      "id": 45004045889,
+      "name": "GOGET Smart Wallet Live Watch (paper-only research)",
+      "path": ".github/workflows/smart-wallet-live.yml",
+      "created_at": "2026-11-22T08:42:19Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45004045889"
+    },
+    {
+      "id": 45001756702,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-22T08:13:01Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45001756702"
+    },
+    {
+      "id": 45001219499,
+      "name": "Vlad watch independent D1 coverage audit",
+      "path": ".github/workflows/audit-vlad-wallet.yml",
+      "created_at": "2026-11-22T08:06:06Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/45001219499"
+    },
+    {
+      "id": 44998432731,
+      "name": "GOGET Capacity Audit (read only)",
+      "path": ".github/workflows/goget-capacity-audit.yml",
+      "created_at": "2026-11-22T07:29:08Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44998432731"
+    },
+    {
+      "id": 44998185932,
+      "name": "GOGET Three Legacy Live Cursor Gaps — bounded Helius replay",
+      "path": ".github/workflows/goget-legacy-live-gap-repair.yml",
+      "created_at": "2026-11-22T07:25:42Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44998185932"
+    },
+    {
+      "id": 44998001177,
+      "name": "GOGET Wallet Quality Audit (D1 read only)",
+      "path": ".github/workflows/goget-wallet-quality-audit.yml",
+      "created_at": "2026-11-22T07:23:15Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44998001177"
+    },
+    {
+      "id": 44996072686,
+      "name": "GOGET RPC Source Quality — verify persisted 3-wallet coverage",
+      "path": ".github/workflows/goget-rpc-source-quality.yml",
+      "created_at": "2026-11-22T06:58:08Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44996072686"
+    },
+    {
+      "id": 44996064242,
+      "name": "GOGET Helius Three-Wallet RPC Decode — forward-safe retrospective enrichment",
+      "path": ".github/workflows/goget-rpc-source-decode.yml",
+      "created_at": "2026-11-22T06:58:01Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44996064242"
+    },
+    {
+      "id": 44994671982,
+      "name": "GOGET Candidate Wallet Discovery (read-only)",
+      "path": ".github/workflows/goget-wallet-candidate-discovery.yml",
+      "created_at": "2026-11-22T06:39:03Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44994671982"
+    },
+    {
+      "id": 44979906032,
+      "name": "trackBIGBUX independent D1 evidence audit",
+      "path": ".github/workflows/trackbigbux-audit.yml",
+      "created_at": "2026-11-22T03:16:57Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44979906032"
+    },
+    {
+      "id": 44979674734,
+      "name": "Independent Quality Ledger — audit execution evidence",
+      "path": ".github/workflows/quality-ledger.yml",
+      "created_at": "2026-11-22T03:13:57Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44979674734"
+    },
+    {
+      "id": 44978861808,
+      "name": "BuyGuy Free Crawler",
+      "path": ".github/workflows/crawler.yml",
+      "created_at": "2026-11-22T03:03:29Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44978861808"
+    },
+    {
+      "id": 44972382726,
+      "name": "GOGET Dashboard Wallet Source — evidence audit (no Helius)",
+      "path": ".github/workflows/goget-wallet-source-dashboard-audit.yml",
+      "created_at": "2026-11-22T01:38:18Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44972382726"
+    },
+    {
+      "id": 44971364509,
+      "name": "GOGET Smart Wallet Live Watch (paper-only research)",
+      "path": ".github/workflows/smart-wallet-live.yml",
+      "created_at": "2026-11-22T01:25:04Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44971364509"
+    },
+    {
+      "id": 44967688147,
+      "name": "GOGET Three Legacy Live Cursor Gaps — bounded Helius replay",
+      "path": ".github/workflows/goget-legacy-live-gap-repair.yml",
+      "created_at": "2026-11-22T00:39:30Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44967688147"
+    },
+    {
+      "id": 44967661138,
+      "name": "GOGET Exact One-Minute Historical USD OHLCV — resumable free-provider repair",
+      "path": ".github/workflows/goget-exact-minute-replay.yml",
+      "created_at": "2026-11-22T00:39:10Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44967661138"
+    },
+    {
+      "id": 44967519129,
+      "name": "GOGET Unattended Collection Watch (read only)",
+      "path": ".github/workflows/goget-unattended-watch.yml",
+      "created_at": "2026-11-22T00:37:25Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44967519129"
+    },
+    {
+      "id": 44966854418,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-22T00:29:23Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44966854418"
+    },
+    {
+      "id": 44966523201,
+      "name": "Vlad watch independent D1 coverage audit",
+      "path": ".github/workflows/audit-vlad-wallet.yml",
+      "created_at": "2026-11-22T00:25:12Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44966523201"
+    },
+    {
+      "id": 44961691516,
+      "name": "GOGET RPC Source Quality — verify persisted 3-wallet coverage",
+      "path": ".github/workflows/goget-rpc-source-quality.yml",
+      "created_at": "2026-11-21T23:25:03Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44961691516"
+    },
+    {
+      "id": 44961685523,
+      "name": "GOGET Helius Three-Wallet RPC Decode — forward-safe retrospective enrichment",
+      "path": ".github/workflows/goget-rpc-source-decode.yml",
+      "created_at": "2026-11-21T23:24:59Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44961685523"
+    },
+    {
+      "id": 44961014208,
+      "name": "trackBIGBUX independent D1 evidence audit",
+      "path": ".github/workflows/trackbigbux-audit.yml",
+      "created_at": "2026-11-21T23:17:00Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44961014208"
+    },
+    {
+      "id": 44960967720,
+      "name": "Independent Quality Ledger — audit execution evidence",
+      "path": ".github/workflows/quality-ledger.yml",
+      "created_at": "2026-11-21T23:16:24Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44960967720"
+    },
+    {
+      "id": 44960066224,
+      "name": "BuyGuy Free Crawler",
+      "path": ".github/workflows/crawler.yml",
+      "created_at": "2026-11-21T23:05:45Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44960066224"
+    },
+    {
+      "id": 44950385127,
+      "name": "GOGET Smart Wallet Live Watch (paper-only research)",
+      "path": ".github/workflows/smart-wallet-live.yml",
+      "created_at": "2026-11-21T21:13:07Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44950385127"
+    },
+    {
+      "id": 44948608444,
+      "name": "BuyGuy V3 Tests",
+      "path": ".github/workflows/verify.yml",
+      "created_at": "2026-11-21T20:53:02Z",
+      "event": "push",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44948608444"
+    },
+    {
+      "id": 44948553104,
+      "name": "BuyGuy V3 Tests",
+      "path": ".github/workflows/verify.yml",
+      "created_at": "2026-11-21T20:52:20Z",
+      "event": "push",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "13c3dbea693feff2f3521a0b7322d5ac9c222a14",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44948553104"
+    },
+    {
+      "id": 44948460789,
+      "name": "BuyGuy V3 Tests",
+      "path": ".github/workflows/verify.yml",
+      "created_at": "2026-11-21T20:51:16Z",
+      "event": "push",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "dc700e0f682510f894c8dc2ea08123f19420c302",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44948460789"
+    },
+    {
+      "id": 44948460753,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-21T20:51:16Z",
+      "event": "push",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "dc700e0f682510f894c8dc2ea08123f19420c302",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44948460753"
+    },
+    {
+      "id": 44948403466,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-21T20:50:38Z",
+      "event": "pull_request",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "aba041b79104f91b7c43b14b497c6d487158ce3b",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44948403466"
+    },
+    {
+      "id": 44948403461,
+      "name": "Fast radar regression tests",
+      "path": ".github/workflows/fast-radar-tests.yml",
+      "created_at": "2026-11-21T20:50:38Z",
+      "event": "pull_request",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "aba041b79104f91b7c43b14b497c6d487158ce3b",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44948403461"
+    },
+    {
+      "id": 44947387303,
+      "name": "GOGET Three Legacy Live Cursor Gaps — bounded Helius replay",
+      "path": ".github/workflows/goget-legacy-live-gap-repair.yml",
+      "created_at": "2026-11-21T20:38:59Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44947387303"
+    },
+    {
+      "id": 44942972841,
+      "name": "GOGET Dashboard Wallet Source — evidence audit (no Helius)",
+      "path": ".github/workflows/goget-wallet-source-dashboard-audit.yml",
+      "created_at": "2026-11-21T19:49:17Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44942972841"
+    },
+    {
+      "id": 44942598171,
+      "name": "GOGET Exact One-Minute Historical USD OHLCV — resumable free-provider repair",
+      "path": ".github/workflows/goget-exact-minute-replay.yml",
+      "created_at": "2026-11-21T19:45:06Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44942598171"
+    },
+    {
+      "id": 44942551396,
+      "name": "GOGET Wallet Quality Audit (D1 read only)",
+      "path": ".github/workflows/goget-wallet-quality-audit.yml",
+      "created_at": "2026-11-21T19:44:34Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44942551396"
+    },
+    {
+      "id": 44942369132,
+      "name": "GOGET Unattended Collection Watch (read only)",
+      "path": ".github/workflows/goget-unattended-watch.yml",
+      "created_at": "2026-11-21T19:42:30Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44942369132"
+    },
+    {
+      "id": 44941295450,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-21T19:30:32Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44941295450"
+    },
+    {
+      "id": 44940943428,
+      "name": "Vlad watch independent D1 coverage audit",
+      "path": ".github/workflows/audit-vlad-wallet.yml",
+      "created_at": "2026-11-21T19:26:27Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44940943428"
+    },
+    {
+      "id": 44939363313,
+      "name": "GOGET Candidate Wallet Discovery (read-only)",
+      "path": ".github/workflows/goget-wallet-candidate-discovery.yml",
+      "created_at": "2026-11-21T19:08:58Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44939363313"
+    },
+    {
+      "id": 44933431028,
+      "name": "GOGET RPC Source Quality — verify persisted 3-wallet coverage",
+      "path": ".github/workflows/goget-rpc-source-quality.yml",
+      "created_at": "2026-11-21T18:03:47Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44933431028"
+    },
+    {
+      "id": 44933430724,
+      "name": "GOGET Helius Three-Wallet RPC Decode — forward-safe retrospective enrichment",
+      "path": ".github/workflows/goget-rpc-source-decode.yml",
+      "created_at": "2026-11-21T18:03:47Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44933430724"
+    },
+    {
+      "id": 44930662736,
+      "name": "Independent Quality Ledger — audit execution evidence",
+      "path": ".github/workflows/quality-ledger.yml",
+      "created_at": "2026-11-21T17:33:05Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44930662736"
+    },
+    {
+      "id": 44930649883,
+      "name": "trackBIGBUX independent D1 evidence audit",
+      "path": ".github/workflows/trackbigbux-audit.yml",
+      "created_at": "2026-11-21T17:32:57Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44930649883"
+    },
+    {
+      "id": 44929771122,
+      "name": "BuyGuy Free Crawler",
+      "path": ".github/workflows/crawler.yml",
+      "created_at": "2026-11-21T17:23:18Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44929771122"
+    },
+    {
+      "id": 44920424854,
+      "name": "GOGET Smart Wallet Live Watch (paper-only research)",
+      "path": ".github/workflows/smart-wallet-live.yml",
+      "created_at": "2026-11-21T15:40:24Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44920424854"
+    },
+    {
+      "id": 44906437992,
+      "name": "GOGET Three Legacy Live Cursor Gaps — bounded Helius replay",
+      "path": ".github/workflows/goget-legacy-live-gap-repair.yml",
+      "created_at": "2026-11-21T12:57:28Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44906437992"
+    },
+    {
+      "id": 44900928817,
+      "name": "GOGET Dashboard Wallet Source — evidence audit (no Helius)",
+      "path": ".github/workflows/goget-wallet-source-dashboard-audit.yml",
+      "created_at": "2026-11-21T11:49:34Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44900928817"
+    },
+    {
+      "id": 44900431271,
+      "name": "GOGET Exact One-Minute Historical USD OHLCV — resumable free-provider repair",
+      "path": ".github/workflows/goget-exact-minute-replay.yml",
+      "created_at": "2026-11-21T11:43:09Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44900431271"
+    },
+    {
+      "id": 44900174839,
+      "name": "GOGET Unattended Collection Watch (read only)",
+      "path": ".github/workflows/goget-unattended-watch.yml",
+      "created_at": "2026-11-21T11:39:56Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44900174839"
+    },
+    {
+      "id": 44899131480,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-21T11:26:40Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44899131480"
+    },
+    {
+      "id": 44898659222,
+      "name": "Vlad watch independent D1 coverage audit",
+      "path": ".github/workflows/audit-vlad-wallet.yml",
+      "created_at": "2026-11-21T11:20:44Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44898659222"
+    },
+    {
+      "id": 44898152966,
+      "name": "GOGET Helius Three-Wallet RPC Decode — forward-safe retrospective enrichment",
+      "path": ".github/workflows/goget-rpc-source-decode.yml",
+      "created_at": "2026-11-21T11:14:29Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44898152966"
+    },
+    {
+      "id": 44898150984,
+      "name": "GOGET RPC Source Quality — verify persisted 3-wallet coverage",
+      "path": ".github/workflows/goget-rpc-source-quality.yml",
+      "created_at": "2026-11-21T11:14:27Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44898150984"
+    },
+    {
+      "id": 44891846903,
+      "name": "trackBIGBUX independent D1 evidence audit",
+      "path": ".github/workflows/trackbigbux-audit.yml",
+      "created_at": "2026-11-21T09:55:21Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44891846903"
+    },
+    {
+      "id": 44891624240,
+      "name": "Independent Quality Ledger — audit execution evidence",
+      "path": ".github/workflows/quality-ledger.yml",
+      "created_at": "2026-11-21T09:52:25Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44891624240"
+    },
+    {
+      "id": 44890574770,
+      "name": "BuyGuy Free Crawler",
+      "path": ".github/workflows/crawler.yml",
+      "created_at": "2026-11-21T09:38:59Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44890574770"
+    },
+    {
+      "id": 44881759501,
+      "name": "GOGET Smart Wallet Live Watch (paper-only research)",
+      "path": ".github/workflows/smart-wallet-live.yml",
+      "created_at": "2026-11-21T07:46:03Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44881759501"
+    },
+    {
+      "id": 44881573117,
+      "name": "GOGET Capacity Audit (read only)",
+      "path": ".github/workflows/goget-capacity-audit.yml",
+      "created_at": "2026-11-21T07:43:40Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44881573117"
+    },
+    {
+      "id": 44881267319,
+      "name": "GOGET Wallet Quality Audit (D1 read only)",
+      "path": ".github/workflows/goget-wallet-quality-audit.yml",
+      "created_at": "2026-11-21T07:39:42Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44881267319"
+    },
+    {
+      "id": 44878033741,
+      "name": "GOGET Candidate Wallet Discovery (read-only)",
+      "path": ".github/workflows/goget-wallet-candidate-discovery.yml",
+      "created_at": "2026-11-21T06:58:30Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44878033741"
+    },
+    {
+      "id": 44861067173,
+      "name": "GOGET Three Legacy Live Cursor Gaps — bounded Helius replay",
+      "path": ".github/workflows/goget-legacy-live-gap-repair.yml",
+      "created_at": "2026-11-21T03:25:41Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44861067173"
+    },
+    {
+      "id": 44858118129,
+      "name": "GOGET Dashboard Wallet Source — evidence audit (no Helius)",
+      "path": ".github/workflows/goget-wallet-source-dashboard-audit.yml",
+      "created_at": "2026-11-21T02:51:25Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44858118129"
+    },
+    {
+      "id": 44857843458,
+      "name": "GOGET Exact One-Minute Historical USD OHLCV — resumable free-provider repair",
+      "path": ".github/workflows/goget-exact-minute-replay.yml",
+      "created_at": "2026-11-21T02:48:14Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44857843458"
+    },
+    {
+      "id": 44857578161,
+      "name": "GOGET Unattended Collection Watch (read only)",
+      "path": ".github/workflows/goget-unattended-watch.yml",
+      "created_at": "2026-11-21T02:45:14Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44857578161"
+    },
+    {
+      "id": 44856632610,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-21T02:34:26Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44856632610"
+    },
+    {
+      "id": 44856425890,
+      "name": "Vlad watch independent D1 coverage audit",
+      "path": ".github/workflows/audit-vlad-wallet.yml",
+      "created_at": "2026-11-21T02:32:08Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44856425890"
+    },
+    {
+      "id": 44855710432,
+      "name": "GOGET RPC Source Quality — verify persisted 3-wallet coverage",
+      "path": ".github/workflows/goget-rpc-source-quality.yml",
+      "created_at": "2026-11-21T02:24:24Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44855710432"
+    },
+    {
+      "id": 44855672668,
+      "name": "GOGET Helius Three-Wallet RPC Decode — forward-safe retrospective enrichment",
+      "path": ".github/workflows/goget-rpc-source-decode.yml",
+      "created_at": "2026-11-21T02:23:59Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44855672668"
+    },
+    {
+      "id": 44854884688,
+      "name": "Independent Quality Ledger — audit execution evidence",
+      "path": ".github/workflows/quality-ledger.yml",
+      "created_at": "2026-11-21T02:15:36Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44854884688"
+    },
+    {
+      "id": 44854876785,
+      "name": "trackBIGBUX independent D1 evidence audit",
+      "path": ".github/workflows/trackbigbux-audit.yml",
+      "created_at": "2026-11-21T02:15:32Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44854876785"
+    },
+    {
+      "id": 44850064460,
+      "name": "BuyGuy Free Crawler",
+      "path": ".github/workflows/crawler.yml",
+      "created_at": "2026-11-21T01:25:12Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44850064460"
+    },
+    {
+      "id": 44845947272,
+      "name": "GOGET Smart Wallet Live Watch (paper-only research)",
+      "path": ".github/workflows/smart-wallet-live.yml",
+      "created_at": "2026-11-21T00:45:39Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44845947272"
+    },
+    {
+      "id": 44824673039,
+      "name": "GOGET Three Legacy Live Cursor Gaps — bounded Helius replay",
+      "path": ".github/workflows/goget-legacy-live-gap-repair.yml",
+      "created_at": "2026-11-20T21:56:20Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44824673039"
+    },
+    {
+      "id": 44820873956,
+      "name": "GOGET Exact One-Minute Historical USD OHLCV — resumable free-provider repair",
+      "path": ".github/workflows/goget-exact-minute-replay.yml",
+      "created_at": "2026-11-20T21:30:16Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44820873956"
+    },
+    {
+      "id": 44820630153,
+      "name": "GOGET Unattended Collection Watch (read only)",
+      "path": ".github/workflows/goget-unattended-watch.yml",
+      "created_at": "2026-11-20T21:28:35Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44820630153"
+    },
+    {
+      "id": 44819237305,
+      "name": "GOGET Complete Live Source Coverage (12 Helius + 3 RPC, read only)",
+      "path": ".github/workflows/goget-live-coverage-audit.yml",
+      "created_at": "2026-11-20T21:19:06Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44819237305"
+    },
+    {
+      "id": 44818623771,
+      "name": "Vlad watch independent D1 coverage audit",
+      "path": ".github/workflows/audit-vlad-wallet.yml",
+      "created_at": "2026-11-20T21:14:59Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44818623771"
+    },
+    {
+      "id": 44818201688,
+      "name": "GOGET RPC Source Quality — verify persisted 3-wallet coverage",
+      "path": ".github/workflows/goget-rpc-source-quality.yml",
+      "created_at": "2026-11-20T21:12:11Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44818201688"
+    },
+    {
+      "id": 44818166376,
+      "name": "GOGET Helius Three-Wallet RPC Decode — forward-safe retrospective enrichment",
+      "path": ".github/workflows/goget-rpc-source-decode.yml",
+      "created_at": "2026-11-20T21:11:57Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "failure",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44818166376"
+    },
+    {
+      "id": 44814203063,
+      "name": "GOGET Dashboard Wallet Source — evidence audit (no Helius)",
+      "path": ".github/workflows/goget-wallet-source-dashboard-audit.yml",
+      "created_at": "2026-11-20T20:45:20Z",
+      "event": "schedule",
+      "run_attempt": 1,
+      "conclusion": "success",
+      "head_sha": "1cab59571ee59c2359d47a9b115b500191b64668",
+      "url": "https://github.com/wessteven/buyguy-free-crawler/actions/runs/44814203063"
+    }
+  ],
+  "markers": {
+    "137335302225": [
+      "2026-11-22T19:58:56.5549323Z GOGET_WALLET_SOURCE_QUALITY_AUDIT {\"asOf\":\"2026-11-22T19:58:55.989Z\",\"status\":\"FORWARD_SOURCE_COVERAGE_INCOMPLETE\",\"historicalBridgesComplete\":3,\"forwardSource\":{\"sampledCronCycles\":72,\"completeThreeWalletCronCycles\":72,\"missingBetweenSampledCronReceipts\":0,\"longestObservedIntervalMinutes\":5,\"lastRecordedCronAt\":\"2026-11-07T23:55:00.000Z\",\"lastRecordedCronAgeMinutes\":21364,\"cronSampleCap\":72,\"note\":\"Recent recorded D1 cycles are not chain-complete and cannot validate pre-baseline intervals.\"},\"walletCoverage\":[{\"wallet\":\"8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4\",\"historical\":\"COMPLETE_HELIUS_SIGNATURE_BRIDGE\",\"originalAnchorsReverified\":true,\"historicArchivedSignatures\":173,\"recoveredExactOriginalRpcMatches\":1,\"recoveredExactEnhancedMatches\":13,\"recoveredExactForwardOverlap\":127,\"source\":\"CHECKPOINT_CONNECTED\",\"sourceSignatures\":892,\"rpcDecodedExactMatches\":0,\"enhancedHistoricExactMatches\":0,\"enhancedWebhookExactMatches\":105},{\"wallet\":\"whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx\",\"historical\":\"COMPLETE_HELIUS_SIGNATURE_BRIDGE\",\"originalAnchorsReverified\":true,\"historicArchivedSignatures\":887,\"recoveredExactOriginalRpcMatches\":1,\"recoveredExactEnhancedMatches\":13,\"recoveredExactForwardOverlap\":153,\"source\":\"CHECKPOINT_CONNECTED\",\"sourceSignatures\":1363,\"rpcDecodedExactMatches\":0,\"enhancedHistoricExactMatches\":0,\"enhancedWebhookExactMatches\":47},{\"wallet\":\"7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP\",\"historical\":\"COMPLETE_HELIUS_SIGNATURE_BRIDGE\",\"originalAnchorsReverified\":true,\"historicArchivedSignatures\":300,\"recoveredExactOriginalRpcMatches\":1,\"recoveredExactEnhancedMatches\":9,\"recoveredExactForwardOverlap\":99,\"source\":\"CHECKPOINT_CONNECTED\",\"sourceSignatures\":405,\"rpcDecodedExactMatches\":0,\"enhancedHistoricExactMatches\":0,\"enhancedWebhookExactMatches\":14}],\"marketCandles\":{\"outcomeSampled\":300,\"missingFutureUsdStatusRows\":256,\"exactHistoricalCandleMatches\":0,\"stillMissingUsdInSample\":256,\"outcomeStatuses\":[{\"outcomeStatus\":\"MISSING_FUTURE_USD_QUOTE_COVERAGE\",\"horizonMinutes\":1440,\"rows\":91},{\"outcomeStatus\":\"MISSING_FUTURE_USD_QUOTE_COVERAGE\",\"horizonMinutes\":5,\"rows\":59},{\"outcomeStatus\":\"MISSING_FUTURE_USD_QUOTE_COVERAGE\",\"horizonMinutes\":360,\"rows\":58},{\"outcomeStatus\":\"MISSING_FUTURE_USD_QUOTE_COVERAGE\",\"horizonMinutes\":60,\"rows\":48},{\"outcomeStatus\":\"OBSERVED_SAME_POOL_USD_PRICE\",\"horizonMinutes\":360,\"rows\":17},{\"outcomeStatus\":\"OBSERVED_SAME_POOL_USD_PRICE\",\"horizonMinutes\":60,\"rows\":13},{\"outcomeStatus\":\"OBSERVED_SAME_POOL_USD_PRICE\",\"horizonMinutes\":1440,\"rows\":13},{\"outcomeStatus\":\"OBSERVED_SAME_POOL_USD_PRICE\",\"horizonMinutes\":5,\"rows\":1}],\"minuteOhlcvContinuityVerified\":false,\"note\":\"Historical candle close matches are retrospective, not a raw continuous 1-minute OHLCV series, executable prices, or wallet-specific trade PnL.\"},\"budgets\":{\"utcDay\":\"2026-11-22\",\"allRpcReserved\":null,\"estimatedWebhookDelivered\":null,\"rpcDailyCap\":9000,\"webhookOriginalGuard\":20000,\"accountWideActualCreditsUnavailable\":true},\"d1Reads\":10,\"d1Writes\":0,\"heliusCalls\":0,\"trades\":0}"
+    ],
+    "137334621778": [
+      "2026-11-22T19:56:32.5573401Z GOGET_WALLET_QUALITY_AUDIT {\"at\":\"2026-11-22T19:56:30.489Z\",\"mode\":\"READ_ONLY_WALLET_EVIDENCE_NOT_A_PROFIT_RANKING\",\"sampleWindowHours\":24,\"cohortWalletCount\":14,\"observedWalletCount\":0,\"receipts\":0,\"unlistedWalletGroups\":0,\"latestSourceAt\":null,\"latestSourceAgeMinutes\":null,\"topTwoReceiptSharePct\":null,\"sampledReceipts\":0,\"sampleCapacity\":320,\"sampleCoverage\":\"MOST_RECENT_GLOBAL_SAMPLE_NOT_PER_WALLET_RANDOM_SAMPLE\",\"sampleSkewWarning\":false,\"wallets\":[{\"wallet\":\"27HFmP7ccLadGswvQfvea4o3juLw75cPF4V6jWpHM3MX\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"3uCdwANhJQs7GhEa6Xi23X1hhJ5r2Z6dgR64SAoLfy6a\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"3wySUKHiD15kUD7sunNe1FQpogv2FK7Tw7TzSJyC9Ft8\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"77Ed1Zk2xEkUHdTgUkqMQvGjnM79LtZJYpbBxB92kBtz\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"AUb3e3ggTscttXBdkSRXxLkmoA28zAhpTwwvhGqZqSd4\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"GQw6yekXzuEMM7iGEnMnFmJwW9PJ94iMSomMw6PUC8zG\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"HNtZMYtK8gLmKoT1ZmErLRKMCuAGifcU2fgpLFmKevUJ\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"HoNCppnH2aojxiosdcfa4nHhcBp2UUBUpDHNKckMUGXS\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"qz9SXgx1tK3aadcReFeXYbVMyCi3DZBWgKwuhMNrD2K\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"UVa1idQFMxA6JRLyhLVTVFi9pTtCjyTpe7ePaTDVqwY\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false},{\"wallet\":\"whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx\",\"observations\":0,\"shareOfCohortReceiptsPct\":null,\"feePayerMatchedSource\":0,\"feePayerMatchedPct\":null,\"enhancedSwapLabels\":0,\"sampledReceipts\":0,\"sampledV2Receipts\":0,\"invalidSampleRows\":0,\"sampledInboundOwnerHints\":0,\"sampledSwapOutputHints\":0,\"distinctSampledHintMints\":0,\"pollingSignedAmmTokenIncrease\":0,\"pollingReferencedNotSigner\":0,\"pollingIncompleteMapping\":0,\"latestSourceAt\":null,\"investigationPriority\":\"LOW_EVIDENCE_OR_UNSAMPLED\",\"independentlyVerifiedBuys\":0,\"profitableTradesVerified\":null,\"realizedProfitUsd\":null,\"copyTradeEligible\":false}],\"publicUsdOutcomes\":[{\"status\":\"MISSING_FUTURE_USD_QUOTE_COVERAGE\",\"horizonMinutes\":5,\"count\":221},{\"status\":\"OBSERVED_SAME_POOL_USD_PRICE\",\"horizonMinutes\":5,\"count\":30},{\"status\":\"MISSING_FUTURE_USD_QUOTE_COVERAGE\",\"horizonMinutes\":60,\"count\":226},{\"status\":\"OBSERVED_SAME_POOL_USD_PRICE\",\"horizonMinutes\":60,\"count\":25},{\"status\":\"MISSING_FUTURE_USD_QUOTE_COVERAGE\",\"horizonMinutes\":360,\"count\":212},{\"status\":\"OBSERVED_SAME_POOL_USD_PRICE\",\"horizonMinutes\":360,\"count\":39},{\"status\":\"MISSING_FUTURE_USD_QUOTE_COVERAGE\",\"horizonMinutes\":1440,\"count\":211},{\"status\":\"OBSERVED_SAME_POOL_USD_PRICE\",\"horizonMinutes\":1440,\"count\":40}],\"activitySignalSamples\":[],\"agentReviewVerdicts\":[],\"verifiedCopyTrades\":0,\"verifiedRealizedCopyPnlUsd\":null,\"realTrades\":0,\"notes\":[\"Transaction-volume share measures webhook receipts, not unique independent traders or profitable trades.\",\"Helius fee payer and token transfer/swap output hints are not independent verification of a buy or ownership.\",\"Signed program invocation with owner token increases is not proof of a standalone swap, sellability or realized PnL.\",\"USD MISSING_FUTURE quote coverage must be excluded from return statistics; never count it as zero or a loss.\",\"Global recent JSON sampling can overrepresent busy wallets and must not be treated as a complete mint census.\",\"No Helius RPC or DEX request, no wallet signing, no candidate auto-promotion, no scanner or paper changes.\"],\"queryCount\":6,\"dataBasis\":{\"webhookStartInclusive\":\"2026-11-21T19:56:30.489Z\",\"webhookEndInclusive\":\"2026-11-22T19:56:30.489Z\",\"sampledGlobalReceiptLimit\":320,\"sourceGroupsLimitedTo\":20,\"providerCalls\":0,\"d1Writes\":0,\"modelCalls\":0}}"
+    ],
+    "137326557589": [
+      "2026-11-22T19:28:55.8746932Z BuyGuy crawler error: HTTP Error 400: Bad Request",
+      "2026-11-22T19:28:55.8867560Z ##[error]Process completed with exit code 1."
+    ],
+    "137289927589": [
+      "2026-11-22T17:22:20.4924663Z GOGET_MINUTE_REPLAY_CUTOFF_NO_CALLS"
+    ],
+    "137289386000": [
+      "2026-11-22T17:20:32.2804350Z GOGET_SOURCE_CONTROL {\"at\":\"2026-11-22T17:20:32.276Z\",\"mode\":\"READ_ONLY\",\"subscription\":\"SOURCE_PILOT_EXPIRED\",\"expectedWallets\":12,\"observedWallets\":null,\"cohortMatches\":false,\"creditUsage\":{\"status\":\"PROJECT_ID_UNAVAILABLE\"},\"managementCalls\":0,\"mutations\":0,\"originalCohortSize\":14,\"originalExcludedFromSubscription\":2,\"rosterSource\":\"VERIFIED_12_OF_14_CONFIG_AND_HELIUS\"}",
+      "2026-11-22T17:20:32.2845193Z ##[error]Process completed with exit code 1.",
+      "2026-11-22T17:20:33.6823943Z GOGET_UNATTENDED_STATUS {\"build\":\"COLLECTION_SUPERVISION_2026_11_02_V1\",\"latest\":{\"service\":\"goget-collection-health\",\"ok\":false,\"state\":\"REQUIRES_ATTENTION\",\"asOf\":\"2026-11-21T03:00:23.318Z\",\"reasons\":[\"COLLECTION_CHECK_STALE\",\"SOURCE_PILOT_EXPIRED\",\"NO_RECENT_SOURCE_RECEIPTS\",\"INCOMPLETE_RAW_ARCHIVE_SAMPLE\",\"SOURCE_NOT_FRESH\"],\"continuousCoverageVerified\":false},\"window\":{\"from\":\"2026-11-19T17:20:00.000Z\",\"to\":\"2026-11-22T17:20:00.000Z\",\"hours\":72,\"expectedSlots\":864,\"observedSlots\":404,\"eligibleSlots\":0,\"degradedSlots\":404,\"uninstrumentedSlots\":0,\"missingSlots\":460,\"duplicateRuns\":0,\"ignoredRuns\":0,\"readCapped\":false,\"reasons\":{\"SOURCE_NOT_FRESH\":404,\"SOURCE_PILOT_EXPIRED\":404,\"NO_RECENT_SOURCE_RECEIPTS\":404,\"INCOMPLETE_RAW_ARCHIVE_SAMPLE\":404},\"marketEvidence\":{\"candidateQuoteGapSlots\":0,\"missingOutcomeLabels\":0,\"marketStatuses\":{\"SKIPPED\":123,\"COOLDOWN\":281}},\"observationGate\":\"INCOMPLETE\",\"continuousCoverageVerified\":false,\"caveat\":\"Scheduler slots and sampled receipts cannot establish full wallet or chain coverage, uninterrupted subscriptions, or profitable signals.\"}}",
+      "2026-11-22T17:20:33.6854008Z GOGET_UNATTENDED_ACCEPTANCE {\"status\":\"INCOMPLETE\",\"currentCheckHealthy\":false,\"sampled72hComplete\":false,\"continuousCoverageVerified\":false,\"expectedSlots\":864,\"observedSlots\":404,\"eligibleSlots\":0,\"reasons\":[\"LATEST_COLLECTION_UNHEALTHY\",\"LATEST_CHECK_STALE_OR_UNKNOWN\",\"WINDOW_MISSING_SLOTS\",\"WINDOW_DEGRADED_SLOTS\",\"WINDOW_OBSERVATION_INCOMPLETE\"],\"caveat\":\"Sampled window evidence is not end-to-end on-chain collection proof. Provider registration, exact cohort, source receipts, archives and market outcomes require independent validation.\"}"
+    ],
+    "137278177874": [
+      "2026-11-22T16:41:11.1238207Z GOGET_WALLET_LIVE_PILOT {\"status\":\"PILOT_EXPIRED\",\"mode\":\"WATCH_ONLY_LIVE_NO_COPY_TRADING\",\"usage\":{\"rpc\":0,\"transactions\":0,\"d1\":0}}",
+      "2026-11-22T16:41:13.2107852Z GOGET_WEBHOOK_LIVE_EVIDENCE {\"checkedAt\":\"2026-11-22T16:41:13.209Z\",\"lastDeliveredEventAt\":\"2026-11-07T23:59:56.342Z\",\"lastDeliveredEventAgeSeconds\":1269677,\"recentRows\":12,\"recentUniqueWallets\":4,\"classificationsInRecentSample\":{\"UNVERIFIED_ENHANCED_SWAP\":12},\"dailyQuota\":[{\"day\":\"2026-11-07\",\"reserved\":1816},{\"day\":\"2026-11-06\",\"reserved\":1785}],\"notes\":\"Only observed webhook D1 entries; NOT proof of complete coverage, fast delivery or profitable copied trades.\"}",
+      "2026-11-22T16:41:13.6056988Z GOGET_NIGHT_EFFICACY {\"scope\":{\"from\":\"2026-10-30T14:20:00.000Z\",\"to\":\"2026-10-30T18:00:00.000Z\",\"asOf\":\"2026-11-22T16:41:13.318Z\",\"final\":true},\"webhook\":{\"rows\":14,\"sampled\":14,\"sampleLimited\":false,\"uniqueWallets\":1,\"firstAt\":\"2026-10-30T14:37:11.962Z\",\"lastAt\":\"2026-10-30T17:50:09.107Z\",\"classifications\":{\"UNVERIFIED_ENHANCED_SWAP\":14},\"delayObservations\":14,\"roughP50Ms\":2168,\"roughP95Ms\":null,\"latencyCaveat\":\"Seconds-resolution chain block timestamps; not an independent subsecond SLA.\"},\"polling\":{\"rows\":5,\"sampled\":5,\"uniqueWallets\":2,\"classifications\":{\"WALLET_REFERENCED_NOT_SIGNER\":1,\"SIGNED_TX_NO_TOKEN_INCREASE\":2,\"AMM_INVOCATION_WITH_TOKEN_INCREASE_UNPRICED\":2},\"baseline\":0,\"cursors\":[{\"wallet\":\"7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP\",\"status\":\"SOURCE_GAP_UNRESOLVED\",\"gaps\":22,\"lastPolledAt\":\"2026-11-07T21:59:24.175Z\"},{\"wallet\":\"8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4\",\"status\":\"SOURCE_GAP_UNRESOLVED\",\"gaps\":40,\"lastPolledAt\":\"2026-11-07T21:59:24.175Z\"},{\"wallet\":\"whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx\",\"status\":\"SOURCE_GAP_UNRESOLVED\",\"gaps\":23,\"lastPolledAt\":\"2026-11-07T21:59:24.175Z\"}]},\"comparison\":{\"sampleMatchedSignatures\":1,\"sampleUnmatchedPolling\":4,\"matchedPctOfPollingSample\":20,\"caveat\":\"NOT a comprehensive webhook miss rate: polling is bounded and event types differ.\"},\"budget\":[{\"day\":\"2026-11-07\",\"attemptedReservations\":1816},{\"day\":\"2026-11-06\",\"attemptedReservations\":1785}],\"efficacy\":{\"verifiedBuys\":0,\"verifiedCopyProfitsUsd\":null,\"realTrades\":0,\"note\":\"Webhook records are unverified, cannot certify entry/exits or profitable signals.\"}}"
+    ],
+    "137276911744": [
+      "2026-11-22T16:36:36.4314148Z GOGET_LEGACY_REPLAY_STOPPED_2026_11_08_NO_CREDITS"
+    ],
+    "137274364628": [
+      "2026-11-22T16:27:54.0462583Z GOGET_WEBHOOK_CONTROL_FAILED GOGET_WEBHOOK_NOT_REGISTERED",
+      "2026-11-22T16:27:54.0520999Z ##[error]Process completed with exit code 1.",
+      "2026-11-22T16:27:54.5137451Z GOGET_LIVE_SOURCE_COVERAGE {\"status\":\"ROSTER_MATCHED_DELIVERY_STALE_OR_UNKNOWN\",\"asOf\":\"2026-11-22T16:27:54.080Z\",\"walletsExpected\":12,\"walletsWithObservedEvents24h\":0,\"wallets\":[{\"wallet\":\"8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"27HFmP7ccLadGswvQfvea4o3juLw75cPF4V6jWpHM3MX\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"UVa1idQFMxA6JRLyhLVTVFi9pTtCjyTpe7ePaTDVqwY\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"GQw6yekXzuEMM7iGEnMnFmJwW9PJ94iMSomMw6PUC8zG\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"HNtZMYtK8gLmKoT1ZmErLRKMCuAGifcU2fgpLFmKevUJ\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"HoNCppnH2aojxiosdcfa4nHhcBp2UUBUpDHNKckMUGXS\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"qz9SXgx1tK3aadcReFeXYbVMyCi3DZBWgKwuhMNrD2K\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"3uCdwANhJQs7GhEa6Xi23X1hhJ5r2Z6dgR64SAoLfy6a\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"AUb3e3ggTscttXBdkSRXxLkmoA28zAhpTwwvhGqZqSd4\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"},{\"wallet\":\"77Ed1Zk2xEkUHdTgUkqMQvGjnM79LtZJYpbBxB92kBtz\",\"observedWebhookRows24h\":0,\"lastNormalizedAt\":null,\"coverage\":\"NO_OBSERVED_EVENTS_ACTIVITY_UNKNOWN\"}],\"walletRowsUnexpected\":[],\"sourceProviderListingCheckedSeparately\":true,\"providerDelivery\":{\"lastAt\":\"2026-11-07T23:59:56.342Z\",\"ageMinutes\":21148,\"freshness\":\"STALE_OR_IDLE_NOT_PROOF_OF_OUTAGE\"},\"persistentWebhookControl\":{\"state\":\"ARMED\"},\"rpcPilot\":{\"expected\":3,\"found\":3,\"pollers\":[{\"wallet\":\"7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP\",\"status\":\"SOURCE_GAP_UNRESOLVED\",\"historicalGapCount\":22,\"lastPolledAt\":\"2026-11-07T21:59:24.175Z\",\"liveContinuityCertified\":false},{\"wallet\":\"8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4\",\"status\":\"SOURCE_GAP_UNRESOLVED\",\"historicalGapCount\":40,\"lastPolledAt\":\"2026-11-07T21:59:24.175Z\",\"liveContinuityCertified\":false},{\"wallet\":\"whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx\",\"status\":\"SOURCE_GAP_UNRESOLVED\",\"historicalGapCount\":23,\"lastPolledAt\":\"2026-11-07T21:59:24.175Z\",\"liveContinuityCertified\":false}]},\"dailyAttemptedReservations\":[{\"day\":\"2026-11-07\",\"reserved\":1816},{\"day\":\"2026-11-06\",\"reserved\":1785}],\"deliveredWebhookCreditEstimates\":[{\"day\":\"2026-11-07\",\"observed_deliveries\":1891,\"last_at\":\"2026-11-07T23:59:56.342Z\"},{\"day\":\"2026-11-06\",\"observed_deliveries\":1893,\"last_at\":\"2026-11-06T23:59:17.066Z\"}],\"rawArchiveHealth\":[{\"day\":\"2026-11-04\",\"degraded_requests\":0,\"attempted_records\":232,\"recovered_records\":0,\"still_failed_records\":0,\"last_at\":\"2026-11-04T07:05:07.401Z\"},{\"day\":\"2026-11-03\",\"degraded_requests\":1,\"attempted_records\":390,\"recovered_records\":0,\"still_failed_records\":0,\"last_at\":\"2026-11-03T23:57:58.781Z\"}],\"limitations\":[\"Zero events does not prove a missing webhook subscription or inactive wallet.\",\"Provider subscription configuration must be checked separately through Helius read-only verification.\",\"D1 received events do not prove exhaustive original-chain activity, low latency, valid buys or trades.\",\"Historical restored data cannot be relabeled as live-forward evidence.\",\"GitHub cron is best effort and must not be assumed to run each five-minute slot.\"],\"d1QueryCount\":6,\"heliusCalls\":0,\"d1Writes\":0,\"trades\":0}",
+      "2026-11-22T16:27:55.9301011Z GOGET_HISTORICAL_PILOT_EVIDENCE {\"asOf\":\"2026-11-22T16:27:54.545Z\",\"runId\":\"aed7d373-39ab-4872-9856-426bc7dc5459\",\"status\":\"HISTORICAL_RECORDS_ONLY_EFFICACY_UNVERIFIED\",\"expectedPools\":10,\"queriesAttempted\":6,\"queriesVerified\":6,\"records\":{\"run\":[{\"run_id\":\"aed7d373-39ab-4872-9856-426bc7dc5459\",\"utc_day\":\"2026-11-06\",\"started_at\":\"2026-11-06T14:35:36.219Z\",\"ends_at\":\"2026-11-06T15:35:36.219Z\",\"completed_at\":\"2026-11-06T14:45:49.559Z\",\"status\":\"PARTIAL_OR_UNVERIFIED_COVERAGE\",\"requested_pools\":10,\"armed_pools\":10,\"reserved_credits\":200,\"streamed_bytes\":4002456,\"unique_events\":740,\"duplicate_events\":0,\"streamed_estimated_credits\":82,\"rpc_attempts\":11,\"provider_billed_credits\":null,\"cloudflare_billed_usd\":null,\"ws_connections\":1,\"stream_gap_count\":1,\"stop_reason\":\"LIMIT_REACHED\",\"notes\":\"WS estimated credits not Helius invoice; raw logs not swap proof\"}],\"roster\":[{\"pool\":\"2zPfdGd48k7B2U9yqZ4hJSPAPtoVU9uiEbFQYXEoeXkv\",\"mint\":\"6FhVPctYg363pQbs4iSvqyHe2cJzfsvFD96gePy6pump\",\"asset_key\":\"solana:6FhVPctYg363pQbs4iSvqyHe2cJzfsvFD96gePy6pump\"},{\"pool\":\"3k5sSodRuZ8qgzNfHmpckaPuE472JWngeXrMeMGsmYYE\",\"mint\":\"5wSQpQfbdSKs7amvyxa2XTzWXNyionERZWdDWykYm1At\",\"asset_key\":\"solana:5wSQpQfbdSKs7amvyxa2XTzWXNyionERZWdDWykYm1At\"},{\"pool\":\"64aRecs97ffq2AgpYN5fmMe7B3WyDD1yDmyWTQWz3hj5\",\"mint\":\"5MVP56Cys6D2SmC7iXXWj9U3sxMWU9Sqquz2XY8JLosL\",\"asset_key\":\"solana:5MVP56Cys6D2SmC7iXXWj9U3sxMWU9Sqquz2XY8JLosL\"},{\"pool\":\"6hYFMyE2BYYScTErqUeCKhihQ5X9j2WD2z9waTdwy38N\",\"mint\":\"5wsjHxT5nW5jQuVupXUNnYszF3WoWCfGGk9LMcsCJzY8\",\"asset_key\":\"solana:5wsjHxT5nW5jQuVupXUNnYszF3WoWCfGGk9LMcsCJzY8\"},{\"pool\":\"76dpWgLDW4gh4N8bTC7HGooUzeMwUpkZuvRExjBteazG\",\"mint\":\"6a81PfhejwCM3bB4F3Rnbzk9ALNmg4YGeyjKd5Nxpump\",\"asset_key\":\"solana:6a81PfhejwCM3bB4F3Rnbzk9ALNmg4YGeyjKd5Nxpump\"},{\"pool\":\"9VjkGqSgKcPG3rYgMAt9GrC6EotvdMmUCD4oeArJVogd\",\"mint\":\"6gnB2H2hbTVvKUWCzNuqjWY8Rod6EVBmfHi7YxZpTWa7\",\"asset_key\":\"solana:6gnB2H2hbTVvKUWCzNuqjWY8Rod6EVBmfHi7YxZpTWa7\"},{\"pool\":\"A5FpVH5c4Zya6EwbBWGzLsFDoUGCX5BjSXK4FXKUwHMW\",\"mint\":\"6QUHcqYuiPRHxhnYZoygewXtNQr9kUrhc9Tmwgtbpump\",\"asset_key\":\"solana:6QUHcqYuiPRHxhnYZoygewXtNQr9kUrhc9Tmwgtbpump\"},{\"pool\":\"APKy43xkxRZ4iJQB7aQAr6u82cRpk8tCg13TKsmUKcAD\",\"mint\":\"5JbRYEz844bwnKbGx4dRHhrJ6zjrJ194CKdDXtzwgaXo\",\"asset_key\":\"solana:5JbRYEz844bwnKbGx4dRHhrJ6zjrJ194CKdDXtzwgaXo\"},{\"pool\":\"EygtRprRwHgtCDDk6GUFnKzCk6U5su7NAekCProatiFc\",\"mint\":\"5BWHo2duxhkRR4ftnZWErnB8GoXpFgZ4ZR9UN8LDpump\",\"asset_key\":\"solana:5BWHo2duxhkRR4ftnZWErnB8GoXpFgZ4ZR9UN8LDpump\"},{\"pool\":\"GhFSaPdvu75KCpsUVk7CZ8A1tdjYeo6YvZx1QiBgwfSJ\",\"mint\":\"5VCEFq1aATjga39QtDunYjJqYBx67w8V8TXwHrqopump\",\"asset_key\":\"solana:5VCEFq1aATjga39QtDunYjJqYBx67w8V8TXwHrqopump\"}],\"windows\":[{\"coverage\":\"CONTINUOUS_STREAM\",\"scheduled_status\":\"NO_FRESH_SCHEDULED_COMPARATOR\",\"n\":30,\"pools\":10},{\"coverage\":\"CONTINUOUS_STREAM\",\"scheduled_status\":\"SCHEDULED_M5_BUY_RATIO_PROXY\",\"n\":40,\"pools\":10},{\"coverage\":\"STREAM_COVERAGE_UNVERIFIED\",\"scheduled_status\":\"NO_FRESH_SCHEDULED_COMPARATOR\",\"n\":20,\"pools\":10}],\"reconciliation\":[{\"pool\":\"2zPfdGd48k7B2U9yqZ4hJSPAPtoVU9uiEbFQYXEoeXkv\",\"checked_at\":\"2026-11-06T14:45:48.710Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":15,\"websocket_matched\":11,\"missing\":4,\"recall\":0.7333333333333333,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"3k5sSodRuZ8qgzNfHmpckaPuE472JWngeXrMeMGsmYYE\",\"checked_at\":\"2026-11-06T14:45:49.398Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":1,\"websocket_matched\":1,\"missing\":0,\"recall\":1,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"64aRecs97ffq2AgpYN5fmMe7B3WyDD1yDmyWTQWz3hj5\",\"checked_at\":\"2026-11-06T14:45:49.086Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":36,\"websocket_matched\":32,\"missing\":4,\"recall\":0.8888888888888888,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"6hYFMyE2BYYScTErqUeCKhihQ5X9j2WD2z9waTdwy38N\",\"checked_at\":\"2026-11-06T14:45:48.563Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":23,\"websocket_matched\":12,\"missing\":11,\"recall\":0.5217391304347826,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"76dpWgLDW4gh4N8bTC7HGooUzeMwUpkZuvRExjBteazG\",\"checked_at\":\"2026-11-06T14:45:48.433Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":0,\"websocket_matched\":0,\"missing\":0,\"recall\":null,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"9VjkGqSgKcPG3rYgMAt9GrC6EotvdMmUCD4oeArJVogd\",\"checked_at\":\"2026-11-06T14:45:49.271Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":7,\"websocket_matched\":6,\"missing\":1,\"recall\":0.8571428571428571,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"A5FpVH5c4Zya6EwbBWGzLsFDoUGCX5BjSXK4FXKUwHMW\",\"checked_at\":\"2026-11-06T14:45:48.833Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":9,\"websocket_matched\":6,\"missing\":3,\"recall\":0.6666666666666666,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"APKy43xkxRZ4iJQB7aQAr6u82cRpk8tCg13TKsmUKcAD\",\"checked_at\":\"2026-11-06T14:45:48.957Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":0,\"websocket_matched\":0,\"missing\":0,\"recall\":null,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"EygtRprRwHgtCDDk6GUFnKzCk6U5su7NAekCProatiFc\",\"checked_at\":\"2026-11-06T14:45:48.176Z\",\"status\":\"BOUNDED_RPC_PAGE_COVERS_WINDOW\",\"rpc_in_window\":101,\"websocket_matched\":73,\"missing\":28,\"recall\":0.7227722772277227,\"page_size\":1000,\"provider_error\":null},{\"pool\":\"GhFSaPdvu75KCpsUVk7CZ8A1tdjYeo6YvZx1QiBgwfSJ\",\"checked_at\":\"2026-11-06T14:45:48.301Z\",\"status\":\"RPC_PAGE_TRUNCATED_OR_BLOCKTIME_UNKNOWN\",\"rpc_in_window\":1000,\"websocket_matched\":0,\"missing\":1000,\"recall\":null,\"page_size\":1000,\"provider_error\":null}],\"outcomes\":[{\"horizon_min\":5,\"status\":\"MISSING_FUTURE_PRICE_COVERAGE\",\"n\":40,\"first_due_at\":\"2026-11-06T14:42:00.000Z\",\"last_due_at\":\"2026-11-06T14:45:00.000Z\"},{\"horizon_min\":60,\"status\":\"MISSING_FUTURE_PRICE_COVERAGE\",\"n\":12,\"first_due_at\":\"2026-11-06T15:37:00.000Z\",\"last_due_at\":\"2026-11-06T15:40:00.000Z\"},{\"horizon_min\":60,\"status\":\"OBSERVED_EXACT_POOL\",\"n\":28,\"first_due_at\":\"2026-11-06T15:37:00.000Z\",\"last_due_at\":\"2026-11-06T15:40:00.000Z\"},{\"horizon_min\":1440,\"status\":\"MISSING_FUTURE_PRICE_COVERAGE\",\"n\":40,\"first_due_at\":\"2026-11-07T14:37:00.000Z\",\"last_due_at\":\"2026-11-07T14:40:00.000Z\"}],\"gaps\":[]},\"errors\":[],\"heliusCalls\":0,\"d1Writes\":0,\"trades\":0,\"limitations\":[\"Persisted rows do not independently prove ACKs, on-chain recall, executable returns or a predictive edge.\",\"Empty or failed reads remain unknown; the expired pilot is never resumed.\"],\"rosterVerified\":true}"
+    ],
+    "137256421964": [
+      "2026-11-22T15:24:53.0356842Z GOGET_RPC_SOURCE_QUALITY {\"status\":\"MANUAL_VERIFIED_CRON_NOT_YET_OBSERVED\",\"asOf\":\"2026-11-22T15:24:52.458Z\",\"expectedWallets\":3,\"wallets\":[{\"wallet\":\"8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4\",\"sourceState\":\"CHECKPOINT_CONNECTED\",\"lastCheckedAt\":\"2026-11-07T23:55:11.809Z\",\"storedSignatures\":892,\"failedChainSignatures\":5,\"oldestSignatureAt\":\"2026-11-05T02:02:40.553Z\",\"newestSignatureAt\":\"2026-11-07T23:50:11.713Z\",\"totalRecordedGapCount\":0,\"currentlyUnresolvedGapWindows\":0},{\"wallet\":\"whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx\",\"sourceState\":\"CHECKPOINT_CONNECTED\",\"lastCheckedAt\":\"2026-11-07T23:55:11.809Z\",\"storedSignatures\":1363,\"failedChainSignatures\":268,\"oldestSignatureAt\":\"2026-11-05T02:02:40.553Z\",\"newestSignatureAt\":\"2026-11-07T01:30:11.546Z\",\"totalRecordedGapCount\":3,\"currentlyUnresolvedGapWindows\":3},{\"wallet\":\"7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP\",\"sourceState\":\"CHECKPOINT_CONNECTED\",\"lastCheckedAt\":\"2026-11-07T23:55:11.809Z\",\"storedSignatures\":405,\"failedChainSignatures\":2,\"oldestSignatureAt\":\"2026-11-05T02:02:40.553Z\",\"newestSignatureAt\":\"2026-11-07T23:35:11.486Z\",\"totalRecordedGapCount\":0,\"currentlyUnresolvedGapWindows\":0}],\"allSourceWalletsPresent\":true,\"collectedCycles\":0,\"cronCycles\":0,\"completeThreeWalletCronCycles\":0,\"missingIntervalsBetweenCronReceipts\":0,\"maxCronIntervalMinutes\":null,\"lastRecordedCycleAgeMinutes\":null,\"failures\":[],\"unresolvedGapWindows\":3,\"sourceWalletsNotContiguouslyVerified\":0,\"utcBudget\":{\"day\":\"2026-11-22\",\"rpcCreditsReserved\":0,\"webhookDeliveryEstimate\":0,\"localCombinedEstimate\":0,\"rpcHardCap\":9000,\"localCombinedCeiling\":20000,\"actualHeliusAccountCreditsNotMeasured\":true},\"limitations\":[\"Complete bounded 100-signature scan is not necessarily complete raw chain history.\",\"Legacy GitHub live RPC cursors remain separate and unresolved.\",\"Daily credit sums exclude other projects and are not Helius billing.\",\"Partial or absent cron rows may hide executions that failed before D1 commit.\"],\"d1Reads\":6,\"heliusCalls\":0,\"d1Writes\":0,\"trades\":0}"
+    ],
+    "137256474647": [
+      "2026-11-22T15:25:01.6068499Z GOGET_DECODE_PILOT_EXPIRED_2026_11_08_NO_CALLS"
+    ]
+  },
+  "capacity": {
+    "at": "2026-11-22T07:29:14.447Z",
+    "accountPlan": "NOT_VERIFIED",
+    "databaseBytes": 9999998976,
+    "bytesInMiB": 9536.74,
+    "tableCounts": {
+      "webhook": [
+        {
+          "n": 6565,
+          "evidence_bytes": 26613643,
+          "first_at": "2026-10-30T10:02:54.229Z",
+          "latest_at": "2026-11-07T23:59:56.342Z"
+        }
+      ],
+      "webhook24h": [
+        {
+          "n": 0,
+          "wallets": 0
+        }
+      ],
+      "rawArchive": [
+        {
+          "n": 642,
+          "payload_bytes": 8185827,
+          "latest_at": "2026-11-04T07:05:07.401Z"
+        }
+      ],
+      "rawArchiveDays": [
+        {
+          "day": "2026-11-04",
+          "bytes_reserved": 2982909
+        },
+        {
+          "day": "2026-11-03",
+          "bytes_reserved": 5032845
+        },
+        {
+          "day": "2026-11-01",
+          "bytes_reserved": 8853914
+        }
+      ],
+      "rawArchiveHealth": [
+        {
+          "day": "2026-11-04",
+          "degraded_requests": 0,
+          "attempted_records": 232,
+          "recovered_records": 0,
+          "still_failed_records": 0,
+          "failed_batches": 0,
+          "last_error_code": "NONE",
+          "last_at": "2026-11-04T07:05:07.401Z"
+        },
+        {
+          "day": "2026-11-03",
+          "degraded_requests": 1,
+          "attempted_records": 390,
+          "recovered_records": 0,
+          "still_failed_records": 0,
+          "failed_batches": 0,
+          "last_error_code": "ZERO_NEW_ROWS",
+          "last_at": "2026-11-03T23:57:58.781Z"
+        },
+        {
+          "day": "2026-11-01",
+          "degraded_requests": 1,
+          "attempted_records": 869,
+          "recovered_records": 0,
+          "still_failed_records": 0,
+          "failed_batches": 0,
+          "last_error_code": "ZERO_NEW_ROWS",
+          "last_at": "2026-11-01T05:21:37.830Z"
+        }
+      ],
+      "webhookSchemaVersions": [],
+      "expandedWebhook": [
+        {
+          "n": 6468,
+          "wallets": 14,
+          "last_at": "2026-11-07T23:59:56.342Z"
+        }
+      ],
+      "wallet_polling": [
+        {
+          "n": 111,
+          "first_at": "2026-10-30T08:09:29.023Z",
+          "latest_at": "2026-11-04T17:56:08.288Z"
+        }
+      ],
+      "wallet_polling24h": [
+        {
+          "n": 0
+        }
+      ],
+      "webhook_daily": [
+        {
+          "day": "2026-11-07",
+          "reserved": 1816
+        },
+        {
+          "day": "2026-11-06",
+          "reserved": 1785
+        },
+        {
+          "day": "2026-11-05",
+          "reserved": 749
+        },
+        {
+          "day": "2026-11-04",
+          "reserved": 3335
+        },
+        {
+          "day": "2026-11-03",
+          "reserved": 397
+        },
+        {
+          "day": "2026-11-01",
+          "reserved": 3166
+        },
+        {
+          "day": "2026-10-31",
+          "reserved": 4129
+        }
+      ],
+      "webhook_wallets": [],
+      "preSignalRecent": [],
+      "preSignalMarketQuotes": [
+        {
+          "n": 0,
+          "mints": 0,
+          "latest_at": null
+        }
+      ],
+      "preSignalProviderStatus": [
+        {
+          "name": "dex",
+          "until_ms": 1794183623318
+        }
+      ],
+      "preSignalMarketOutcomes": [
+        {
+          "horizon_min": 5,
+          "status": "MISSING_FUTURE_USD_QUOTE_COVERAGE",
+          "n": 221
+        },
+        {
+          "horizon_min": 5,
+          "status": "OBSERVED_SAME_POOL_USD_PRICE",
+          "n": 30
+        },
+        {
+          "horizon_min": 60,
+          "status": "MISSING_FUTURE_USD_QUOTE_COVERAGE",
+          "n": 226
+        },
+        {
+          "horizon_min": 60,
+          "status": "OBSERVED_SAME_POOL_USD_PRICE",
+          "n": 25
+        },
+        {
+          "horizon_min": 360,
+          "status": "MISSING_FUTURE_USD_QUOTE_COVERAGE",
+          "n": 212
+        },
+        {
+          "horizon_min": 360,
+          "status": "OBSERVED_SAME_POOL_USD_PRICE",
+          "n": 39
+        },
+        {
+          "horizon_min": 1440,
+          "status": "MISSING_FUTURE_USD_QUOTE_COVERAGE",
+          "n": 211
+        },
+        {
+          "horizon_min": 1440,
+          "status": "OBSERVED_SAME_POOL_USD_PRICE",
+          "n": 40
+        }
+      ],
+      "preSignalOutcomes": [
+        {
+          "horizon_min": 5,
+          "status": "OBSERVED_MATCHED_POOL_PRICE",
+          "n": 10
+        },
+        {
+          "horizon_min": 60,
+          "status": "OBSERVED_MATCHED_POOL_PRICE",
+          "n": 10
+        },
+        {
+          "horizon_min": 360,
+          "status": "OBSERVED_MATCHED_POOL_PRICE",
+          "n": 10
+        },
+        {
+          "horizon_min": 1440,
+          "status": "MISSING_FUTURE_QUOTE_COVERAGE",
+          "n": 10
+        }
+      ],
+      "preSignalRuns": [],
+      "agentRunTypes": [],
+      "agentRunRecent": [
+        {
+          "started_at": "2026-11-21T03:20:44.035Z",
+          "source_rows": 0,
+          "persisted_rows": 0,
+          "backlog": 0,
+          "trigger": "cron"
+        },
+        {
+          "started_at": "2026-11-21T03:15:44.035Z",
+          "source_rows": 0,
+          "persisted_rows": 0,
+          "backlog": 0,
+          "trigger": "cron"
+        },
+        {
+          "started_at": "2026-11-21T03:10:44.035Z",
+          "source_rows": 0,
+          "persisted_rows": 0,
+          "backlog": 0,
+          "trigger": "cron"
+        },
+        {
+          "started_at": "2026-11-21T03:05:44.035Z",
+          "source_rows": 0,
+          "persisted_rows": 0,
+          "backlog": 0,
+          "trigger": "cron"
+        },
+        {
+          "started_at": "2026-11-21T03:00:44.035Z",
+          "source_rows": 0,
+          "persisted_rows": 0,
+          "backlog": 0,
+          "trigger": "cron"
+        },
+        {
+          "started_at": "2026-11-21T02:55:44.035Z",
+          "source_rows": 0,
+          "persisted_rows": 0,
+          "backlog": 0,
+          "trigger": "cron"
+        },
+        {
+          "started_at": "2026-11-21T02:50:44.035Z",
+          "source_rows": 0,
+          "persisted_rows": 0,
+          "backlog": 0,
+          "trigger": "cron"
+        },
+        {
+          "started_at": "2026-11-21T02:45:44.035Z",
+          "source_rows": 0,
+          "persisted_rows": 0,
+          "backlog": 0,
+          "trigger": "cron"
+        }
+      ],
+      "agentBacklog": [
+        {
+          "unreviewed": 0
+        }
+      ],
+      "agentReviewed": [
+        {
+          "reviewed": 6565,
+          "latest_review": "2026-11-08T00:00:44.035Z"
+        }
+      ],
+      "tables": [
+        {
+          "name": "_cf_KV"
+        },
+        {
+          "name": "assets"
+        },
+        {
+          "name": "chain_radar_samples"
+        },
+        {
+          "name": "goget_event_pilot_gaps"
+        },
+        {
+          "name": "goget_event_pilot_outcomes"
+        },
+        {
+          "name": "goget_event_pilot_reconciliation"
+        },
+        {
+          "name": "goget_event_pilot_roster"
+        },
+        {
+          "name": "goget_event_pilot_runs"
+        },
+        {
+          "name": "goget_event_pilot_windows"
+        },
+        {
+          "name": "goget_exact_minute_replay_budget"
+        },
+        {
+          "name": "goget_exact_minute_replay_outcomes"
+        },
+        {
+          "name": "goget_exact_minute_replay_runs"
+        },
+        {
+          "name": "goget_historical_native_ratio_audit"
+        },
+        {
+          "name": "goget_historical_pool_activity_audit"
+        },
+        {
+          "name": "goget_historical_price_recovery"
+        },
+        {
+          "name": "goget_legacy_rpc_replay_budget"
+        },
+        {
+          "name": "goget_legacy_rpc_replay_journal"
+        },
+        {
+          "name": "goget_legacy_rpc_replay_runs"
+        },
+        {
+          "name": "goget_legacy_rpc_replay_signatures"
+        },
+        {
+          "name": "goget_live_source_watchdog_runs"
+        },
+        {
+          "name": "goget_pre_signal_lease"
+        },
+        {
+          "name": "goget_pre_signal_market_outcomes"
+        },
+        {
+          "name": "goget_pre_signal_market_quotes"
+        },
+        {
+          "name": "goget_pre_signal_outcomes"
+        },
+        {
+          "name": "goget_pre_signal_provider_state"
+        },
+        {
+          "name": "goget_pre_signal_runs"
+        },
+        {
+          "name": "goget_pre_signal_snapshots"
+        },
+        {
+          "name": "goget_rpc_decode_attempts"
+        },
+        {
+          "name": "goget_rpc_decode_budget"
+        },
+        {
+          "name": "goget_rpc_decode_runs"
+        },
+        {
+          "name": "goget_rpc_decoded_signatures"
+        },
+        {
+          "name": "goget_rpc_source_budget"
+        },
+        {
+          "name": "goget_rpc_source_cycles"
+        },
+        {
+          "name": "goget_rpc_source_gaps"
+        },
+        {
+          "name": "goget_rpc_source_lease"
+        },
+        {
+          "name": "goget_rpc_source_signatures"
+        },
+        {
+          "name": "goget_rpc_source_wallets"
+        },
+        {
+          "name": "leases"
+        },
+        {
+          "name": "observations"
+        },
+        {
+          "name": "paper_account"
+        },
+        {
+          "name": "paper_positions"
+        },
+        {
+          "name": "paper_trades"
+        },
+        {
+          "name": "predictions"
+        },
+        {
+          "name": "quality_ledger_checks"
+        },
+        {
+          "name": "quality_ledger_runs"
+        },
+        {
+          "name": "radar_samples"
+        },
+        {
+          "name": "research_events"
+        },
+        {
+          "name": "runs"
+        },
+        {
+          "name": "score_outcomes"
+        },
+        {
+          "name": "score_snapshots"
+        },
+        {
+          "name": "smart_wallet_agent_lease"
+        },
+        {
+          "name": "smart_wallet_agent_runs"
+        },
+        {
+          "name": "smart_wallet_candidate_signers"
+        },
+        {
+          "name": "smart_wallet_helius_gap_wave_coverage"
+        },
+        {
+          "name": "smart_wallet_helius_historical_replay"
+        },
+        {
+          "name": "smart_wallet_live_cursors"
+        },
+        {
+          "name": "smart_wallet_live_events"
+        },
+        {
+          "name": "smart_wallet_six_agent_reviews"
+        },
+        {
+          "name": "smart_wallet_webhook_budget"
+        },
+        {
+          "name": "smart_wallet_webhook_control"
+        },
+        {
+          "name": "smart_wallet_webhook_credit_estimates"
+        },
+        {
+          "name": "smart_wallet_webhook_events"
+        },
+        {
+          "name": "smart_wallet_webhook_raw"
+        },
+        {
+          "name": "smart_wallet_webhook_raw_budget"
+        },
+        {
+          "name": "smart_wallet_webhook_raw_health"
+        },
+        {
+          "name": "trackbigbux_activity"
+        },
+        {
+          "name": "trackbigbux_coverage"
+        },
+        {
+          "name": "trackbigbux_external_audits"
+        },
+        {
+          "name": "trackbigbux_quality"
+        },
+        {
+          "name": "trackbigbux_receipts"
+        },
+        {
+          "name": "trackbigbux_runs"
+        },
+        {
+          "name": "trackbigbux_wallet_state"
+        },
+        {
+          "name": "trackca_chain_metrics"
+        },
+        {
+          "name": "trackca_coverage"
+        },
+        {
+          "name": "trackca_holder_snapshots"
+        },
+        {
+          "name": "trackca_ohlcv"
+        },
+        {
+          "name": "trackca_pair_snapshots"
+        },
+        {
+          "name": "trackca_runs"
+        },
+        {
+          "name": "trackca_token_quotes"
+        },
+        {
+          "name": "trackca_transfer_events"
+        },
+        {
+          "name": "vladwatch_checkpoints"
+        },
+        {
+          "name": "vladwatch_coverage"
+        },
+        {
+          "name": "vladwatch_events"
+        },
+        {
+          "name": "vladwatch_runs"
+        }
+      ]
+    },
+    "last24Hours": {},
+    "rowEvidenceBytes": 26613643,
+    "graphqlUsage30d": {
+      "status": "AVAILABLE",
+      "daysQueried": 30,
+      "totals": {},
+      "groupCount": 0
+    },
+    "notes": [
+      "Usage is for the designated GOGET D1 database only; there may be other Cloudflare services and databases.",
+      "Database file size is a capacity measure, not a monthly bill.",
+      "Helius credits and webhook costs are a separate provider and not covered by Workers Paid."
+    ],
+    "r2": {
+      "status": "PERMISSIONS_OR_SERVICE_UNAVAILABLE"
+    }
+  }
+}

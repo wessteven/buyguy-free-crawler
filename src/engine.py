@@ -11,12 +11,38 @@ UTC=dt.timezone.utc
 BASE='https://api.dexscreener.com'
 CF='https://api.cloudflare.com/client/v4/accounts/{}/d1/database/{}/query'
 def now(): return dt.datetime.now(UTC).isoformat(timespec='seconds').replace('+00:00','Z')
+def d1_http_diagnostic(exc,body):
+    """Bounded provider error metadata only; no URLs, SQL, values or error text."""
+    info={'provider':'CLOUDFLARE_D1','http_status':exc.code,
+          'operation': 'READ' if str((body or {}).get('sql','')).lstrip().upper().startswith('SELECT ') else 'WRITE_OR_SCHEMA',
+          'diagnostic':'D1_HTTP_ERROR_UNCLASSIFIED','provider_codes':[], 'root_cause_confirmed':False}
+    try:
+        raw=exc.read(4097)
+        if len(raw)>4096:info['diagnostic']='D1_ERROR_BODY_CAPPED';return info
+        payload=json.loads(raw)
+        errors=payload.get('errors',[]) if isinstance(payload,dict) else []
+        if not isinstance(errors,list):return info
+        for item in errors[:8]:
+            if not isinstance(item,dict):continue
+            code=item.get('code')
+            if type(code) is int and 0<=code<=999999:info['provider_codes'].append(code)
+            message=item.get('message','')
+            if isinstance(message,str) and re.search(r'maximum database size|database or disk is full|SQLITE_FULL|database is full',message,re.I):
+                info['diagnostic']='D1_PROVIDER_REPORTED_STORAGE_LIMIT'
+    except Exception:pass
+    return info
+
 def get(url,body=None,token=None):
     headers={'Accept':'application/json','User-Agent':'BuyGuyCrawler/3'}
     if body is not None: headers['Content-Type']='application/json'
     if token: headers['Authorization']='Bearer '+token
     request=Request(url,data=json.dumps(body).encode() if body is not None else None,headers=headers)
-    with urlopen(request,timeout=25) as response: return json.load(response)
+    try:
+        with urlopen(request,timeout=25) as response: return json.load(response)
+    except HTTPError as exc:
+        if urlsplit(url).hostname=='api.cloudflare.com' and '/d1/database/' in urlsplit(url).path:
+            print('GOGET_D1_HTTP_DIAGNOSTIC '+json.dumps(d1_http_diagnostic(exc,body)),file=sys.stderr)
+        raise
 def num(v):
     try: return float(v or 0)
     except (TypeError,ValueError): return 0
