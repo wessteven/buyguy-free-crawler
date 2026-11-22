@@ -1,0 +1,495 @@
+{
+  "version": "weekly-1",
+  "effectiveBaseline": "9a5243d60d4c9cbefb4df161e66db17ae5c5a4ee",
+  "createdAt": "2026-11-21T20:48:53.220213+00:00",
+  "scope": "GOGET only; source configuration, not chain coverage certification",
+  "rosters": {
+    "solanaWebhook": [
+      {
+        "wallet": "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4",
+        "source": "Prior pilot, fee-payer activity",
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx",
+        "source": "Prior pilot, deployer research",
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP",
+        "source": "Prior pilot, deployer research",
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 3,
+        "poolCount": 2,
+        "vetted": false,
+        "webhookEnabled": false,
+        "webhookExclusion": "2026-11-03: bounded credit restart, extreme observed traffic (~95% of recent webhook receipts); retained for historic research; NOT certified trader"
+      },
+      {
+        "wallet": "27HFmP7ccLadGswvQfvea4o3juLw75cPF4V6jWpHM3MX",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 3,
+        "poolCount": 2,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "3wySUKHiD15kUD7sunNe1FQpogv2FK7Tw7TzSJyC9Ft8",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 2,
+        "poolCount": 2,
+        "vetted": false,
+        "webhookEnabled": false,
+        "webhookExclusion": "2026-11-03: bounded credit restart, extreme observed traffic (~95% of recent webhook receipts); retained for historic research; NOT certified trader"
+      },
+      {
+        "wallet": "UVa1idQFMxA6JRLyhLVTVFi9pTtCjyTpe7ePaTDVqwY",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 2,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "GQw6yekXzuEMM7iGEnMnFmJwW9PJ94iMSomMw6PUC8zG",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 2,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "HNtZMYtK8gLmKoT1ZmErLRKMCuAGifcU2fgpLFmKevUJ",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "HoNCppnH2aojxiosdcfa4nHhcBp2UUBUpDHNKckMUGXS",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "qz9SXgx1tK3aadcReFeXYbVMyCi3DZBWgKwuhMNrD2K",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "3uCdwANhJQs7GhEa6Xi23X1hhJ5r2Z6dgR64SAoLfy6a",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "AUb3e3ggTscttXBdkSRXxLkmoA28zAhpTwwvhGqZqSd4",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      },
+      {
+        "wallet": "77Ed1Zk2xEkUHdTgUkqMQvGjnM79LtZJYpbBxB92kBtz",
+        "source": "2026-10-31T04:20:35Z bounded PumpSwap signer sample, NOT verified buyer",
+        "observedTransactions": 1,
+        "poolCount": 1,
+        "vetted": false,
+        "webhookEnabled": true
+      }
+    ],
+    "solanaRpc": [
+      {
+        "wallet": "8LJWz8uW51u6kL2XBZ6cKYBngnXCpxQjUZRbwKLfVYp4",
+        "vetted": false,
+        "source": "recent confirmed PumpSwap fee-payer activity; independent wallet profit not established"
+      },
+      {
+        "wallet": "whamNNP9tHoxLg92yHvJPdYhghEoCg1qYTsh5a2oLbx",
+        "vetted": false,
+        "source": "prior Deployer Lab watch; evidence of recent transfer activity, not a copy-trading recommendation"
+      },
+      {
+        "wallet": "7naFFwuEJWeWwWYQUkgAWHsxYKg3KctEuUj42JdAMidP",
+        "vetted": false,
+        "source": "Deployer Lab entity; transactions may reference this wallet without it signing"
+      }
+    ],
+    "originalTenPoolPilot": {
+      "runId": "aed7d373-39ab-4872-9856-426bc7dc5459",
+      "expected": 10,
+      "status": "EXACT_STORED_IDENTITIES_RECOVERED_NOT_LIVE_CERTIFICATION",
+      "records": [
+        {
+          "pool": "2zPfdGd48k7B2U9yqZ4hJSPAPtoVU9uiEbFQYXEoeXkv",
+          "mint": "6FhVPctYg363pQbs4iSvqyHe2cJzfsvFD96gePy6pump",
+          "asset_key": "solana:6FhVPctYg363pQbs4iSvqyHe2cJzfsvFD96gePy6pump"
+        },
+        {
+          "pool": "3k5sSodRuZ8qgzNfHmpckaPuE472JWngeXrMeMGsmYYE",
+          "mint": "5wSQpQfbdSKs7amvyxa2XTzWXNyionERZWdDWykYm1At",
+          "asset_key": "solana:5wSQpQfbdSKs7amvyxa2XTzWXNyionERZWdDWykYm1At"
+        },
+        {
+          "pool": "64aRecs97ffq2AgpYN5fmMe7B3WyDD1yDmyWTQWz3hj5",
+          "mint": "5MVP56Cys6D2SmC7iXXWj9U3sxMWU9Sqquz2XY8JLosL",
+          "asset_key": "solana:5MVP56Cys6D2SmC7iXXWj9U3sxMWU9Sqquz2XY8JLosL"
+        },
+        {
+          "pool": "6hYFMyE2BYYScTErqUeCKhihQ5X9j2WD2z9waTdwy38N",
+          "mint": "5wsjHxT5nW5jQuVupXUNnYszF3WoWCfGGk9LMcsCJzY8",
+          "asset_key": "solana:5wsjHxT5nW5jQuVupXUNnYszF3WoWCfGGk9LMcsCJzY8"
+        },
+        {
+          "pool": "76dpWgLDW4gh4N8bTC7HGooUzeMwUpkZuvRExjBteazG",
+          "mint": "6a81PfhejwCM3bB4F3Rnbzk9ALNmg4YGeyjKd5Nxpump",
+          "asset_key": "solana:6a81PfhejwCM3bB4F3Rnbzk9ALNmg4YGeyjKd5Nxpump"
+        },
+        {
+          "pool": "9VjkGqSgKcPG3rYgMAt9GrC6EotvdMmUCD4oeArJVogd",
+          "mint": "6gnB2H2hbTVvKUWCzNuqjWY8Rod6EVBmfHi7YxZpTWa7",
+          "asset_key": "solana:6gnB2H2hbTVvKUWCzNuqjWY8Rod6EVBmfHi7YxZpTWa7"
+        },
+        {
+          "pool": "A5FpVH5c4Zya6EwbBWGzLsFDoUGCX5BjSXK4FXKUwHMW",
+          "mint": "6QUHcqYuiPRHxhnYZoygewXtNQr9kUrhc9Tmwgtbpump",
+          "asset_key": "solana:6QUHcqYuiPRHxhnYZoygewXtNQr9kUrhc9Tmwgtbpump"
+        },
+        {
+          "pool": "APKy43xkxRZ4iJQB7aQAr6u82cRpk8tCg13TKsmUKcAD",
+          "mint": "5JbRYEz844bwnKbGx4dRHhrJ6zjrJ194CKdDXtzwgaXo",
+          "asset_key": "solana:5JbRYEz844bwnKbGx4dRHhrJ6zjrJ194CKdDXtzwgaXo"
+        },
+        {
+          "pool": "EygtRprRwHgtCDDk6GUFnKzCk6U5su7NAekCProatiFc",
+          "mint": "5BWHo2duxhkRR4ftnZWErnB8GoXpFgZ4ZR9UN8LDpump",
+          "asset_key": "solana:5BWHo2duxhkRR4ftnZWErnB8GoXpFgZ4ZR9UN8LDpump"
+        },
+        {
+          "pool": "GhFSaPdvu75KCpsUVk7CZ8A1tdjYeo6YvZx1QiBgwfSJ",
+          "mint": "5VCEFq1aATjga39QtDunYjJqYBx67w8V8TXwHrqopump",
+          "asset_key": "solana:5VCEFq1aATjga39QtDunYjJqYBx67w8V8TXwHrqopump"
+        }
+      ]
+    }
+  },
+  "history": {
+    "originalResearchWallets": 14,
+    "webhookEnabled": 12,
+    "exclusionCommit": "7a481a4a422cdc9603c91b228a7d4d0b1df49e21",
+    "excludedRetainedForResearch": [
+      "kiwiC4pg5mC4N5AhpXc4Av3V6oV7Sn2p3CqB7NeHbJJ",
+      "3wySUKHiD15kUD7sunNe1FQpogv2FK7Tw7TzSJyC9Ft8"
+    ]
+  },
+  "requirements": [
+    {
+      "id": 1,
+      "requirement": "Exact rosters and approved scope history",
+      "status": "PARTIAL",
+      "evidenceOrGap": "Configured14/12 wallets,3 RPC and10 exact pilot pools recovered;dynamic production watchlist/mint/pool universe not completely obtained. Configured subset alone COMPLETE.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "COMPLETE",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 2,
+      "requirement": "Webhook registration and all-wallet coverage",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "pilot expired 2026-11-08; source control verify NOT_REGISTERED; no fresh receipts",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "UNVERIFIED",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 3,
+      "requirement": "RPC forward collection per wallet",
+      "status": "PARTIAL",
+      "evidenceOrGap": "3 stored identities; zero current-day cycles in source audit; last checked Nov 7; expired",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 4,
+      "requirement": "Historical bridges and original anchors",
+      "status": "PARTIAL",
+      "evidenceOrGap": "dashboard audit reports 3 complete bridges; legacy cursors separately unresolved",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 5,
+      "requirement": "Three legacy cursor gaps and bounded backfill",
+      "status": "PARTIAL",
+      "evidenceOrGap": "Legacy gaps unchanged22/40/23. Test block repaired; source/replay skipped on expiry. Separate RPC source ledger has3 unresolved windows.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 6,
+      "requirement": "Launch discovery and canonical swap decoding",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "discovery expired; 0 exact RPC decoded matches; no new signed executable swap proofs",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "UNVERIFIED",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 7,
+      "requirement": "Independent buyers/funding and attribution",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "no fresh receipts and no verified buys; fee payer/provider labels insufficient",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "UNVERIFIED",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 8,
+      "requirement": "Reconnect continuity and signature reconciliation",
+      "status": "PARTIAL",
+      "evidenceOrGap": "Stored 10 reconciliation records; 9 bounded windows, 1 truncated unknown; raw chain not re-queried.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 9,
+      "requirement": "USD one-minute OHLCV and enrichment",
+      "status": "PARTIAL",
+      "evidenceOrGap": "256/300 sampled future USD labels missing; 0 exact historical candle matches; no continuity proof",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 10,
+      "requirement": "Signal delivery and alert latency",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "no current fresh signal-to-delivery receipts; historical latency not current SLA",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "UNVERIFIED",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 11,
+      "requirement": "Dashboard source freshness",
+      "status": "PARTIAL",
+      "evidenceOrGap": "live evidence query works but stored last cron Nov 7; 0 decoded matches",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 12,
+      "requirement": "Ten-pool pilot roster ACKs and minute windows",
+      "status": "PARTIAL",
+      "evidenceOrGap": "10 exact pools, 90 recorded windows of 600 planned pool-minutes; 20 windows unverified; ended early.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 13,
+      "requirement": "Ten-pool pilot matched scheduled baseline",
+      "status": "PARTIAL",
+      "evidenceOrGap": "40 windows have scheduled proxy, 50 lack fresh comparator. No executable comparative outcome proof.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 14,
+      "requirement": "Mature 5m/1h/24h outcomes",
+      "status": "PARTIAL",
+      "evidenceOrGap": "Original pilot5m0/40,1h28/40,24h0/40 observed exact-pool price labels; remaining missing.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 15,
+      "requirement": "Precommitted target and cohort baseline",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "original early 50k-150k objective exists; no recovered frozen executable success threshold/control definition",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "UNVERIFIED",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 16,
+      "requirement": "Precision recall and missed opportunities",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "independent eligible universe and labels incomplete",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "UNVERIFIED",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 17,
+      "requirement": "Executable paper returns drawdown calibration",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "fees/slippage/sell-depth matched fills absent; do not count missing quotes as losses",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "UNVERIFIED",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 18,
+      "requirement": "Provider credits and Cloudflare actual costs",
+      "status": "UNVERIFIED",
+      "evidenceOrGap": "local reservation ceilings 9000/20000 retained; project billing unavailable, plan not verified",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "UNVERIFIED",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 19,
+      "requirement": "D1 capacity and durable evidence writes",
+      "status": "PARTIAL",
+      "evidenceOrGap": "Fresh metadata remains9999998976bytes; HTTP400 remains causally unattributed pending redacted diagnostics.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "PARTIAL",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 20,
+      "requirement": "Daily fix regression and deployment verification",
+      "status": "COMPLETE",
+      "evidenceOrGap": "In-period PR128 tested/merged/live verified. PR129 separately post-period;no scoring promotion or measured prediction benefit.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "COMPLETE",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    },
+    {
+      "id": 21,
+      "requirement": "Durable ledger and carry-forward comparison",
+      "status": "COMPLETE",
+      "evidenceOrGap": "Report,evidence and21-item register are saved together;claim completion only after successful remote commit.",
+      "priorStatus": "NO_PRIOR_WEEKLY_LEDGER",
+      "currentEvidence": "2026-11-23-weekly-evidence.json",
+      "nextAction": "See ranked carry-forward queue in weekly report.",
+      "priorDailyStatus": "COMPLETE",
+      "scope": "Entire reporting week, unless explicitly historical or post-period",
+      "expectedDenominator": "See weekly report for required counts; UNKNOWN where full universe or intended scheduling evidence is missing."
+    }
+  ],
+  "previousRegister": "requirements-v1.json",
+  "previousFinalReceipt": "2026-11-22-release-evidence.json",
+  "asOf": "2026-11-22T20:24:33Z",
+  "period": {
+    "localFrom": "2026-11-16T00:00:00+12:00",
+    "localToExclusive": "2026-11-23T00:00:00+12:00",
+    "utcFrom": "2026-11-15T12:00:00Z",
+    "utcToExclusive": "2026-11-22T12:00:00Z"
+  },
+  "snapshotUtc": "2026-11-22T21:53:01Z",
+  "reportingWeekFinalMain": "74f9b2e75219b979f869e8d3f1435361ffe08c39",
+  "priorWeeklyRegister": "UNAVAILABLE_FIRST_WEEKLY_LEDGER",
+  "dailyRecordsInPeriod": [
+    "2026-11-22-result.md"
+  ],
+  "postPeriodDailyRecords": [
+    "2026-11-23-result.md"
+  ],
+  "predictionProtocol": {
+    "mission": "Detect credible Solana opportunities near50k\u2013150k valuation before acceleration",
+    "sourceSpecification": "docs/GOGET_ALWAYS_ON_PRE_SIGNAL.md",
+    "researchSignalThresholds": {
+      "recentWindowMinutes": 15,
+      "referenceWindowMinutes": 75,
+      "minimumRecentSignatures": 3,
+      "minimumWatchedWallets": 2,
+      "normalizedIntensity": 3,
+      "decision": "RESEARCH_ONLY_NOT_A_VERIFIED_BUY"
+    },
+    "controls": "Deterministic weak-signal controls;selection-biased,not independently matched evaluation controls",
+    "horizonsMinutes": [
+      5,
+      60,
+      1440
+    ],
+    "successfulExecutableReturnThreshold": "UNVERIFIED_NOT_RECOVERED",
+    "frozenHeldOutCohort": "UNVERIFIED_NOT_RECOVERED",
+    "scoringChangesInPeriod": false,
+    "evaluationVerdict": "UNVERIFIED"
+  }
+}
