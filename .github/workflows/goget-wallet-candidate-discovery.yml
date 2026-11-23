@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   discover:
-    if: github.event_name != 'schedule' || github.event.schedule == '12 */6 * * *'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

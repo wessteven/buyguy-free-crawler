@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
-    if: github.event_name != 'schedule'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -172,7 +172,7 @@ jobs:
           console.log('GOGET_LIVE_WORKER_REVISION_VERIFIED');
           JS
   cleanup:
-    if: github.event_name == 'schedule'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:

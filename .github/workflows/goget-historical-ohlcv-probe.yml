@@ -15,6 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   probe:
+    if: ${{ false }} # Emergency Cloudflare/D1 cost pause, 2026-11-23
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:

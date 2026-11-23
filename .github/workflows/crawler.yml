@@ -25,6 +25,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   crawl:
+    if: ${{ false }} # Emergency Cloudflare/D1 cost pause, 2026-11-23
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -53,7 +54,7 @@ jobs:
           fi
 
   night_efficacy:
-    if: github.event_name != 'workflow_dispatch'
+    if: ${{ false }}
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 3

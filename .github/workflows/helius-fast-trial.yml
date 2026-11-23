@@ -5,6 +5,7 @@ permissions:
   contents: read
 jobs:
   proof:
+    if: ${{ false }} # Emergency Cloudflare/D1 cost pause, 2026-11-23
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
@@ -26,6 +27,7 @@ jobs:
           name: helius-fast-proof
           path: helius-fast-trial.jsonl
   soak:
+    if: ${{ false }} # Emergency Cloudflare/D1 cost pause, 2026-11-23
     needs: proof
     runs-on: ubuntu-latest
     timeout-minutes: 70

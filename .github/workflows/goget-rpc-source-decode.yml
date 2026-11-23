@@ -25,6 +25,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   test:
+    if: ${{ false }} # Emergency Cloudflare/D1 cost pause, 2026-11-23
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:
@@ -54,7 +55,7 @@ jobs:
           PY
   decode:
     needs: test
-    if: github.event_name != 'pull_request'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
